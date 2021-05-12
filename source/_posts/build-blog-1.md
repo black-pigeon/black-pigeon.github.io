@@ -1,6 +1,6 @@
 ---
-title: 建立一个自己的博客
-date: 2021-05-08 23:41:06
+title: 建立博客-(1)
+date: 2021-05-12 18:59:23
 tags: 博客
 categories: 博客
 comments: true
@@ -15,7 +15,7 @@ comments: true
 
 # 1. 创建一个github仓库
 要想使用到 ithub pages，首先需要在github上创建一个仓库，创建仓库的时候，需要注意，仓库的名称需要遵循特定的格式。必须是`username.github.io`这种格式，其中username就是用户在github上注册的时候所设置的名字。
-![仓库名称设置](../images/仓库名称.png)
+![repo_name](repo_name.png)
 有了自己的仓库之后就可以进行之后的操作了。
 
 # 2. 安装nodejs环境和hexo
@@ -72,7 +72,7 @@ hexo g
 hexo server
 ```
 在浏览器中打开打开localhost:4000，就可以看到当前的博客了，大概长这样。
-![博客样品](../images/博客样品.png)
+![blog_ex](blog_ex.png)
 按下ctrl+c可以退出本地调试。
 
 ### 2.4 部署博客到github
@@ -98,7 +98,6 @@ hexo deploy
 ```
 `hexo clean`用来清除之前生成的博客，`hexo generate`生成静态网页，也可以使用简写`hexo g`。`hexo deploy`是用来部署的命令，使用这个命令就能把hexo生成的网页文件部署到github上，也可以使用`hexo d`。
 
-![部署完成之后](../images/部署之后.png)
-<br>
+![deployed](deployed.png)
 
 博客的搭建到这里就完成了一小步了，后续还有其他的操作，后续会使用到next主题，对next主题进行配置。还有如何发布文章等操作。
