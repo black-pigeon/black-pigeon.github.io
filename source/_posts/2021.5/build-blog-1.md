@@ -12,7 +12,7 @@ comments: true
 
 这篇博客的目的就是来记录一下博客的搭建过程，博客的后续安排如下：
 
-
+<!--more-->
 # 1. 创建一个github仓库
 要想使用到 ithub pages，首先需要在github上创建一个仓库，创建仓库的时候，需要注意，仓库的名称需要遵循特定的格式。必须是`username.github.io`这种格式，其中username就是用户在github上注册的时候所设置的名字。
 ![repo_name](repo_name.png)

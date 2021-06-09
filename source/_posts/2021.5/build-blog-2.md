@@ -7,6 +7,7 @@ comments: true
 ---
 在前面的博客当中介绍了如何使用hexo来创建一个博客，并使用github来部署博客。得到了一个最基础的博客模板，在这个文章当中会介绍如何使用和配置一下[NexT](https://github.com/theme-next/hexo-theme-next)主题。
 本篇博客主要参考这位作者的：[Next主题配置](https://www.jianshu.com/p/e4db4f7ed45f)
+<!--more-->
 # 1. 安装next
 在博客根目录下使用git命令将NexT主题可克隆到themes文件夹下面。
 ```bash
