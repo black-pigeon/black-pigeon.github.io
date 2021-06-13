@@ -14,6 +14,7 @@ mathjax: true
 git clone https://github.com/Xilinx/linux-xlnx.git
 git clone https://github.com/Xilinx/u-boot-xlnx.git
 git clone https://github.com/Xilinx/device-tree-xlnx.git
+<!--more-->
 ```
 # 2.建立最小系统
 接下来就是需要一个最基本的硬件平台了，只需要在Vivado中搭建一个最小系统就醒了，我在vivado中使能了串口，以太网，sd卡，usb。用不用得到先不说，弄个最基础的出来先。
