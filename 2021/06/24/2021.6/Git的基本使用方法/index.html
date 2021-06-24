@@ -22,24 +22,29 @@
     var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":false,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
   </script>
 
-  <meta name="description" content="这是基于github pages和hexo搭建的一个博客，搭建这个博客也参考了许多人的搭建过程。搭建博客的过程还是挺有趣的。 在之后就可以在自己的博客上面写一些东西了。 这篇博客的目的就是来记录一下博客的搭建过程，博客的后续安排如下：">
+  <meta name="description" content="1. Git 添加子模块当Git的项目比较大之后，可以将一个工程分为好几个子模块，就向上面的图中所展示的那样，在PlutoSDR的固件当中，需要由不同的子项目构成。">
 <meta property="og:type" content="article">
-<meta property="og:title" content="建立博客-(1)">
-<meta property="og:url" content="https://black-pigeon.github.io/2021/05/12/2021.5/build-blog-1/index.html">
+<meta property="og:title" content="Git的基本使用方法">
+<meta property="og:url" content="https://black-pigeon.github.io/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/index.html">
 <meta property="og:site_name" content="wcc的博客">
-<meta property="og:description" content="这是基于github pages和hexo搭建的一个博客，搭建这个博客也参考了许多人的搭建过程。搭建博客的过程还是挺有趣的。 在之后就可以在自己的博客上面写一些东西了。 这篇博客的目的就是来记录一下博客的搭建过程，博客的后续安排如下：">
+<meta property="og:description" content="1. Git 添加子模块当Git的项目比较大之后，可以将一个工程分为好几个子模块，就向上面的图中所展示的那样，在PlutoSDR的固件当中，需要由不同的子项目构成。">
 <meta property="og:locale" content="zh_CH">
-<meta property="og:image" content="https://black-pigeon.github.io/2021/05/12/2021.5/build-blog-1/repo_name.png">
-<meta property="og:image" content="https://black-pigeon.github.io/2021/05/12/2021.5/build-blog-1/blog_ex.png">
-<meta property="og:image" content="https://black-pigeon.github.io/2021/05/12/2021.5/build-blog-1/deployed.png">
-<meta property="article:published_time" content="2021-05-12T10:59:23.000Z">
-<meta property="article:modified_time" content="2021-06-10T14:05:49.908Z">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/Git子模块.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/clone模块到本地.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/submodule添加.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/submodule信息.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/未提交的更改.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/push结果.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/submodule更新.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/主模块更新.png">
+<meta property="article:published_time" content="2021-06-24T13:55:55.000Z">
+<meta property="article:modified_time" content="2021-06-24T15:13:32.365Z">
 <meta property="article:author" content="wcc">
-<meta property="article:tag" content="博客">
+<meta property="article:tag" content="Git">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:image" content="https://black-pigeon.github.io/2021/05/12/2021.5/build-blog-1/repo_name.png">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/Git子模块.png">
 
-<link rel="canonical" href="https://black-pigeon.github.io/2021/05/12/2021.5/build-blog-1/">
+<link rel="canonical" href="https://black-pigeon.github.io/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/">
 
 
 <script id="page-configurations">
@@ -52,7 +57,7 @@
   };
 </script>
 
-  <title>建立博客-(1) | wcc的博客</title>
+  <title>Git的基本使用方法 | wcc的博客</title>
   
 
 
@@ -173,7 +178,7 @@
   
   
   <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/05/12/2021.5/build-blog-1/">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/">
 
     <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
       <meta itemprop="image" content="/./images/avatar.jpg">
@@ -186,7 +191,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          建立博客-(1)
+          Git的基本使用方法
         </h1>
 
         <div class="post-meta">
@@ -195,28 +200,22 @@
                 <i class="far fa-calendar"></i>
               </span>
               <span class="post-meta-item-text">Posted on</span>
+              
 
-              <time title="Created: 2021-05-12 18:59:23" itemprop="dateCreated datePublished" datetime="2021-05-12T18:59:23+08:00">2021-05-12</time>
+              <time title="Created: 2021-06-24 21:55:55 / Modified: 23:13:32" itemprop="dateCreated datePublished" datetime="2021-06-24T21:55:55+08:00">2021-06-24</time>
             </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2021-06-10 22:05:49" itemprop="dateModified" datetime="2021-06-10T22:05:49+08:00">2021-06-10</time>
-              </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
                 <i class="far fa-folder"></i>
               </span>
               <span class="post-meta-item-text">In</span>
                 <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/%E5%8D%9A%E5%AE%A2/" itemprop="url" rel="index"><span itemprop="name">博客</span></a>
+                  <a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a>
                 </span>
             </span>
 
           
-            <span id="/2021/05/12/2021.5/build-blog-1/" class="post-meta-item leancloud_visitors" data-flag-title="建立博客-(1)" title="Views">
+            <span id="/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/" class="post-meta-item leancloud_visitors" data-flag-title="Git的基本使用方法" title="Views">
               <span class="post-meta-item-icon">
                 <i class="fa fa-eye"></i>
               </span>
@@ -231,8 +230,8 @@
       </span>
       <span class="post-meta-item-text">Valine: </span>
     
-    <a title="valine" href="/2021/05/12/2021.5/build-blog-1/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2021/05/12/2021.5/build-blog-1/" itemprop="commentCount"></span>
+    <a title="valine" href="/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/" itemprop="commentCount"></span>
     </a>
   </span>
   
@@ -247,36 +246,9 @@
     <div class="post-body" itemprop="articleBody">
 
       
-        <p>这是基于github pages和hexo搭建的一个博客，搭建这个博客也参考了许多人的搭建过程。搭建博客的过程还是挺有趣的。</p>
-<p>在之后就可以在自己的博客上面写一些东西了。</p>
-<p>这篇博客的目的就是来记录一下博客的搭建过程，博客的后续安排如下：</p>
-<span id="more"></span>
-<h1 id="1-创建一个github仓库"><a href="#1-创建一个github仓库" class="headerlink" title="1. 创建一个github仓库"></a>1. 创建一个github仓库</h1><p>要想使用到 ithub pages，首先需要在github上创建一个仓库，创建仓库的时候，需要注意，仓库的名称需要遵循特定的格式。必须是<code>username.github.io</code>这种格式，其中username就是用户在github上注册的时候所设置的名字。<br><img src="/2021/05/12/2021.5/build-blog-1/repo_name.png" alt="repo_name"><br>有了自己的仓库之后就可以进行之后的操作了。</p>
-<h1 id="2-安装nodejs环境和hexo"><a href="#2-安装nodejs环境和hexo" class="headerlink" title="2. 安装nodejs环境和hexo"></a>2. 安装nodejs环境和hexo</h1><h2 id="2-1-安装nodejs"><a href="#2-1-安装nodejs" class="headerlink" title="2.1 安装nodejs"></a>2.1 安装nodejs</h2><p>由于想要使用hexo来搭建博客，因此首先需要安装 <a target="_blank" rel="noopener" href="https://nodejs.org/en/">nodejs</a>。</p>
-<p>安装nodejs可以采用以下步骤。</p>
-<ul>
-<li>添加源<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">curl -sL https://deb.nodesource.com/setup_12.x | sudo -E bash -</span><br></pre></td></tr></table></figure></li>
-<li>安装nodejs<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">sudo apt install nodejs</span><br></pre></td></tr></table></figure></li>
-<li>确认是否版本为12.x以上<figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">node  --version</span><br><span class="line">npm  --version</span><br></pre></td></tr></table></figure>
-</li>
-</ul>
-<h2 id="2-2-安装hexo"><a href="#2-2-安装hexo" class="headerlink" title="2.2 安装hexo"></a>2.2 安装hexo</h2><p><a target="_blank" rel="noopener" href="https://hexo.io/zh-cn/">hexo</a>能够很方便地来管理博客，即使像我这种不会前端地小白也能玩一玩。<br>使用以下命令安装hexo<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install -g hexo-cli</span><br></pre></td></tr></table></figure><br>安装完成之后可以使用<code>hexo -v</code>来查看一下版本。<br>到这里需要安装的工具都安装好了，接下来就可以来搭建自己的博客了。</p>
-<h2 id="2-3-使用hexo生成一个博客文件夹"><a href="#2-3-使用hexo生成一个博客文件夹" class="headerlink" title="2.3 使用hexo生成一个博客文件夹"></a>2.3 使用hexo生成一个博客文件夹</h2><p>首先使用hexo init来生成一个博客的源文件的文件夹。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">hexo init myblog</span><br></pre></td></tr></table></figure><br>在之后进入到这个文件夹当中，可以看一下当前的文件夹的结构<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="built_in">cd</span> myblog </span><br><span class="line">npm install</span><br></pre></td></tr></table></figure></p>
-<ul>
-<li>node_modules: 依赖包</li>
-<li>public：存放生成的页面</li>
-<li>scaffolds：生成文章的一些模板</li>
-<li>source：用来存放你的文章</li>
-<li>themes：主题</li>
-<li><strong>_config.yml: 博客的配置文件</strong></li>
-<li>…</li>
-</ul>
-<p>在这个文件夹当中最重要的一个文件就是_config,yml文件，该文件会保存我们的配置信息，在之后会使用到。<br>这个时候我们就可以使用hexo的本地调试功能，来看看当前生成的博客长啥样了。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">hexo g</span><br><span class="line">hexo server</span><br></pre></td></tr></table></figure><br>在浏览器中打开打开localhost:4000，就可以看到当前的博客了，大概长这样。<br><img src="/2021/05/12/2021.5/build-blog-1/blog_ex.png" alt="blog_ex"><br>按下ctrl+c可以退出本地调试。</p>
-<h3 id="2-4-部署博客到github"><a href="#2-4-部署博客到github" class="headerlink" title="2.4 部署博客到github"></a>2.4 部署博客到github</h3><p>使用hexo来管理博客十分简单。打开配置文件<code>_config.yml</code>,直接拉到最后，将deploy选项下面的地址设置为前面创建的的github仓库即可。</p>
-<figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Deployment</span></span><br><span class="line"><span class="comment">## Docs: https://hexo.io/docs/one-command-deployment</span></span><br><span class="line"><span class="attr">deploy:</span></span><br><span class="line">  <span class="attr">type:</span> <span class="string">git</span></span><br><span class="line">  <span class="attr">repo:</span> <span class="string">https://github.com/black-pigeon/black-pigeon.github.io.git</span></span><br><span class="line">  <span class="attr">branch:</span> <span class="string">master</span></span><br></pre></td></tr></table></figure>
-<p>设置完成之后，就可以来部署博客了，这里需要使用到<code>deploy-git</code>,也就是部署的命令，需要先安装这个命令。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">npm install hexo-deployer-git --save</span><br></pre></td></tr></table></figure><br>然后就可以使用hexo很方便地来部署博客了。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">hexo clean</span><br><span class="line">hexo generate</span><br><span class="line">hexo deploy</span><br></pre></td></tr></table></figure><br><code>hexo clean</code>用来清除之前生成的博客，<code>hexo generate</code>生成静态网页，也可以使用简写<code>hexo g</code>。<code>hexo deploy</code>是用来部署的命令，使用这个命令就能把hexo生成的网页文件部署到github上，也可以使用<code>hexo d</code>。</p>
-<p><img src="/2021/05/12/2021.5/build-blog-1/deployed.png" alt="deployed"></p>
-<p>博客的搭建到这里就完成了一小步了，后续还有其他的操作，后续会使用到next主题，对next主题进行配置。还有如何发布文章等操作。</p>
+        <h2 id="1-Git-添加子模块"><a href="#1-Git-添加子模块" class="headerlink" title="1. Git 添加子模块"></a>1. Git 添加子模块</h2><p><img src="/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/Git子模块.png" alt="Git项目"><br>当Git的项目比较大之后，可以将一个工程分为好几个子模块，就向上面的图中所展示的那样，在PlutoSDR的固件当中，需要由不同的子项目构成。<br><span id="more"></span><br>比如我在Git上有两个仓库，一个是git_study,一个是git_module。现在想要把gitmodule作为git_study的子模块进行添加。首先把这两个仓库都克隆到本地来。<br><img src="/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/clone模块到本地.png" alt="clone子模块到本地"><br>接下来进入到主模块当中，使用git submodule add 命令，添加一个子模块。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git submodule add &lt;url&gt; &lt;path&gt;</span><br></pre></td></tr></table></figure><br>其中 \<url> 是子模块的github的链接，path是子模块在当前仓库当中的路径。在这里把git_module这个仓库添加到主模块的仓库当中。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git submodule add https://github.com/black-pigeon/git_module.git</span><br></pre></td></tr></table></figure><br>添加完成之后会在主模块下面新生成一个.gitmodule的文件，该文件当中存储有子模块的路径信息和子模块所处的分支(branch)信息。<br><img src="/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/submodule添加.png" alt="submodule添加"><br><img src="/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/submodule信息.png" alt="子模块路径信息"><br>现在使用git status可以看到当前主模块仓库中有未提交的更改，这个时候可以把更改推到github上了。<br><img src="/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/未提交的更改.png" alt="未提交的更改"></url></p>
+<p><img src="/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/push结果.png" alt="push之后的结果"><br>可以看到当前子模块的commit ID是bc43061</p>
+<h2 id="2-子模块的更新"><a href="#2-子模块的更新" class="headerlink" title="2.子模块的更新"></a>2.子模块的更新</h2><p>在子模块当中更新了内容，并对子模块进行了提交之后，主模块当中该如何来进行更新子模块的内容呢？在主模块当中执行以下命令可以跟踪子模块的变化。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git submodule update --remote</span><br></pre></td></tr></table></figure><br><img src="/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/submodule更新.png" alt="submodule更新"><br>这个时候可以检测出子模块当中的更新，可以看到当前子模块的commit ID会更改为最新的commit ID。<br>这时候再将主模块当中的更新尽心提交就可以了。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git commit -a -m <span class="string">&quot;Tracking submodule changes&quot;</span></span><br></pre></td></tr></table></figure><br><img src="/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/主模块更新.png" alt="主模块更新"><br>可以看到，主模块当中的子模块的commit ID也发生了变化。</p>
 
     </div>
 
@@ -286,7 +258,7 @@
 
       <footer class="post-footer">
           <div class="post-tags">
-              <a href="/tags/%E5%8D%9A%E5%AE%A2/" rel="tag"># 博客</a>
+              <a href="/tags/Git/" rel="tag"># Git</a>
           </div>
 
         
@@ -294,11 +266,11 @@
 
         
     <div class="post-nav">
-      <div class="post-nav-item"></div>
       <div class="post-nav-item">
-    <a href="/2021/05/14/2021.5/build-blog-2/" rel="next" title="建立博客-(2)">
-      建立博客-(2) <i class="fa fa-chevron-right"></i>
+    <a href="/2021/06/13/2021.6/Linux%E5%9C%A8ZYNQ%E4%B8%8A%E7%9A%84%E7%A7%BB%E6%A4%8D/" rel="prev" title="Linux在ZYNQ上的移植">
+      <i class="fa fa-chevron-left"></i> Linux在ZYNQ上的移植
     </a></div>
+      <div class="post-nav-item"></div>
     </div>
       </footer>
     
@@ -358,7 +330,7 @@
 
       <!--noindex-->
       <div class="post-toc-wrap sidebar-panel">
-          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E5%88%9B%E5%BB%BA%E4%B8%80%E4%B8%AAgithub%E4%BB%93%E5%BA%93"><span class="nav-number">1.</span> <span class="nav-text">1. 创建一个github仓库</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-%E5%AE%89%E8%A3%85nodejs%E7%8E%AF%E5%A2%83%E5%92%8Chexo"><span class="nav-number">2.</span> <span class="nav-text">2. 安装nodejs环境和hexo</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1-%E5%AE%89%E8%A3%85nodejs"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 安装nodejs</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2-%E5%AE%89%E8%A3%85hexo"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 安装hexo</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-3-%E4%BD%BF%E7%94%A8hexo%E7%94%9F%E6%88%90%E4%B8%80%E4%B8%AA%E5%8D%9A%E5%AE%A2%E6%96%87%E4%BB%B6%E5%A4%B9"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 使用hexo生成一个博客文件夹</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E9%83%A8%E7%BD%B2%E5%8D%9A%E5%AE%A2%E5%88%B0github"><span class="nav-number">2.3.1.</span> <span class="nav-text">2.4 部署博客到github</span></a></li></ol></li></ol></li></ol></div>
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-Git-%E6%B7%BB%E5%8A%A0%E5%AD%90%E6%A8%A1%E5%9D%97"><span class="nav-number">1.</span> <span class="nav-text">1. Git 添加子模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E5%AD%90%E6%A8%A1%E5%9D%97%E7%9A%84%E6%9B%B4%E6%96%B0"><span class="nav-number">2.</span> <span class="nav-text">2.子模块的更新</span></a></li></ol></div>
       </div>
       <!--/noindex-->
 
