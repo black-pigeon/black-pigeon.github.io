@@ -2,7 +2,7 @@
 title: Git的基本使用方法
 date: 2021-06-24 21:55:55
 tags: Git
-categories: Linux
+categories: Git
 comment: true
 ---
 ## 1. Git 添加子模块
