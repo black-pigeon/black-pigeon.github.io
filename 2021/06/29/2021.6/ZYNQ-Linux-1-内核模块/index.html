@@ -24,7 +24,7 @@
 
   <meta name="description" content="1. 内核模块的基本概念在前面的博客当中记录了如何在ZYNQ上移植Linux，移植好Linux之后，就可以来学一学怎么进行嵌入式的开发了。这种比较传统的linux的学习方式的通用性应该比使用petalinux要好多了。  宏内核：关键功能和服务功能均在内核空间提供 运行效率高 扩展性较差   微内核：内核空间只提供关键功能，服务功能在用户空间提供 运行效率较低 安全性、扩展性较高">
 <meta property="og:type" content="article">
-<meta property="og:title" content="Linux在ZYNQ上的移植">
+<meta property="og:title" content="ZYNQ Linux(1)--内核模块">
 <meta property="og:url" content="https://black-pigeon.github.io/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/index.html">
 <meta property="og:site_name" content="wcc的博客">
 <meta property="og:description" content="1. 内核模块的基本概念在前面的博客当中记录了如何在ZYNQ上移植Linux，移植好Linux之后，就可以来学一学怎么进行嵌入式的开发了。这种比较传统的linux的学习方式的通用性应该比使用petalinux要好多了。  宏内核：关键功能和服务功能均在内核空间提供 运行效率高 扩展性较差   微内核：内核空间只提供关键功能，服务功能在用户空间提供 运行效率较低 安全性、扩展性较高">
@@ -34,7 +34,7 @@
 <meta property="og:image" content="https://black-pigeon.github.io/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/编译内核模块.png">
 <meta property="og:image" content="https://black-pigeon.github.io/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/内核模块的加载和卸载.png">
 <meta property="article:published_time" content="2021-06-29T13:46:51.000Z">
-<meta property="article:modified_time" content="2021-06-29T15:51:42.695Z">
+<meta property="article:modified_time" content="2021-07-02T14:16:17.533Z">
 <meta property="article:author" content="wcc">
 <meta property="article:tag" content="Linux">
 <meta name="twitter:card" content="summary">
@@ -53,7 +53,7 @@
   };
 </script>
 
-  <title>Linux在ZYNQ上的移植 | wcc的博客</title>
+  <title>ZYNQ Linux(1)--内核模块 | wcc的博客</title>
   
 
 
@@ -143,7 +143,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">8</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">9</span></a>
 
   </li>
   </ul>
@@ -187,7 +187,7 @@
     </span>
       <header class="post-header">
         <h1 class="post-title" itemprop="name headline">
-          Linux在ZYNQ上的移植
+          ZYNQ Linux(1)--内核模块
         </h1>
 
         <div class="post-meta">
@@ -196,10 +196,16 @@
                 <i class="far fa-calendar"></i>
               </span>
               <span class="post-meta-item-text">Posted on</span>
-              
 
-              <time title="Created: 2021-06-29 21:46:51 / Modified: 23:51:42" itemprop="dateCreated datePublished" datetime="2021-06-29T21:46:51+08:00">2021-06-29</time>
+              <time title="Created: 2021-06-29 21:46:51" itemprop="dateCreated datePublished" datetime="2021-06-29T21:46:51+08:00">2021-06-29</time>
             </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2021-07-02 22:16:17" itemprop="dateModified" datetime="2021-07-02T22:16:17+08:00">2021-07-02</time>
+              </span>
             <span class="post-meta-item">
               <span class="post-meta-item-icon">
                 <i class="far fa-folder"></i>
@@ -211,7 +217,7 @@
             </span>
 
           
-            <span id="/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/" class="post-meta-item leancloud_visitors" data-flag-title="Linux在ZYNQ上的移植" title="Views">
+            <span id="/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/" class="post-meta-item leancloud_visitors" data-flag-title="ZYNQ Linux(1)--内核模块" title="Views">
               <span class="post-meta-item-icon">
                 <i class="fa fa-eye"></i>
               </span>
@@ -300,7 +306,10 @@
     <a href="/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/" rel="prev" title="Git的基本使用方法">
       <i class="fa fa-chevron-left"></i> Git的基本使用方法
     </a></div>
-      <div class="post-nav-item"></div>
+      <div class="post-nav-item">
+    <a href="/2021/07/02/2021.7/ZYNQ-Linux-2-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E5%8F%82%E6%95%B0/" rel="next" title="ZYNQ Linux(2)--内核模块参数和符号共享">
+      ZYNQ Linux(2)--内核模块参数和符号共享 <i class="fa fa-chevron-right"></i>
+    </a></div>
     </div>
       </footer>
     
@@ -376,7 +385,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">8</span>
+          <span class="site-state-item-count">9</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
