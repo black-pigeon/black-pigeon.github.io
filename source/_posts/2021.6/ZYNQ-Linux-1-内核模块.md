@@ -1,5 +1,5 @@
 ---
-title: Linux在ZYNQ上的移植
+title: ZYNQ Linux(1)--内核模块
 date: 2021-06-29 21:46:51
 tags: Linux
 categories: Linux
