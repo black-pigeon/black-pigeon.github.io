@@ -341,5 +341,3 @@ always @(posedge user_clk or negedge M_AXI_ARESETN) begin
 	end
 end
 ```
-
-## 4. 
