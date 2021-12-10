@@ -59,7 +59,7 @@ radio_legacy模块和radio_ctrl_proc模块都会对上位机发出的控制命�
 
 我也找到了两个PDF文件，来介绍USRP3当中的CHDR在传输过程当中的一些情况。
 
-[USRP3_concepts.pdf](usrp-b205-fpga源码-2/https://github.com/black-pigeon/black-pigeon.github.io/raw/hexo/source/_posts/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/USRP3_concepts.pdf)
+[USRP3_concepts.pdf](https://github.com/black-pigeon/black-pigeon.github.io/raw/hexo/source/_posts/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/USRP3_concepts.pdf)
 
 [Synchronizing_USRP_Events_Using_Timed_Commands_in_UHD.pdf](https://github.com/black-pigeon/black-pigeon.github.io/raw/hexo/source/_posts/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/Synchronizing_USRP_Events_Using_Timed_Commands_in_UHD.pdf)
 
