@@ -2,7 +2,7 @@
 title: usrp_b205 fpga源码(1)
 date: 2021-12-05 16:40:36
 tags: ["SDR", "FPGA", "usrp_b205"]
-categories: usrp_b205
+categories: usrp
 comment: true
 ---
 
