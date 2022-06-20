@@ -1,7 +1,7 @@
 ---
 title: OFDM_802.11a学习----前导码域构建PLCP帧
 date: 2022-05-07 12:46:24
-tags: ["OFDM", "SDR", "ZYNQ"]
+tags: ["OFDM", "SDR", "ZYNQ", "FPGA"]
 categories: OFDM
 comment: true
 mathjax: true

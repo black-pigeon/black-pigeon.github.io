@@ -1,7 +1,7 @@
 ---
 title: OFDM_802.11a学习----signal域编码、交织与调制
 date: 2022-05-07 10:25:00
-tags: ["OFDM", "SDR", "ZYNQ"]
+tags: ["OFDM", "SDR", "ZYNQ", "FPGA"]
 categories: OFDM
 comment: true
 mathjax: true

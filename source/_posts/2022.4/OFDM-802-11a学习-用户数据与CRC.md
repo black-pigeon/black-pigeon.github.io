@@ -1,7 +1,7 @@
 ---
 title: OFDM-802-11a学习-用户数据与CRC
 date: 2022-04-28 16:34:22
-tags: ["OFDM", "SDR", "ZYNQ"]
+tags: ["OFDM", "SDR", "ZYNQ", "FPGA"]
 categories: OFDM
 comment: true
 ---

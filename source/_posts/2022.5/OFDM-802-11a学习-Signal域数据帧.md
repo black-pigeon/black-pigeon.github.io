@@ -1,7 +1,7 @@
 ---
 title: OFDM_802.11a学习----Signal域数据帧
 date: 2022-05-06 15:49:00
-tags: ["OFDM", "SDR", "ZYNQ"]
+tags: ["OFDM", "SDR", "ZYNQ", "FPGA"]
 categories: OFDM
 comment: true
 mathjax: true

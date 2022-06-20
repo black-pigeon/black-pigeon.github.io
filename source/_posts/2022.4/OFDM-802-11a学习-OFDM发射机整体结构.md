@@ -1,7 +1,7 @@
 ---
 title: OFDM_802.11a学习----OFDM发射机整体结构
 date: 2022-04-28 13:52:57
-tags: ["OFDM", "SDR", "ZYNQ"]
+tags: ["OFDM", "SDR", "ZYNQ", "FPGA"]
 categories: OFDM
 comment: true
 ---

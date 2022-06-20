@@ -1,7 +1,7 @@
 ---
 title: OFDM_802.11a学习----IFFT和添加循环前缀
 date: 2022-05-06 11:08:17
-tags: ["OFDM", "SDR", "ZYNQ"]
+tags: ["OFDM", "SDR", "ZYNQ", "FPGA"]
 categories: OFDM
 comment: true
 mathjax: true
