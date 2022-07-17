@@ -25,7 +25,7 @@ mathjax: true
 
 安装必要依赖和工具：
 ```bash
-sudo apt-fast install default-jre default-jdk ia32-libs lsb dos2unix
+sudo apt-get install default-jre default-jdk lib32z1 lsb dos2unix
 ```
 进行必要的设置：
 ```bash
