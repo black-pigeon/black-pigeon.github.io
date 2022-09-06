@@ -9,8 +9,8 @@ mathjax: true
 # 1. 基本结构
 
 AXI DMA工作的基本结果如下，AXI DMA负责和内存进行数据交互，一条路径是S2MM也就是将PL侧产生的用户数据写入到内存当中，另外一条路径是MM2S也就是将用户数据从内存当中读取出来给到用户逻辑。
-
-
+![axi_dma结构](axi-dma驱动-register-mode/axi_dma结构.png)
+<!--more-->
 
 AXIDMA 在register mode的工作方式如下：
 
@@ -47,12 +47,4 @@ CPU首先在内存当中分配一系列内存，用来给之后AXIDMA MM2S传输
 CPU配置AXI DMA开始通过MM2S将数据从内存当中读出，每次传输的起始地址就是内存当中当前MM2S指针指向的block对应的基地址，每次传输的长度是1个block。
 
 当一次传输完成的时候，AXIDMA会产生一个MM2S中断，中断产生之后，CPU会检测当前MM2S指针是否指向分配的最后一个block，如果是最后一个block，那么指针会指向第一个block，如果不是最后一个block，那么指针会加一并且指向下一个block，并且CPU会配置DMA开始下一次传输。
-
-
-
-# 3. 系统设计思路
-
-
-
-
 
