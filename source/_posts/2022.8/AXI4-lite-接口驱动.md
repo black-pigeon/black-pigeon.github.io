@@ -1,8 +1,8 @@
 ---
 title: AXI4-lite 接口驱动
 date: 2022-08-21 16:11:17
-tags: ["zynq", "linux"]
-categories: linux
+tags: ["ZYNQ", "Linux"]
+categories: Linux
 comment: true
 mathjax: true
 ---

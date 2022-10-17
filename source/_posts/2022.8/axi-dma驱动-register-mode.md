@@ -1,8 +1,8 @@
 ---
 title: axi-dma驱动(register mode)
 date: 2022-08-27 16:42:52
-tags: ["zynq", "linux"]
-categories: linux
+tags: ["ZYNQ", "Linux"]
+categories: Linux
 comment: true
 mathjax: true
 ---
