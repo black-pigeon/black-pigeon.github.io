@@ -42,3 +42,22 @@ git commit -a -m "Tracking submodule changes"
 ```
 ![主模块更新](Git的基本使用方法/主模块更新.png)
 可以看到，主模块当中的子模块的commit ID也发生了变化。
+
+## 3. 和并分支当中的某些文件或文件夹
+git merge是用来合并两个分支的，两个分支当中的所有文件都需要被合并。
+如果想要只合并一些内容，那么可以通过checkout的方式来进行合并。
+
+比如我有一个项目：antsdr_uhd.
+![项目文件](Git的基本使用方法/项目文件.png)
+我这个项目其中一个分支是master， 另外一个分支是e200_dev。如果我指向合并在master分支上合并e200_dev的firmware下面的内容。那么我只需要先checkout到对应分支的目录下，比如：
+```bash
+git checkout e200_dev firmware/**
+```
+此时master分支上的firmware文件夹里面的内容就会变成e200_dev分支上的内容。
+然后我们在提交对应的内容就可以了。
+```bash
+git status
+git add .
+git commit -m "xxxx"
+git push
+```
