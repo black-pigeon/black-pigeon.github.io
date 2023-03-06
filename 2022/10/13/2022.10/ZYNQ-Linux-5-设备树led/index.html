@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. 设备树基本语法设备树用树状结构描述设备信息，组成设备树的基本单元是 node（设备节点），这些node 被组织成树状结构，有如下一些特征：  一个 device tree 文件中只有一个 root node（根节点）； 除了 root node，每个 node 都只有一个 parent node（父节点）； 一般来说，开发板上的每一个设备都能够对应到设备树中的一个 node； 每个 node">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ZYNQ-Linux-5-设备树led">
+<meta property="og:url" content="https://black-pigeon.github.io/2022/10/13/2022.10/ZYNQ-Linux-5-%E8%AE%BE%E5%A4%87%E6%A0%91led/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="1. 设备树基本语法设备树用树状结构描述设备信息，组成设备树的基本单元是 node（设备节点），这些node 被组织成树状结构，有如下一些特征：  一个 device tree 文件中只有一个 root node（根节点）； 除了 root node，每个 node 都只有一个 parent node（父节点）； 一般来说，开发板上的每一个设备都能够对应到设备树中的一个 node； 每个 node">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/10/13/2022.10/ZYNQ-Linux-5-%E8%AE%BE%E5%A4%87%E6%A0%91led/usb控制器.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/10/13/2022.10/ZYNQ-Linux-5-%E8%AE%BE%E5%A4%87%E6%A0%91led/gpio-led实验结果.png">
+<meta property="article:published_time" content="2022-10-13T08:01:52.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.785Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="Linux">
+<meta property="article:tag" content="ZYNQ">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2022/10/13/2022.10/ZYNQ-Linux-5-%E8%AE%BE%E5%A4%87%E6%A0%91led/usb控制器.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2022/10/13/2022.10/ZYNQ-Linux-5-%E8%AE%BE%E5%A4%87%E6%A0%91led/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>ZYNQ-Linux-5-设备树led | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/10/13/2022.10/ZYNQ-Linux-5-%E8%AE%BE%E5%A4%87%E6%A0%91led/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          ZYNQ-Linux-5-设备树led
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-10-13 16:01:52" itemprop="dateCreated datePublished" datetime="2022-10-13T16:01:52+08:00">2022-10-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2022/10/13/2022.10/ZYNQ-Linux-5-%E8%AE%BE%E5%A4%87%E6%A0%91led/" class="post-meta-item leancloud_visitors" data-flag-title="ZYNQ-Linux-5-设备树led" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2022/10/13/2022.10/ZYNQ-Linux-5-%E8%AE%BE%E5%A4%87%E6%A0%91led/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2022/10/13/2022.10/ZYNQ-Linux-5-%E8%AE%BE%E5%A4%87%E6%A0%91led/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="1-设备树基本语法"><a href="#1-设备树基本语法" class="headerlink" title="1. 设备树基本语法"></a>1. 设备树基本语法</h1><p>设备树用树状结构描述设备信息，组成设备树的基本单元是 node（设备节点），这些<br>node 被组织成树状结构，有如下一些特征：</p>
+<ul>
+<li>一个 device tree 文件中只有一个 root node（根节点）；</li>
+<li>除了 root node，每个 node 都只有一个 parent node（父节点）；</li>
+<li>一般来说，开发板上的每一个设备都能够对应到设备树中的一个 node；</li>
+<li>每个 node 中包含了若干的 property-value（键-值对，当然也可以没有 value）来描述该 node 的一些<br>特性；</li>
+<li>每个 node 都有自己的 node name（节点名字）；</li>
+<li>node 之间可以是平行关系，也可以嵌套成父子关系，这样就可以很方便的描述设备间的关系；</li>
+</ul>
+<span id="more"></span>
+<p>一个具体的设树例子如下所示<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&quot;zynq.dtsi&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;dt-bindings/input/input.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;dt-bindings/gpio/gpio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;dt-bindings/interrupt-controller/irq.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> AD9361_EXT_BAND_CTL_SHORTHANDS</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;dt-bindings/iio/adc/adi,ad9361.h&gt;</span></span></span><br><span class="line"></span><br><span class="line">/ &#123;</span><br><span class="line">	model = <span class="string">&quot;MicroPhase ANTSDR E310&quot;</span>;</span><br><span class="line">	memory &#123;</span><br><span class="line">		device_type = <span class="string">&quot;memory&quot;</span>;</span><br><span class="line">		reg = &lt;<span class="number">0x00000000</span> <span class="number">0x40000000</span>&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	chosen &#123;</span><br><span class="line">		<span class="built_in">stdout</span>-path = <span class="string">&quot;/amba@0/uart@E0001000&quot;</span>;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">	clocks &#123;</span><br><span class="line">		ad9364_clkin: clock@<span class="number">0</span> &#123;</span><br><span class="line">			<span class="meta">#clock-cells = <span class="meta-string">&lt;0&gt;</span>;</span></span><br><span class="line">			compatible = <span class="string">&quot;adjustable-clock&quot;</span>;</span><br><span class="line">			clock-frequency = &lt;<span class="number">40000000</span>&gt;;</span><br><span class="line">			clock-accuracy = &lt;<span class="number">200000</span>&gt;; <span class="comment">/* 200 ppm (ppb) */</span></span><br><span class="line">			clock-output-names = <span class="string">&quot;ad9364_ext_refclk&quot;</span>;</span><br><span class="line">		&#125;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	usb_phy0: phy0 &#123;</span><br><span class="line">		compatible = <span class="string">&quot;ulpi-phy&quot;</span>;</span><br><span class="line">		<span class="meta">#phy-cells = <span class="meta-string">&lt;0&gt;</span>;</span></span><br><span class="line">		reg = &lt;<span class="number">0xe0002000</span> <span class="number">0x1000</span>&gt;;</span><br><span class="line">		view-port = &lt;<span class="number">0x0170</span>&gt;;</span><br><span class="line">		drv-vbus;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">&amp;sdhci0 &#123;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">	xlnx,has-cd = &lt;<span class="number">0x0</span>&gt;;</span><br><span class="line">	xlnx,has-power = &lt;<span class="number">0x0</span>&gt;;</span><br><span class="line">	xlnx,has-wp = &lt;<span class="number">0x0</span>&gt;;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;watchdog0 &#123;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">	reset-on-timeout;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;gem0 &#123;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">	phy-mode = <span class="string">&quot;rgmii-id&quot;</span>;</span><br><span class="line">	phy-handle = &lt;&amp;phy0&gt;;</span><br><span class="line"></span><br><span class="line">	phy0: phy@<span class="number">0</span> &#123; <span class="comment">/* Marvell 88e1512 */</span></span><br><span class="line">		reg = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">		compatible = <span class="string">&quot;ethernet-phy-ieee802.3-c22&quot;</span>;</span><br><span class="line">		reset-gpios = &lt;&amp;gpio0 <span class="number">46</span> <span class="number">1</span>&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;usb0 &#123;</span><br><span class="line">	xlnx,phy-reset-gpio = &lt;&amp;gpio0 <span class="number">47</span> <span class="number">0</span>&gt;;</span><br><span class="line">	dr_mode = <span class="string">&quot;otg&quot;</span>;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">	usb-phy = &lt;&amp;usb_phy0&gt;;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;qspi &#123;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">	is-dual = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">	num-cs = &lt;<span class="number">1</span>&gt;;</span><br><span class="line">	primary_flash: ps7-qspi@<span class="number">0</span> &#123;</span><br><span class="line">		<span class="meta">#address-cells = <span class="meta-string">&lt;1&gt;</span>;</span></span><br><span class="line">		<span class="meta">#size-cells = <span class="meta-string">&lt;1&gt;</span>;</span></span><br><span class="line">		spi-tx-bus-width = &lt;<span class="number">1</span>&gt;;</span><br><span class="line">		spi-rx-bus-width = &lt;<span class="number">4</span>&gt;;</span><br><span class="line">		compatible = <span class="string">&quot;n25q256a&quot;</span>, <span class="string">&quot;n25q512a&quot;</span>, <span class="string">&quot;jedec,spi-nor&quot;</span>; <span class="comment">/* same as S25FL256 */</span></span><br><span class="line">		reg = &lt;<span class="number">0x0</span>&gt;;</span><br><span class="line">		spi-max-frequency = &lt;<span class="number">50000000</span>&gt;;</span><br><span class="line">		partition@qspi-fsbl-uboot &#123;</span><br><span class="line">			label = <span class="string">&quot;qspi-fsbl-uboot&quot;</span>;</span><br><span class="line">			reg = &lt;<span class="number">0x0</span> <span class="number">0x100000</span>&gt;; <span class="comment">/* 1M */</span></span><br><span class="line">		&#125;;</span><br><span class="line">		partition@qspi-uboot-env &#123;</span><br><span class="line">			label = <span class="string">&quot;qspi-uboot-env&quot;</span>;</span><br><span class="line">			reg = &lt;<span class="number">0x100000</span> <span class="number">0x20000</span>&gt;; <span class="comment">/* 128k */</span></span><br><span class="line">		&#125;;</span><br><span class="line">		partition@qspi-nvmfs &#123;</span><br><span class="line">			label = <span class="string">&quot;qspi-nvmfs&quot;</span>;</span><br><span class="line">			reg = &lt;<span class="number">0x120000</span> <span class="number">0xE0000</span>&gt;; <span class="comment">/* 1M */</span></span><br><span class="line">		&#125;;</span><br><span class="line">		partition@qspi-linux &#123;</span><br><span class="line">			label = <span class="string">&quot;qspi-linux&quot;</span>;</span><br><span class="line">			reg = &lt;<span class="number">0x200000</span> <span class="number">0x1E00000</span>&gt;; <span class="comment">/* 30M */</span></span><br><span class="line">		&#125;;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">&amp;adc &#123;</span><br><span class="line">	xlnx,channels &#123;</span><br><span class="line">		<span class="meta">#address-cells = <span class="meta-string">&lt;1&gt;</span>;</span></span><br><span class="line">		<span class="meta">#size-cells = <span class="meta-string">&lt;0&gt;</span>;</span></span><br><span class="line">		channel@<span class="number">0</span> &#123;</span><br><span class="line">			reg = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">/ &#123;</span><br><span class="line">	fpga_axi: fpga-axi@<span class="number">0</span> &#123;</span><br><span class="line">		compatible = <span class="string">&quot;simple-bus&quot;</span>;</span><br><span class="line">		<span class="meta">#address-cells = <span class="meta-string">&lt;0x1&gt;</span>;</span></span><br><span class="line">		<span class="meta">#size-cells = <span class="meta-string">&lt;0x1&gt;</span>;</span></span><br><span class="line">		ranges;</span><br><span class="line"></span><br><span class="line">		axi_i2c0: i2c@<span class="number">41600000</span> &#123;</span><br><span class="line">			compatible = <span class="string">&quot;xlnx,axi-iic-1.02.a&quot;</span>, <span class="string">&quot;xlnx,xps-iic-2.00.a&quot;</span>;</span><br><span class="line">			reg = &lt;<span class="number">0x41600000</span> <span class="number">0x10000</span>&gt;;</span><br><span class="line">			interrupt-parent = &lt;&amp;intc&gt;;</span><br><span class="line">			interrupts = &lt;<span class="number">0</span> <span class="number">59</span> IRQ_TYPE_LEVEL_HIGH&gt;;</span><br><span class="line">			clocks = &lt;&amp;clkc <span class="number">15</span>&gt;;</span><br><span class="line">			clock-names = <span class="string">&quot;pclk&quot;</span>;</span><br><span class="line"></span><br><span class="line">			<span class="meta">#address-cells = <span class="meta-string">&lt;1&gt;</span>;</span></span><br><span class="line">			<span class="meta">#size-cells = <span class="meta-string">&lt;0&gt;</span>;</span></span><br><span class="line"></span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		rx_dma: dma@<span class="number">7</span>c400000 &#123;</span><br><span class="line">			compatible = <span class="string">&quot;adi,axi-dmac-1.00.a&quot;</span>;</span><br><span class="line">			reg = &lt;<span class="number">0x7c400000</span> <span class="number">0x10000</span>&gt;;</span><br><span class="line">			<span class="meta">#dma-cells = <span class="meta-string">&lt;1&gt;</span>;</span></span><br><span class="line">			interrupts = &lt;<span class="number">0</span> <span class="number">57</span> IRQ_TYPE_LEVEL_HIGH&gt;;</span><br><span class="line">			clocks = &lt;&amp;clkc <span class="number">16</span>&gt;;</span><br><span class="line"></span><br><span class="line">			adi,channels &#123;</span><br><span class="line">				<span class="meta">#size-cells = <span class="meta-string">&lt;0&gt;</span>;</span></span><br><span class="line">				<span class="meta">#address-cells = <span class="meta-string">&lt;1&gt;</span>;</span></span><br><span class="line"></span><br><span class="line">				dma-channel@<span class="number">0</span> &#123;</span><br><span class="line">					reg = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">					adi,source-bus-width = &lt;<span class="number">32</span>&gt;;</span><br><span class="line">					adi,source-bus-type = &lt;<span class="number">2</span>&gt;;</span><br><span class="line">					adi,destination-bus-width = &lt;<span class="number">64</span>&gt;;</span><br><span class="line">					adi,destination-bus-type = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">				&#125;;</span><br><span class="line">			&#125;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		tx_dma: dma@<span class="number">7</span>c420000 &#123;</span><br><span class="line">			compatible = <span class="string">&quot;adi,axi-dmac-1.00.a&quot;</span>;</span><br><span class="line">			reg = &lt;<span class="number">0x7c420000</span> <span class="number">0x10000</span>&gt;;</span><br><span class="line">			<span class="meta">#dma-cells = <span class="meta-string">&lt;1&gt;</span>;</span></span><br><span class="line">			interrupts = &lt;<span class="number">0</span> <span class="number">56</span> IRQ_TYPE_LEVEL_HIGH&gt;;</span><br><span class="line">			clocks = &lt;&amp;clkc <span class="number">16</span>&gt;;</span><br><span class="line"></span><br><span class="line">			adi,channels &#123;</span><br><span class="line">				<span class="meta">#size-cells = <span class="meta-string">&lt;0&gt;</span>;</span></span><br><span class="line">				<span class="meta">#address-cells = <span class="meta-string">&lt;1&gt;</span>;</span></span><br><span class="line"></span><br><span class="line">				dma-channel@<span class="number">0</span> &#123;</span><br><span class="line">					reg = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">					adi,source-bus-width = &lt;<span class="number">64</span>&gt;;</span><br><span class="line">					adi,source-bus-type = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">					adi,destination-bus-width = &lt;<span class="number">32</span>&gt;;</span><br><span class="line">					adi,destination-bus-type = &lt;<span class="number">2</span>&gt;;</span><br><span class="line">				&#125;;</span><br><span class="line">			&#125;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		cf_ad9364_adc_core_0: cf-ad9361-lpc@<span class="number">79020000</span> &#123;</span><br><span class="line">			compatible = <span class="string">&quot;adi,axi-ad9361-6.00.a&quot;</span>;</span><br><span class="line">			reg = &lt;<span class="number">0x79020000</span> <span class="number">0x6000</span>&gt;;</span><br><span class="line">			dmas = &lt;&amp;rx_dma <span class="number">0</span>&gt;;</span><br><span class="line">			dma-names = <span class="string">&quot;rx&quot;</span>;</span><br><span class="line">			spibus-connected = &lt;&amp;adc0_ad9364&gt;;</span><br><span class="line">			adi,axi-decimation-core-available;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		cf_ad9364_dac_core_0: cf-ad9361-dds-core-lpc@<span class="number">79024000</span> &#123;</span><br><span class="line">			compatible = <span class="string">&quot;adi,axi-ad9364-dds-6.00.a&quot;</span>;</span><br><span class="line">			reg = &lt;<span class="number">0x79024000</span> <span class="number">0x1000</span>&gt;;</span><br><span class="line">			clocks = &lt;&amp;adc0_ad9364 <span class="number">13</span>&gt;;</span><br><span class="line">			clock-names = <span class="string">&quot;sampl_clk&quot;</span>;</span><br><span class="line">			dmas = &lt;&amp;tx_dma <span class="number">0</span>&gt;;</span><br><span class="line">			dma-names = <span class="string">&quot;tx&quot;</span>;</span><br><span class="line">			adi,axi-interpolation-core-available;</span><br><span class="line">			adi,axi-dds-<span class="keyword">default</span>-scale = &lt;<span class="number">0</span>&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line"></span><br><span class="line">		mwipcore@<span class="number">43</span>c00000 &#123;</span><br><span class="line">			compatible = <span class="string">&quot;mathworks,mwipcore-axi4lite-v1.00&quot;</span>;</span><br><span class="line">			reg = &lt;<span class="number">0x43c00000</span> <span class="number">0xffff</span>&gt;;</span><br><span class="line">		&#125;;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br></pre></td></tr></table></figure></p>
+<h2 id="1-1-设备树节点与属性"><a href="#1-1-设备树节点与属性" class="headerlink" title="1.1 设备树节点与属性"></a>1.1 设备树节点与属性</h2><p>一般设备树的节点都有下面的表示方式：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">[label:]node-name[@unit-address] &#123;</span><br><span class="line">    [properties definitions]</span><br><span class="line">    [child nodes]</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure><br>“[]”中的内容表示可选的，可有也可以没有；节点名字前加上”label”则方便在 dts文件中被其他的节点引用，其中“node-name”是节点名字，为 ASCII 字符串，节点名字应该能够清晰的描述出节点的功能，比如“gem0”就表示这个节点是 以太网外设。“unit-address”一般表示设备的地址或寄存基地址，如果某个节点没有地址或者寄存器的话“unit-address”可以不要，比如“cpu@0”、“interrupt-controller@00a01000”。每个节点都有若干属性，属性又有相对应的值（值不是必须要有的），而一个节点当中又可以嵌套其它的节点，形成父子节点。<br>比如上面关于FPGA这边的设备树：<br>对于fpga-axi这个节点，其别名为fpga_axi,设备地址是0，在其内部有许多其他的节点，比如axi_i2c0节点，rx_dma, tx_dma, cf_ad9364_adc_core_0, cf_ad9364_dac_core_0等等。</p>
+<p>一个设备树节点当中，有一些属性是比较通用的,对于大多数节点都是可以使用的。</p>
+<h3 id="compatible-属性"><a href="#compatible-属性" class="headerlink" title="compatible 属性"></a>compatible 属性</h3><p>compatible 属性也叫做“兼容性”属性，compatible 属性的值可以是一个字符串，也可以是一个字符串列表；一般该字符串使用”&lt;制造商&gt;,&lt;型号&gt;”这样的形式进行命名，当然这不是必须要这样，这是要求大家按照这样的形式进行命名，目的是为了指定一个确切的设备，并且包括制造商的名字，以避免命名空间冲突，如下所示：<br><code>compatible = &quot;xlnx,xuartps&quot;, &quot;cdns,uart-r1p8&quot;;</code><br>xlnx 和 cdns 就表示制造商，而后面的 xuartps 和 uart-r1p8 就表示具体设备的型号。compatible 属性用于将设备和驱动绑定起来，例如该设备首先使用第一个兼容值（xlnx,xuartps）在 Linux 内核里面查找，看看能不能找到与之匹配的驱动文件，如果没有<br>找到的话就使用第二个兼容值（cdns,uart-r1p8）查找，直到找到或者查找完整个 Linux 内核也没有找到对应的驱动。<br>一般驱动程序文件都会有一个 OF 匹配表，此 OF 匹配表保存着一些 compatible 值，如果设备树中的节点的 compatible 属性值和 OF 匹配表中的任何一个值相等，那么就表示设备可以使用这个驱动。</p>
+<h3 id="model-属性"><a href="#model-属性" class="headerlink" title="model 属性"></a>model 属性</h3><p>model属性也是一个字符串描述信息，没有太大的作用就是描述一下设备的信息，内核在解析设备树的时候会把这个属性对应的字符串信息打印出来。</p>
+<h3 id="status属性"><a href="#status属性" class="headerlink" title="status属性"></a>status属性</h3><p>status属性和设备状态有关，device tree当中的status标识了设备的状态，可以使用status去启用或者禁用设备。</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>值</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>okay</td>
+<td>表明设备可操作，启动设备</td>
+</tr>
+<tr>
+<td>disable</td>
+<td>表明当前设备是不可操作，但在之后可以变为可操作的</td>
+</tr>
+<tr>
+<td>fail</td>
+<td>表明设备不可操作，检测到了一系列的错误</td>
+</tr>
+<tr>
+<td>fail-sss</td>
+<td>含义同上，后面的sss是错误内容</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="address-cells和-size-cells属性"><a href="#address-cells和-size-cells属性" class="headerlink" title="#address-cells和#size-cells属性"></a>#address-cells和#size-cells属性</h3><p>这两个属性的值都是无符号32位整形，#address-cells和#size-cells这两个属性可以用在任何拥有子节点的设备当中，用来描述子节点的地址信息。</p>
+<ul>
+<li>#address-cell用来描述子节点”reg”属性的地址表当中用来描述首地址的cell的数量。</li>
+<li>#size-cells用来描述子节点”reg”属性的地址表中用来描述地址长度的cell的数量。</li>
+</ul>
+<p>其中#address-cells和#size-cells 表明了子节点应该如何编写 reg 属性值，一般 reg 属性都是和地址有关的内容，和地址相关的信息有两种：起始地址和地址长度，有了这两个属性，子节点中的”reg”属性就可以描述一块连续的地址区域了；<br>reg 属性的格式一般为：<br><code>reg=&lt;address1 length1 address2 length2 ...&gt;</code><br>每个”address length”组合表示一个地址范围，其中address是起始地址，length是地址长度，#address-cells表示address字段占用的字长，#size-cells表示length字段占用的字长。</p>
+<h3 id="reg属性"><a href="#reg属性" class="headerlink" title="reg属性"></a>reg属性</h3><p>reg 属性的值一般是(address，length)对。reg 属性一般用于描述设备地址空间资源信息，一般都是描述某个外设的寄存器地址范围信息、flash 设备的分区信息等。比如:<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">usb_phy0: phy0 &#123;</span><br><span class="line">	compatible = <span class="string">&quot;ulpi-phy&quot;</span>;</span><br><span class="line">	<span class="meta">#phy-cells = <span class="meta-string">&lt;0&gt;</span>;</span></span><br><span class="line">	reg = &lt;<span class="number">0xe0002000</span> <span class="number">0x1000</span>&gt;;</span><br><span class="line">	view-port = &lt;<span class="number">0x0170</span>&gt;;</span><br><span class="line">	drv-vbus;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure><br><img src="/2022/10/13/2022.10/ZYNQ-Linux-5-%E8%AE%BE%E5%A4%87%E6%A0%91led/usb控制器.png" alt="usb控制器"><br>可以看到在USB的设备树节点当中，reg属性为 <code>reg = &lt;0xe0002000 0x1000&gt;;</code>,说明该设备树节点的起始地址为0xe0002000长度为0x1000,通过查阅UG585可以看到当前的起始地址确实是zynq usb控制器0的起始地址。</p>
+<h2 id="1-2节点引用"><a href="#1-2节点引用" class="headerlink" title="1.2节点引用"></a>1.2节点引用</h2><p>节点的名称格式为：<br><code>[label:]node-name[@unit-address]</code><br>通过引用label这个字段，可以方便地来访问节点。比如在zynq-7000.dtsi当中，对于默认的zynq gem以太网控制器有如下属性：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">gem0: ethernet@e000b000 &#123;</span><br><span class="line">	compatible = <span class="string">&quot;cdns,zynq-gem&quot;</span>, <span class="string">&quot;cdns,gem&quot;</span>;</span><br><span class="line">	reg = &lt;<span class="number">0xe000b000</span> <span class="number">0x1000</span>&gt;;</span><br><span class="line">	status = <span class="string">&quot;disabled&quot;</span>;</span><br><span class="line">	interrupts = &lt;<span class="number">0</span> <span class="number">22</span> <span class="number">4</span>&gt;;</span><br><span class="line">	clocks = &lt;&amp;clkc <span class="number">30</span>&gt;, &lt;&amp;clkc <span class="number">30</span>&gt;, &lt;&amp;clkc <span class="number">13</span>&gt;;</span><br><span class="line">	clock-names = <span class="string">&quot;pclk&quot;</span>, <span class="string">&quot;hclk&quot;</span>, <span class="string">&quot;tx_clk&quot;</span>;</span><br><span class="line">	<span class="meta">#address-cells = <span class="meta-string">&lt;1&gt;</span>;</span></span><br><span class="line">	<span class="meta">#size-cells = <span class="meta-string">&lt;0&gt;</span>;</span></span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">gem1: ethernet@e000c000 &#123;</span><br><span class="line">	compatible = <span class="string">&quot;cdns,zynq-gem&quot;</span>, <span class="string">&quot;cdns,gem&quot;</span>;</span><br><span class="line">	reg = &lt;<span class="number">0xe000c000</span> <span class="number">0x1000</span>&gt;;</span><br><span class="line">	status = <span class="string">&quot;disabled&quot;</span>;</span><br><span class="line">	interrupts = &lt;<span class="number">0</span> <span class="number">45</span> <span class="number">4</span>&gt;;</span><br><span class="line">	clocks = &lt;&amp;clkc <span class="number">31</span>&gt;, &lt;&amp;clkc <span class="number">31</span>&gt;, &lt;&amp;clkc <span class="number">14</span>&gt;;</span><br><span class="line">	clock-names = <span class="string">&quot;pclk&quot;</span>, <span class="string">&quot;hclk&quot;</span>, <span class="string">&quot;tx_clk&quot;</span>;</span><br><span class="line">	<span class="meta">#address-cells = <span class="meta-string">&lt;1&gt;</span>;</span></span><br><span class="line">	<span class="meta">#size-cells = <span class="meta-string">&lt;0&gt;</span>;</span></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure><br>在我们自己的设备树文件当中，将zynq-7000.dtsi这个文件包含到自己的设备树文件当中，如果想要修改其中的gem0这个设备树节点，我们可以通过引用的方式，而不必再将这个节点的所有内容都重复一边。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line">&amp;gem0 &#123;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">	</span><br><span class="line">	phy-handle = &lt;&amp;phy0&gt;;</span><br><span class="line">	phy-mode = <span class="string">&quot;rgmii-rxid&quot;</span>;</span><br><span class="line">	xlnx,has-mdio = &lt;<span class="number">0x1</span>&gt;;</span><br><span class="line">	gmii2rgmii-phy-handle = &lt;&amp;gmii_to_rgmii_0&gt;;</span><br><span class="line">	</span><br><span class="line">	phy0: phy@<span class="number">1</span> &#123;</span><br><span class="line">		compatible = <span class="string">&quot;ethernet-phy-id011c.c916&quot;</span>;</span><br><span class="line">		device_type = <span class="string">&quot;ethernet-phy&quot;</span>;</span><br><span class="line">		reg = &lt;<span class="number">0x1</span>&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line"></span><br><span class="line">	gmii_to_rgmii_0: gmiitorgmii@<span class="number">8</span> &#123;</span><br><span class="line">		compatible = <span class="string">&quot;xlnx,gmii-to-rgmii-1.0&quot;</span>;</span><br><span class="line">		reg = &lt;<span class="number">0x8</span>&gt;;</span><br><span class="line">		phy-handle = &lt;&amp;phy0&gt;;</span><br><span class="line">	&#125;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></p>
+<h2 id="1-3-特殊的子节点"><a href="#1-3-特殊的子节点" class="headerlink" title="1.3 特殊的子节点"></a>1.3 特殊的子节点</h2><p>在设备树当中有几个比较特殊的节点，aliases，chosen，以及memory，这三个节点是没有compatible属性的。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br></pre></td><td class="code"><pre><span class="line">memory &#123;</span><br><span class="line">	device_type = <span class="string">&quot;memory&quot;</span>;</span><br><span class="line">	reg = &lt;<span class="number">0x00000000</span> <span class="number">0x20000000</span>&gt;;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">aliases &#123;</span><br><span class="line">	ethernet0 = &amp;gem0;</span><br><span class="line">	serial0 = &amp;uart0;</span><br><span class="line">	spi0 = &amp;qspi;</span><br><span class="line">	mmc0 = &amp;sdhci0;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line">chosen &#123;</span><br><span class="line">	bootargs = <span class="string">&quot;earlycon&quot;</span>;</span><br><span class="line">	<span class="built_in">stdout</span>-path = <span class="string">&quot;serial0:115200n8&quot;</span>;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>因此 aliases 节点的主要功能就是定义别名，定义别名的目的就是为了方便访问节点。但是需要注意的是，这里说的方便访问节点并不是在设备<br>树中访问节点，例如前面说到的使用“&amp;label”的方式访问设备树中的节点，而是内核当中方便定位节点，例如在内核中通过 ethernet0 就可以定位到 gem0 节点（&amp;gem0 引用的节点），再例如内核通过 serial0 就可以找到 uart0 节点。</p>
+<p>chosen 节点一般会有两个属性，“bootargs”和“stdout-path”。</p>
+<p>memory 节点描述了系统内存的基地址以及系统内存大小，“reg = <0x0 0x20000000>”就表示系统内存的起始地址为 0x0，大小为 0x20000000，也就是 512MB，该节点一般只有这两个属性，device_type 属性的值固定为”memory”.</0x0></p>
+<h1 id="2-GPIO子系统"><a href="#2-GPIO子系统" class="headerlink" title="2. GPIO子系统"></a>2. GPIO子系统</h1><p>gpio 子系统是 linux 内核当中用于管理 GPIO 资源的一套系统，它提供了很多 GPIO 相关的 API 接口。驱动程序中使用 GPIO 之前需要向 gpio 子系统申请，申请成功之后才可以使用，例如设置 GPIO 的输入、输出方向，设置 GPIO 输出高或低电平、读取 GPIO 输入电平等等。<br>gpio 子系统的主要目的就是方便驱动开发者使用 gpio，驱动开发者在设备树中添加 gpio相关信息，然后就可以在驱动程序中使用 gpio 子系统提供的 API 函数来操作 GPIO，Linux 内核向驱动开发者屏蔽掉了 GPIO 的设置过程，极大的方便了驱动开发者使用 GPIO。</p>
+<h2 id="2-1-ZYNQ的GPIO子系统驱动"><a href="#2-1-ZYNQ的GPIO子系统驱动" class="headerlink" title="2.1 ZYNQ的GPIO子系统驱动"></a>2.1 ZYNQ的GPIO子系统驱动</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">leds &#123;</span><br><span class="line">	compatible = <span class="string">&quot;microphase,gpio-led&quot;</span>;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">	led-gpio = &lt;&amp;gpio0 <span class="number">15</span> <span class="number">1</span>&gt;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<p>在leds这个设备树节点当中，定义了一个led-gpio的属性，该属性用于描述led设备由哪个GPIO来控制，属性值一共有三个。<br>“&amp;gpio0”表示 led 引脚所使用的 IO 属于 gpio0，“15”表示 gpio0 的第 15 号 IO，通过这两个值 led 驱动程序就知道 led 引脚使用了 GPIO0_IO015 这 GPIO。“GPIO_ACTIVE_HIGH”表示高电平有效，如果改为“GPIO_ACTIVE_LOW”就表示高电平有效（GPIO_ACTIVE_HIGH 和 GPIO_ACTIVE_LOW 其实是宏定义，GPIO_ACTIVE_HIGH 等于 0，GPIO_ACTIVE_LOW 等于 1）。<br>在zynq-7000.dtsi当中，可以找到gpio0控制器的设备树节点：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">gpio0: gpio@e000a000 &#123;</span><br><span class="line">	compatible = <span class="string">&quot;xlnx,zynq-gpio-1.0&quot;</span>;</span><br><span class="line">	<span class="meta">#gpio-cells = <span class="meta-string">&lt;2&gt;</span>;</span></span><br><span class="line">	clocks = &lt;&amp;clkc <span class="number">42</span>&gt;;</span><br><span class="line">	gpio-controller;</span><br><span class="line">	interrupt-controller;</span><br><span class="line">	<span class="meta">#interrupt-cells = <span class="meta-string">&lt;2&gt;</span>;</span></span><br><span class="line">	interrupt-parent = &lt;&amp;intc&gt;;</span><br><span class="line">	interrupts = &lt;<span class="number">0</span> <span class="number">20</span> <span class="number">4</span>&gt;;</span><br><span class="line">	reg = &lt;<span class="number">0xe000a000</span> <span class="number">0x1000</span>&gt;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></p>
+<p>“#gpio-cells”属性和“#address-cells”类似，在 gpio0 节点中#gpio-cells 的值等于 2，表示一共有两个 cell，大家可以这样理解，使用 gpio0 的时候，需要传递 2 个参数过去，第一个参数为 GPIO 编号，比如“&amp;gpio0 15”就表示 GPIO0_IO015。第二个参数表示 GPIO 极性，如果为 0(GPIO_ACTIVE_HIGH)的话表示高电平有效，如果为1(GPIO_ACTIVE_LOW)的话表示低电平有效。</p>
+<h2 id="2-2-GPIO子系统API函数"><a href="#2-2-GPIO子系统API函数" class="headerlink" title="2.2 GPIO子系统API函数"></a>2.2 GPIO子系统API函数</h2><ul>
+<li><p>gpio_request()<br>gpio_request 函数用于申请一个 GPIO 管脚，在使用一个 GPIO 之前一定要使用gpio_request 进行申请</p>
+  <figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">gpio_request</span><span class="params">(<span class="keyword">unsigned</span> gpio, <span class="keyword">const</span> <span class="keyword">char</span> *label)</span></span></span><br></pre></td></tr></table></figure>
+<p>  gpio：要申请的 gpio 标号，使用 of_get_named_gpio 函数从设备树获取指定 GPIO 属性<br>  信息，此函数会返回这个 GPIO 的标号。<br>  label：给 gpio 设置个名字。<br>  返回值：0，申请成功；其他值，申请失败。</p>
+</li>
+<li><p>gpio_free<br>如果不使用某个 GPIO 了，那么就可以调用 gpio_free 函数进行释放。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">gpio_free</span><span class="params">(<span class="keyword">unsigned</span> gpio)</span></span></span><br></pre></td></tr></table></figure>
+<p>参数：</p>
+<pre><code>gpio： 要释放的gpio
+</code></pre></li>
+<li><p>gpio_direction_input<br>用于设置某个GPIO为输入，函数原型如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">gpio_direction_input</span><span class="params">(<span class="keyword">unsigned</span> gpio)</span></span></span><br></pre></td></tr></table></figure>
+<p>函数参数和返回值含义如下：<br>gpio:要设置为输入的GPIO标号<br>返回值：0设置成功；负数，设置失败。</p>
+</li>
+<li><p>gpio_direction_output<br>用于设置某个GPIO为输入，函数原型如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">gpio_direction_input</span><span class="params">(<span class="keyword">unsigned</span> gpio, <span class="keyword">int</span> value)</span></span></span><br></pre></td></tr></table></figure>
+<p>函数参数和返回值含义如下：<br>gpio:要设置为输出的GPIO标号<br>value:GPIO输出默认值<br>返回值：0设置成功；负数，设置失败。</p>
+</li>
+<li><p>gpio_get_value<br>用于获取某个GPIO的值，定义如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> gpio_get_value __gpio_get_value</span></span><br><span class="line"><span class="keyword">int</span> __gpio_get_value(<span class="keyword">unsigned</span> gpio)</span><br></pre></td></tr></table></figure>
+<p>函数参数和返回值含义如下：<br>gpio:要获取的GPIO标号<br>返回值：非负数，得到的GPIO值负数，获取失败</p>
+</li>
+</ul>
+<ul>
+<li>gpio_set_value<br>用来设置某个GPIO的值，定义如下：<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> gpio_set_value __gpio_get_value</span></span><br><span class="line"><span class="keyword">void</span> __gpio_set_value(<span class="keyword">unsigned</span> gpio, <span class="keyword">int</span> value)</span><br></pre></td></tr></table></figure>
+函数参数和返回值含义如下：<br>gpio:要设置的GPIO标号<br>value:设置的输出的值</li>
+</ul>
+<h2 id="2-3-与GPIO相关的OF函数"><a href="#2-3-与GPIO相关的OF函数" class="headerlink" title="2.3 与GPIO相关的OF函数"></a>2.3 与GPIO相关的OF函数</h2><ul>
+<li><p>of_gpio_named_count<br>of_gpio_named_count 函数用于获取设备树某个属性里面定义了几个 GPIO 信息，要注意的是空的 GPIO 信息也会被统计到，</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">of_gpio_named_count</span><span class="params">(struct device_node *np, <span class="keyword">const</span> <span class="keyword">char</span> *propname)</span></span></span><br></pre></td></tr></table></figure>
+<p>函数参数和返回值含义如下：<br>np：设备节点。<br>propname：要统计的 GPIO 属性。<br>返回值：正值，统计到的 GPIO 数量；负值，失败。</p>
+</li>
+<li><p>of_get_named_gpio<br>此函数获取 GPIO 编号，gpio 子系统为了方便管理系统中的 GPIO 资源，每一个 GPIO 管脚都有一个对应的编号，Linux 内核中关于 GPIO 的 API 函数都要使用 GPIO 编号，此函数会将设备树中类似&lt;&amp;gpio0 7 GPIO_ACTIVE_LOW&gt;的属性信息转换为对应的 GPIO 编号，此函数在驱动中使用很频繁.</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">of_get_named_gpio</span><span class="params">(struct device_node *np, <span class="keyword">const</span> <span class="keyword">char</span> *propname, <span class="keyword">int</span> index)</span></span></span><br></pre></td></tr></table></figure>
+<p>函数参数和返回值含义如下：<br>np：设备节点。<br>propname：包含要获取 GPIO 信息的属性名。<br>index：GPIO 索引，因为一个属性里面可能包含多个 GPIO，此参数指定要获取哪个 GPIO的编号，如果只有一个 GPIO 信息的话此参数为 0。<br>返回值：正值，获取到的 GPIO 编号；负值，失败。</p>
+</li>
+</ul>
+<h2 id="GPIO-LED-驱动"><a href="#GPIO-LED-驱动" class="headerlink" title="GPIO LED 驱动"></a>GPIO LED 驱动</h2><p>在有了上面的设备树的之后和GPIO子系统的知识之后，就可以来写一个自己的基于GPIO子系统的LED灯驱动了。<br>首先在设备树当中，需要定义一个led节点：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">leds &#123;</span><br><span class="line">	compatible = <span class="string">&quot;microphase,gpio-led&quot;</span>;</span><br><span class="line">	status = <span class="string">&quot;okay&quot;</span>;</span><br><span class="line">	led-gpio = &lt;&amp;gpio0 <span class="number">15</span> <span class="number">1</span>&gt;;</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure></p>
+<p>然后需要实现一个驱动文件：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/types.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/kernel.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/delay.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/ide.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/init.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/module.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/errno.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/gpio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;asm/mach/map.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;asm/uaccess.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;asm/io.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/cdev.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/of.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/of_address.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/of_gpio.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&quot;chrdev_gpio.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> DRIVER_NAME <span class="meta-string">&quot;my_chrdev_driver&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> BUFF_SIZE 	128</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">/* Meta Information */</span></span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL&quot;</span>);</span><br><span class="line">MODULE_AUTHOR(<span class="string">&quot;wcc&quot;</span>);</span><br><span class="line">MODULE_DESCRIPTION(<span class="string">&quot;A char device LKM&quot;</span>);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">chrdev_local</span>&#123;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">cdev</span> <span class="title">cdev</span>;</span></span><br><span class="line">	<span class="keyword">dev_t</span> dev_no;</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="keyword">class</span> *<span class="title">my_class</span> ;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">device</span> * <span class="title">my_device</span>;</span></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">device_node</span> *<span class="title">nd</span>;</span></span><br><span class="line">	<span class="keyword">int</span> gpio_num;</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">chrdev_local</span> <span class="title">my_chrdev_local</span>;</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">char</span> vbuf[BUFF_SIZE];</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">ssize_t</span> <span class="title">my_chrdev_read</span><span class="params">(struct file * inode, <span class="keyword">char</span> __user * buf, <span class="keyword">size_t</span> count, <span class="keyword">loff_t</span> * ppos)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	printk(<span class="string">&quot;my_chrdev: read ... \n&quot;</span>);</span><br><span class="line">	<span class="keyword">unsigned</span> <span class="keyword">long</span> p = *ppos;</span><br><span class="line">    <span class="keyword">int</span> ret;</span><br><span class="line">    <span class="keyword">int</span> tmp = count ;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> i = <span class="number">0</span>;</span><br><span class="line">    i++;</span><br><span class="line">    <span class="keyword">if</span>(p &gt;= BUFF_SIZE)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">if</span>(tmp &gt; BUFF_SIZE - p)</span><br><span class="line">        tmp = BUFF_SIZE - p;</span><br><span class="line">    ret = copy_to_user(buf, vbuf+p, tmp);</span><br><span class="line">    *ppos +=tmp;</span><br><span class="line">    <span class="keyword">return</span> tmp;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">ssize_t</span> <span class="title">my_chrdev_write</span><span class="params">(struct file * inode, <span class="keyword">const</span> <span class="keyword">char</span> __user * buf, <span class="keyword">size_t</span> count, <span class="keyword">loff_t</span> * ppos)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	printk(<span class="string">&quot;my_chrdev: write ...\n&quot;</span>);</span><br><span class="line">	<span class="keyword">unsigned</span> <span class="keyword">long</span> p = *ppos;</span><br><span class="line">    <span class="keyword">int</span> ret;</span><br><span class="line">    <span class="keyword">int</span> tmp = count ;</span><br><span class="line">    <span class="keyword">if</span>(p &gt; BUFF_SIZE)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">if</span>(tmp &gt; BUFF_SIZE - p)</span><br><span class="line">        tmp = BUFF_SIZE - p;</span><br><span class="line">    ret = copy_from_user(vbuf, buf, tmp);</span><br><span class="line">    *ppos += tmp;</span><br><span class="line">    <span class="keyword">return</span> tmp;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">my_chrdev_open</span> <span class="params">(struct inode *inode, struct file *filp)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">int</span> ret;</span><br><span class="line">	printk(<span class="string">&quot;my_chrdev: open ... \n&quot;</span>);</span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">chrdev_local</span> * <span class="title">lp</span>;</span></span><br><span class="line">	<span class="comment">/* get the char device */</span></span><br><span class="line">	lp =  container_of(inode-&gt;i_cdev, struct chrdev_local, cdev);</span><br><span class="line">	filp-&gt;private_data = lp;</span><br><span class="line">	</span><br><span class="line">	<span class="comment">/* get the gpio */</span></span><br><span class="line">	lp-&gt;gpio_num = of_get_named_gpio(lp-&gt;nd, <span class="string">&quot;led-gpio&quot;</span>, <span class="number">0</span>);</span><br><span class="line">	<span class="keyword">if</span>(!gpio_is_valid(lp-&gt;gpio_num)) &#123;</span><br><span class="line">		printk(KERN_ERR <span class="string">&quot;my_chrdev: Failed to get led-gpio\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> -EINVAL;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* gpio request */</span></span><br><span class="line">	ret = gpio_request(lp-&gt;gpio_num, <span class="string">&quot;GPIO_LED0&quot;</span>);</span><br><span class="line">	<span class="keyword">if</span> (ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">		printk(<span class="string">&quot;my_chrdev: Failed to request gpio\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> ret;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* set the gpio direction */</span></span><br><span class="line">	gpio_direction_output(lp-&gt;gpio_num, <span class="number">0</span>);</span><br><span class="line">	</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">my_chrdev_close</span> <span class="params">(struct inode *inode, struct file *filp)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	printk(<span class="string">&quot;my_chrdev: close ... \n&quot;</span>);</span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">chrdev_local</span> * <span class="title">lp</span>;</span></span><br><span class="line">	lp = filp-&gt;private_data;</span><br><span class="line"></span><br><span class="line">	gpio_free(lp-&gt;gpio_num);</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">long</span> <span class="title">my_chrdev_ioctl</span> <span class="params">(struct file * filp, <span class="keyword">unsigned</span> <span class="keyword">int</span> cmd, <span class="keyword">unsigned</span> <span class="keyword">long</span> arg)</span></span>&#123;</span><br><span class="line"></span><br><span class="line">	<span class="class"><span class="keyword">struct</span> <span class="title">chrdev_local</span> * <span class="title">lp</span>;</span></span><br><span class="line">	lp = filp-&gt;private_data;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">switch</span> (cmd) &#123;</span><br><span class="line">		<span class="keyword">case</span> IOCTL_SET_0:</span><br><span class="line">			gpio_set_value(lp-&gt;gpio_num, <span class="number">0</span>);</span><br><span class="line">			printk(<span class="string">&quot;my_chrdev: ioctl set gpio to 0 \n&quot;</span>);</span><br><span class="line">			<span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">case</span> IOCTL_SET_1:</span><br><span class="line">			gpio_set_value(lp-&gt;gpio_num,<span class="number">1</span>);</span><br><span class="line">			printk(<span class="string">&quot;my_chrdev: ioctl set gpio to 1\n&quot;</span>);</span><br><span class="line">			<span class="keyword">break</span>;</span><br><span class="line"></span><br><span class="line">		<span class="keyword">default</span>: <span class="keyword">break</span>;</span><br><span class="line">	&#125;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">file_operations</span> <span class="title">my_chrdev_ops</span> =</span> &#123;</span><br><span class="line">    .owner = THIS_MODULE,</span><br><span class="line">    .open = my_chrdev_open,</span><br><span class="line">    .release = my_chrdev_close,</span><br><span class="line">    .write = my_chrdev_write,</span><br><span class="line">    .read = my_chrdev_read,</span><br><span class="line">	.unlocked_ioctl = my_chrdev_ioctl</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief This function is called, when the module is loaded into the kernel</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> __init <span class="title">my_init</span><span class="params">(<span class="keyword">void</span>)</span> </span>&#123;</span><br><span class="line">	<span class="keyword">const</span> <span class="keyword">char</span> *str;</span><br><span class="line">	<span class="keyword">int</span> ret;</span><br><span class="line">	printk(<span class="string">&quot;my_chrdev: Hello, Kernel!\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* get device node from dts */</span></span><br><span class="line">	my_chrdev_local.nd = of_find_node_by_path(<span class="string">&quot;/leds&quot;</span>);</span><br><span class="line">	<span class="keyword">if</span>(<span class="literal">NULL</span> == my_chrdev_local.nd) &#123;</span><br><span class="line">		printk(<span class="string">&quot;leds node can not found!\r\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> -EINVAL;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* get device node status */</span></span><br><span class="line">	ret = of_property_read_string(my_chrdev_local.nd, <span class="string">&quot;status&quot;</span>, &amp;str);</span><br><span class="line">	<span class="keyword">if</span>(ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">		printk(<span class="string">&quot;my_chrdev: dts does not have status property\n&quot;</span>);</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* compatible driver */</span></span><br><span class="line">	ret = of_property_read_string(my_chrdev_local.nd, <span class="string">&quot;compatible&quot;</span>, &amp;str);</span><br><span class="line">	<span class="keyword">if</span> (ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">		printk(<span class="string">&quot;my_chrdev: the device node don&#x27;t have a compatible string\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> -EINVAL;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span> (<span class="built_in">strcmp</span>(str, <span class="string">&quot;microphase,gpio-led&quot;</span>)) &#123;</span><br><span class="line">		printk(<span class="string">&quot;my_chrdev: current driver don&#x27;t support the device node\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> -EINVAL;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	printk(<span class="string">&quot;my_chrdev: gpio led driver match!!!\n&quot;</span>);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* alloc char device region */</span></span><br><span class="line">	alloc_chrdev_region(&amp;my_chrdev_local.dev_no, <span class="number">0</span>, <span class="number">1</span>, DRIVER_NAME);</span><br><span class="line">	<span class="keyword">if</span> (ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">		printk(<span class="string">&quot;my_chrdev: alloc chrdev region failed \n&quot;</span>);</span><br><span class="line">		<span class="keyword">goto</span> alloc_err;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* init char device */</span></span><br><span class="line">	cdev_init(&amp;my_chrdev_local.cdev, &amp;my_chrdev_ops);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* add chrdev to kernel */</span></span><br><span class="line">	ret = cdev_add(&amp;my_chrdev_local.cdev, my_chrdev_local.dev_no, <span class="number">1</span>);</span><br><span class="line">	<span class="keyword">if</span> (ret &lt; <span class="number">0</span>) &#123;</span><br><span class="line">		printk(<span class="string">&quot;my_chrdev: add error\n&quot;</span>);</span><br><span class="line">		<span class="keyword">goto</span> add_err;</span><br><span class="line">	&#125;</span><br><span class="line">	</span><br><span class="line">	<span class="comment">/* create a class for auto create */</span></span><br><span class="line">	my_chrdev_local.my_class = class_create(THIS_MODULE, DRIVER_NAME);</span><br><span class="line">	<span class="keyword">if</span> (IS_ERR(my_chrdev_local.my_class)) &#123;</span><br><span class="line">		printk(<span class="string">&quot;my_chrdev: create class erorr ...\n&quot;</span>);</span><br><span class="line">		ret = PTR_ERR(my_chrdev_local.my_class);</span><br><span class="line">		<span class="keyword">goto</span> class_err;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* create device for auto create */</span></span><br><span class="line">	my_chrdev_local.my_device = device_create(my_chrdev_local.my_class, <span class="literal">NULL</span>,</span><br><span class="line">											 my_chrdev_local.dev_no, <span class="literal">NULL</span>, DRIVER_NAME);</span><br><span class="line">	<span class="keyword">if</span> (IS_ERR(my_chrdev_local.my_device)) &#123;</span><br><span class="line">		printk(<span class="string">&quot;my_chrdev: create device error... \n&quot;</span>);</span><br><span class="line">		ret = PTR_ERR(my_chrdev_local.my_device);</span><br><span class="line">		<span class="keyword">goto</span> device_err;</span><br><span class="line">	&#125;</span><br><span class="line">	printk(<span class="string">&quot;my_chrdev: init driver success \n&quot;</span>);</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">device_err: </span><br><span class="line">	class_destroy(my_chrdev_local.my_class);</span><br><span class="line"></span><br><span class="line">class_err:</span><br><span class="line">	cdev_del(&amp;my_chrdev_local.cdev);</span><br><span class="line"></span><br><span class="line">add_err:</span><br><span class="line">	unregister_chrdev_region(my_chrdev_local.dev_no, <span class="number">1</span>);</span><br><span class="line"></span><br><span class="line">alloc_err:</span><br><span class="line">	<span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * @brief This function is called, when the module is removed from the kernel</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> __exit <span class="title">my_exit</span><span class="params">(<span class="keyword">void</span>)</span> </span>&#123;</span><br><span class="line">	cdev_del(&amp;my_chrdev_local.cdev);</span><br><span class="line">	unregister_chrdev_region(my_chrdev_local.dev_no, <span class="number">1</span>);</span><br><span class="line">	device_destroy(my_chrdev_local.my_class, my_chrdev_local.dev_no);</span><br><span class="line">	class_destroy(my_chrdev_local.my_class);</span><br><span class="line">	printk(<span class="string">&quot;my_chrdev: Goodbye, Kernel\n&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">module_init(my_init);</span><br><span class="line">module_exit(my_exit);</span><br><span class="line"></span><br></pre></td></tr></table></figure><br>简单的测试程序</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/ioctl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&quot;chrdev_gpio.h&quot;</span></span></span><br><span class="line"></span><br><span class="line"><span class="keyword">char</span> *wbuf = <span class="string">&quot;Hello World\n&quot;</span>;</span><br><span class="line"><span class="keyword">char</span> rbuf[<span class="number">128</span>];</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;EmbedCharDev test\n&quot;</span>);</span><br><span class="line">    <span class="comment">//打开文件</span></span><br><span class="line">    <span class="keyword">int</span> fd = open(<span class="string">&quot;/dev/my_chrdev_driver&quot;</span>, O_RDWR);</span><br><span class="line">    <span class="comment">//写入数据</span></span><br><span class="line">    write(fd, wbuf, <span class="built_in">strlen</span>(wbuf));</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> (<span class="keyword">int</span> i =<span class="number">0</span>; i &lt;<span class="number">60</span>; i++) &#123;</span><br><span class="line">        <span class="comment">/* ioctl write */</span></span><br><span class="line">        ioctl(fd, IOCTL_SET_0, <span class="number">1</span>);</span><br><span class="line">        sleep(<span class="number">1</span>);</span><br><span class="line">        <span class="comment">/* ioctl read */</span></span><br><span class="line">        ioctl(fd, IOCTL_SET_1, <span class="number">1</span>);</span><br><span class="line">        sleep(<span class="number">1</span>);</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//写入完毕，关闭文件</span></span><br><span class="line">    close(fd);</span><br><span class="line">    <span class="comment">//打开文件</span></span><br><span class="line">     fd = open(<span class="string">&quot;/dev/my_chrdev_driver&quot;</span>, O_RDWR);</span><br><span class="line">    <span class="comment">//读取文件内容</span></span><br><span class="line">    read(fd, rbuf, <span class="number">128</span>);</span><br><span class="line">    <span class="comment">//打印读取的内容</span></span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;The content : %s\n&quot;</span>, rbuf);</span><br><span class="line">    <span class="comment">//读取完毕，关闭文件</span></span><br><span class="line">    close(fd);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p><img src="/2022/10/13/2022.10/ZYNQ-Linux-5-%E8%AE%BE%E5%A4%87%E6%A0%91led/gpio-led实验结果.png" alt="gpio-led实验结果"></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+              <a href="/tags/ZYNQ/" rel="tag"># ZYNQ</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/08/27/2022.8/axi-dma%E9%A9%B1%E5%8A%A8-register-mode/" rel="prev" title="axi-dma驱动(register mode)">
+      <i class="fa fa-chevron-left"></i> axi-dma驱动(register mode)
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/02/07/2022.3/DMA%E4%BC%A0%E8%BE%93%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A8%A1%E5%9E%8B/" rel="next" title="DMA传输的基本模型">
+      DMA传输的基本模型 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E8%AE%BE%E5%A4%87%E6%A0%91%E5%9F%BA%E6%9C%AC%E8%AF%AD%E6%B3%95"><span class="nav-number">1.</span> <span class="nav-text">1. 设备树基本语法</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-1-%E8%AE%BE%E5%A4%87%E6%A0%91%E8%8A%82%E7%82%B9%E4%B8%8E%E5%B1%9E%E6%80%A7"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 设备树节点与属性</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#compatible-%E5%B1%9E%E6%80%A7"><span class="nav-number">1.1.1.</span> <span class="nav-text">compatible 属性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#model-%E5%B1%9E%E6%80%A7"><span class="nav-number">1.1.2.</span> <span class="nav-text">model 属性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#status%E5%B1%9E%E6%80%A7"><span class="nav-number">1.1.3.</span> <span class="nav-text">status属性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#address-cells%E5%92%8C-size-cells%E5%B1%9E%E6%80%A7"><span class="nav-number">1.1.4.</span> <span class="nav-text">#address-cells和#size-cells属性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#reg%E5%B1%9E%E6%80%A7"><span class="nav-number">1.1.5.</span> <span class="nav-text">reg属性</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-2%E8%8A%82%E7%82%B9%E5%BC%95%E7%94%A8"><span class="nav-number">1.2.</span> <span class="nav-text">1.2节点引用</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#1-3-%E7%89%B9%E6%AE%8A%E7%9A%84%E5%AD%90%E8%8A%82%E7%82%B9"><span class="nav-number">1.3.</span> <span class="nav-text">1.3 特殊的子节点</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-GPIO%E5%AD%90%E7%B3%BB%E7%BB%9F"><span class="nav-number">2.</span> <span class="nav-text">2. GPIO子系统</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1-ZYNQ%E7%9A%84GPIO%E5%AD%90%E7%B3%BB%E7%BB%9F%E9%A9%B1%E5%8A%A8"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 ZYNQ的GPIO子系统驱动</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2-GPIO%E5%AD%90%E7%B3%BB%E7%BB%9FAPI%E5%87%BD%E6%95%B0"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 GPIO子系统API函数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-3-%E4%B8%8EGPIO%E7%9B%B8%E5%85%B3%E7%9A%84OF%E5%87%BD%E6%95%B0"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 与GPIO相关的OF函数</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#GPIO-LED-%E9%A9%B1%E5%8A%A8"><span class="nav-number">2.4.</span> <span class="nav-text">GPIO LED 驱动</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

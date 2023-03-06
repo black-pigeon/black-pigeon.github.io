@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. 前言最近学习了一点linux驱动的开发，尤其是涉及到和FPGA资源相关的驱动的开发，其实主要是DMA的，有了这个基础，对于了解其他的知识是很有帮助的。之前可能不回去看的内核的源码也可以尝试去看一看了。 在这里不得不说默罕默德的视频和对应的源码对我来说还是很有帮助的，所以这几千块还是花得挺值的。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="usrp_e320 FPGA整体结构分析">
+<meta property="og:url" content="https://black-pigeon.github.io/2022/08/13/2022.8/usrp-e320-FPGA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="1. 前言最近学习了一点linux驱动的开发，尤其是涉及到和FPGA资源相关的驱动的开发，其实主要是DMA的，有了这个基础，对于了解其他的知识是很有帮助的。之前可能不回去看的内核的源码也可以尝试去看一看了。 在这里不得不说默罕默德的视频和对应的源码对我来说还是很有帮助的，所以这几千块还是花得挺值的。">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/08/13/2022.8/usrp-e320-FPGA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/struct.svg">
+<meta property="article:published_time" content="2022-08-13T05:10:44.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.817Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="SDR">
+<meta property="article:tag" content="usrp">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2022/08/13/2022.8/usrp-e320-FPGA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/struct.svg">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2022/08/13/2022.8/usrp-e320-FPGA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>usrp_e320 FPGA整体结构分析 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/08/13/2022.8/usrp-e320-FPGA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          usrp_e320 FPGA整体结构分析
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-08-13 13:10:44" itemprop="dateCreated datePublished" datetime="2022-08-13T13:10:44+08:00">2022-08-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/usrp/" itemprop="url" rel="index"><span itemprop="name">usrp</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2022/08/13/2022.8/usrp-e320-FPGA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/" class="post-meta-item leancloud_visitors" data-flag-title="usrp_e320 FPGA整体结构分析" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2022/08/13/2022.8/usrp-e320-FPGA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2022/08/13/2022.8/usrp-e320-FPGA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>最近学习了一点linux驱动的开发，尤其是涉及到和FPGA资源相关的驱动的开发，其实主要是DMA的，有了这个基础，对于了解其他的知识是很有帮助的。之前可能不回去看的内核的源码也可以尝试去看一看了。 在这里不得不说默罕默德的视频和对应的源码对我来说还是很有帮助的，所以这几千块还是花得挺值的。</p>
+<span id="more"></span>
+<h1 id="2-USRP-E320-整体结构"><a href="#2-USRP-E320-整体结构" class="headerlink" title="2. USRP E320 整体结构"></a>2. USRP E320 整体结构</h1><p>在之前确实是由于水平不行，导致不知道从什么地方开始看USRP E320的工程，以前是抓住一个小地方就开始闷着头看，结果也弄不出个所以然还打击自己的信息。经过一段时间的其他知识地掌握，现在来看USRP E320的工程也似乎有点眉目了，这也许就是厚积薄发吧。</p>
+<p>在这篇博客当中会从整体的角度来把握一下USRP E320这个软件无线电设备的FPGA架构。</p>
+<p><img src="/2022/08/13/2022.8/usrp-e320-FPGA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/struct.svg" alt="struct"></p>
+<p>USRP的FPGA工程从整体上来看其实也还是比较简单的。在经过了昨天一下午地对系统结构层次的梳理之后，绘制出了上面的结构图。</p>
+<p>红色的连线表示的是AXI-LITE总线：通过这些总线ZYNQ PS能够访问到PL端的寄存器，实现ZYNQ的linux系统对PL端的设备的配置和状态查看。</p>
+<p>紫色的连线表示的是AXI-FULL总线： 通过这些总线，FPGA部分的数据能够和完成和内存的交互。</p>
+<p>绿色的连线表示的是AXI-STREAM总线：通过这些总线，FPGA内部的各个子模块可以以流的方式进行传输。在Ettus的SDR设备上，这些绿色的总线是非常非常重要的，数据经过以太网进入到FPGA之后，都是以AXIS的形式在FPGA当中进行传输，如果数据需要和内存交互才会通过AXI-FULL接口进行传输。</p>
+<p>下面可以从整体结构上来分析模块的主要功能：</p>
+<ul>
+<li>ZYNQ PS <ul>
+<li>系统调度管理</li>
+</ul>
+</li>
+<li>SFP_Wrapper<ul>
+<li>PL端完成以太网PHY和MAC的功能，同时会对特定端口的UDP数据进行卸载，让卸载的数据通过FPGA处理，未卸载的数据会交给ZYNQ PS来处理。这其实就是我最近一直也想做的TOE/UOE。</li>
+<li>卸载的数据会通过e2v或v2e着两个AXIS接口，将数据交给E320_CORE 来进行处理(e:ethernet, v: vita)</li>
+<li>未经过卸载的数据会通过e2c/c2e这两个AXIS接口给到axi_eth_dma这个DMA模块，DMA模块最终会把这些数据给到PS的DDR当中这样操作系统就能够完成对这些以太网帧的处理。</li>
+</ul>
+</li>
+<li>E320_CORE <ul>
+<li>这和是USRP E320的工作的核心，负责管理USRP的SDR对AD9361的数据接收</li>
+<li>控制USRP E320的同步，外部的时钟等工作</li>
+<li>进行FPGA和以太网之间的数据传输，对于卸载到FPGA的UDP数据，需要经过这个模块来进行处理，如果用户有自己的基带算法想要实现也可以在这个模块当中来实现。该模块和卸载下来的以太网数据的交互模块一共有4个AXIS接口，其中e2v/v2e接口是和PL端的以太网进行数据的交互。s_dma/m_dma是和PS侧的以太网DMA进行交互的。</li>
+</ul>
+</li>
+<li>axi_eth_dma<ul>
+<li>这个模块负责将SFP_Wrapper模块没有卸载的数据传递到ZYNQ PS上的操作系统让操作系统来进行处理。因为USRP E320主要是基于UDP传输CHDR包来实现其IQ数据传输的，对于非CHDR包，FPGA不会处理，因此需要将这些报文让cpu来进行处理，常见的有arp，icmp，tcp等等。。。通过这个DMA模块，就能够显示PL和内存之间的数据交互，在内核驱动上写好驱动之后，用户层就能够拿到这些数据了。</li>
+</ul>
+</li>
+<li>axi_dma和eth_internal<ul>
+<li>这两个模块是组合起来工作的，由于USRP E320 在PS侧有一个网口，当需要使用PS侧的网口来实现SDR功能的时候，需要将内存当中的IQ数据交给PL端进行处理，于是就有这个axi_dma负责和内存进行数据的交互。</li>
+<li>但不是所有的数据都需要交给E320_CORE来进行处理的，因此eth_internal也会卸载对应的CHDR的报文，其余的报文还是由操作系统自己处理。</li>
+</ul>
+</li>
+</ul>
+<p>经过上面的这一系列的处理，感觉整个系统的工作过程就清晰了很多了。当然，系统中还有很重要的部分我没有绘制出来，比如：和AD9361进行IQ数据传输的LVDS接口，E320 GPSDO这些模块，这些模块其实都是和E320_CORE联系在一起的，在之后对各个模块进行分析的时候，可以再深入地去研究这些内容，在这里能够理清系统的以太网数据的传输过程就很不错了。</p>
+<h2 id="2-USRP-E320-后续研究内容"><a href="#2-USRP-E320-后续研究内容" class="headerlink" title="2. USRP E320 后续研究内容"></a>2. USRP E320 后续研究内容</h2><p>其实对整个系统有了一定的了解之后，接下来就需要去弄清楚每个部分具体实现了什么功能。这不仅仅只是包括FPGA部分，对于软件部分同样需要去了解。这也是我想要做和成为的，需要push自己才能掌握到更多的东西。</p>
+<p>接下来我主要会从两个方面来了解USRP E320的整个工程：</p>
+<ul>
+<li>FPGA部分：<ul>
+<li>以太网MAC，ettus实现了这个以太网的MAC功能，并且支持10G和1G，而且是采用的AXIS接口的，这对于最近也在研究TOE的我来说，是一个很好的学习资料。</li>
+<li>AXI_ETH_DMA, ettus自己实现了一个AXI DMA模块用来和内存进行数据传输，这个AXI DMA也是工作在scatter gather模式下，之前只用过Xilinx的AXI DMA而且还是register mode。通过在默罕默德哪里学习才稍微了解了一点AXIDMA驱动的东西。所以这个模块也是一个很好的学习资料。</li>
+<li>E320_CORE，这个是USRP E320的信号处理的主要模块，其实这个模块相对于我来说并没有那么重要，因为我的目的是希望能够在自己的板子上移植USRP的固件，因此可以把这个模块当做是一个IP来进行使用。</li>
+<li>axi_dma和eth_internal其实实现的功能和前面的以太网MAC和AXI_ETH_DMA差不多，只要把前面那两个东西弄明白了这个应该也不在话下。</li>
+</ul>
+</li>
+<li>软件部分<ul>
+<li>了解NI的以太网驱动，在之前对FPGA部分的AXI接口的驱动不了解的时候，对kernel 设备树这些东西都只是一个很浅显地认知。这次在我看ni的设备树和源码的时候，才发现其实他们的这个以太网的驱动，其实也就是在驱动PL端的DMA的和内存进行数据交互的过程。所以希望通过这个再配合上默罕默德的DMA的内容，能够让我对FPGA的驱动有进一步的了解。</li>
+</ul>
+</li>
+</ul>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/SDR/" rel="tag"># SDR</a>
+              <a href="/tags/usrp/" rel="tag"># usrp</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/07/15/2022.7/%E4%B8%AA%E4%BA%BA%E6%84%9F%E6%82%9F/" rel="prev" title="个人感悟">
+      <i class="fa fa-chevron-left"></i> 个人感悟
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/08/21/2022.8/AXI4-lite-%E6%8E%A5%E5%8F%A3%E9%A9%B1%E5%8A%A8/" rel="next" title="AXI4-lite 接口驱动">
+      AXI4-lite 接口驱动 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">1. 前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-USRP-E320-%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84"><span class="nav-number">2.</span> <span class="nav-text">2. USRP E320 整体结构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-USRP-E320-%E5%90%8E%E7%BB%AD%E7%A0%94%E7%A9%B6%E5%86%85%E5%AE%B9"><span class="nav-number">2.1.</span> <span class="nav-text">2. USRP E320 后续研究内容</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

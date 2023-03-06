@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="好久没有学习了，作为一个辣鸡程序员，写着自己都看不懂的辣鸡程序。还是要学习才行啊，做一个资料的搬运工。 1.字符设备驱动开发流程其实这个东西我完全没弄懂，只能说照猫画虎地能够把程序跑起来，实际在linux内核里面做了些什么事，我也完全不知道。做一个在框架上耕耘的小蜜蜂。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ZYNQ-Linux(3)--字符设备驱动">
+<meta property="og:url" content="https://black-pigeon.github.io/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="好久没有学习了，作为一个辣鸡程序员，写着自己都看不懂的辣鸡程序。还是要学习才行啊，做一个资料的搬运工。 1.字符设备驱动开发流程其实这个东西我完全没弄懂，只能说照猫画虎地能够把程序跑起来，实际在linux内核里面做了些什么事，我也完全不知道。做一个在框架上耕耘的小蜜蜂。">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/字符设备驱动开发流程.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/字符设备驱动加载.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/创建字符设备.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/测试字符设备.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/卸载设备.png">
+<meta property="article:published_time" content="2021-07-14T14:25:42.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.785Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="Linux">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/字符设备驱动开发流程.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>ZYNQ-Linux(3)--字符设备驱动 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          ZYNQ-Linux(3)--字符设备驱动
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-07-14 22:25:42" itemprop="dateCreated datePublished" datetime="2021-07-14T22:25:42+08:00">2021-07-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/" class="post-meta-item leancloud_visitors" data-flag-title="ZYNQ-Linux(3)--字符设备驱动" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>好久没有学习了，作为一个辣鸡程序员，写着自己都看不懂的辣鸡程序。还是要学习才行啊，做一个资料的搬运工。</p>
+<h2 id="1-字符设备驱动开发流程"><a href="#1-字符设备驱动开发流程" class="headerlink" title="1.字符设备驱动开发流程"></a>1.字符设备驱动开发流程</h2><p>其实这个东西我完全没弄懂，只能说照猫画虎地能够把程序跑起来，实际在linux内核里面做了些什么事，我也完全不知道。做一个在框架上耕耘的小蜜蜂。<br><span id="more"></span><br>具体细节对于我这种初学者也就不去深究了，记录一下一个基本的字符设备的驱动的开发流程。然后在这个流程上慢慢补充添加东西就好了，一个基本的字符设备的开发流程如下图所示。<br><img src="/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/字符设备驱动开发流程.png" alt="字符设备驱动开发流程"><br>首先需要为这个驱动设备分配一个设备号，分配好设备号之后将该驱动设备和要执行的操作file_operation联系起来，然后将该设备添加到设备管理的哈希表当中，到这里就完成了设备的初始化操作。<br>初始化完成之后，在使用这个驱动的时候就可以调用open, read/write, close等函数来对设备进行基本的操作，这些操作也就时通过file_operation结构体当中指定的函数来决定的。<br>当要卸载驱动的时候，需要取消驱动设备的注册并将驱动设备删除。<br>这样就是整个字符设备驱动开发的一个流程了。<br>所以学习字符设备的驱动，其实也就是学习如何基于这个框架来设计代码。</p>
+<h2 id="2-字符设备开发流程中重要的函数与结构体"><a href="#2-字符设备开发流程中重要的函数与结构体" class="headerlink" title="2.字符设备开发流程中重要的函数与结构体"></a>2.字符设备开发流程中重要的函数与结构体</h2><h3 id="2-1-分配设备号"><a href="#2-1-分配设备号" class="headerlink" title="2.1 分配设备号"></a>2.1 分配设备号</h3><p>在进行字符设备的驱动初始化的时候，最先需要做的就是为字符设备分配一个设备号，在这一步可以采取动态分配或者静态分配的方式，一般采取动态分配会简单一点。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * @param – dev	        : 分配得到的主设备号</span></span><br><span class="line"><span class="comment"> * @param - baseminor	: 次设备号起始值</span></span><br><span class="line"><span class="comment"> * @param - count	    : 次设备号的数量</span></span><br><span class="line"><span class="comment"> * @param - name	    : 设备的名称</span></span><br><span class="line"><span class="comment"> * @return			    : 0 成功;其他 失败</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">alloc_chrdev_region</span><span class="params">(<span class="keyword">dev_t</span> *dev, <span class="keyword">unsigned</span> baseminor, <span class="keyword">unsigned</span> count, <span class="keyword">const</span> <span class="keyword">char</span> *name)</span></span></span><br></pre></td></tr></table></figure><br>动态分配需要提供次设备号的数量和起始值，因为一个主设备下可以有多个次设备这些设备公用驱动。动态分配时还需要传入设备的名称，这样在生成的字符设备驱动当中就能够看到自己想要的名字了。还需要注意，该函数会返回分配得到的主设备号，这个主设备号在字符设备的初始化当中会多次使用到。</p>
+<p>在内核中，dev_t用来表示设备编号，dev_t是一个32位的数，其中，高12位表示主设备号，低20位表示次设备号。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MINORBITS    20</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MINORMASK    ((1U &lt;&lt; MINORBITS) - 1)</span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MAJOR(dev)   ((unsigned int) ((dev) &gt;&gt; MINORBITS))</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MINOR(dev)   ((unsigned int) ((dev) &amp; MINORMASK))</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> MKDEV(ma,mi) (((ma) &lt;&lt; MINORBITS) | (mi))</span></span><br></pre></td></tr></table></figure></p>
+<h3 id="2-2-字符设备初始化"><a href="#2-2-字符设备初始化" class="headerlink" title="2.2 字符设备初始化"></a>2.2 字符设备初始化</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * @param – cdev	        : 驱动设备结构体指针</span></span><br><span class="line"><span class="comment"> * @param - file_operations	: 文件操作结构体</span></span><br><span class="line"><span class="comment"> * @return			        : NONE</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">cdev_init</span><span class="params">(struct cdev *cdev, <span class="keyword">const</span> struct file_operations *fops)</span></span></span><br></pre></td></tr></table></figure>
+<p>在字符设备初始化的时候，需要指定一个文件操作结构体，这个文件操作结构体十分重要，它是后续操作这个字符设备的基础。在这里初始化的时候进行关联，在后续就能够通过驱动设备访问到该结构体当中的函数。</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">struct</span> <span class="title">file_operations</span> &#123;</span></span><br><span class="line">   <span class="class"><span class="keyword">struct</span> <span class="title">module</span> *<span class="title">owner</span>;</span></span><br><span class="line">   <span class="keyword">loff_t</span> (*llseek) (struct file *, <span class="keyword">loff_t</span>, <span class="keyword">int</span>);</span><br><span class="line">   <span class="keyword">ssize_t</span> (*read) (struct file *, <span class="keyword">char</span> __user *, <span class="keyword">size_t</span>, <span class="keyword">loff_t</span> *);</span><br><span class="line">   <span class="keyword">ssize_t</span> (*write) (struct file *, <span class="keyword">const</span> <span class="keyword">char</span> __user *, <span class="keyword">size_t</span>, <span class="keyword">loff_t</span> *);</span><br><span class="line">   <span class="keyword">long</span> (*unlocked_ioctl) (struct file *, <span class="keyword">unsigned</span> <span class="keyword">int</span>, <span class="keyword">unsigned</span> <span class="keyword">long</span>);</span><br><span class="line">   <span class="keyword">int</span> (*open) (struct inode *, struct file *)</span><br><span class="line">   <span class="keyword">int</span> (*release) (struct inode *, struct file *);</span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure>
+<h3 id="2-3-添加设备到哈希表当中"><a href="#2-3-添加设备到哈希表当中" class="headerlink" title="2.3 添加设备到哈希表当中"></a>2.3 添加设备到哈希表当中</h3><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * @param – p	    : 指向字符设备结构体的指针</span></span><br><span class="line"><span class="comment"> * @param - dev	    : 用于指定设备的起始编号</span></span><br><span class="line"><span class="comment"> * @param - count	: 次设备号的数量</span></span><br><span class="line"><span class="comment"> * @return			: 0 成功;其他 失败</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">cdev_add</span><span class="params">(struct cdev *p, <span class="keyword">dev_t</span> dev, <span class="keyword">unsigned</span> count)</span></span></span><br></pre></td></tr></table></figure>
+<h3 id="2-4-字符设备的操作"><a href="#2-4-字符设备的操作" class="headerlink" title="2.4 字符设备的操作"></a>2.4 字符设备的操作</h3><p>完成字符设备的初始化之后，就可以进行字符设备的操作了，这里就需要对前面的file_operations结构体进行天空了，需要使用那个功能就去实现对应的函数，然后将函数地址填进去就好了。</p>
+<h3 id="删除和卸载字符设备"><a href="#删除和卸载字符设备" class="headerlink" title="删除和卸载字符设备"></a>删除和卸载字符设备</h3><p>当不需要使用字符设备的时，需要将驱动进行卸载和函数，这都比较好理解，卸载不需要的设备能够释放哈希表的空间。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * @param – major	: 指定释放的主设备号</span></span><br><span class="line"><span class="comment"> * @param - name	: 卸载设备的名称</span></span><br><span class="line"><span class="comment"> * @return			: NONE</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">inline</span> <span class="keyword">void</span> <span class="title">unregister_chrdev</span><span class="params">(<span class="keyword">unsigned</span> <span class="keyword">int</span> major, <span class="keyword">const</span> <span class="keyword">char</span> *name)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">__unregister_chrdev(major, <span class="number">0</span>, <span class="number">256</span>, name);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * @param – p	: 要删除的字符设备结构体指针</span></span><br><span class="line"><span class="comment"> * @return		: NONE</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">cdev_del</span><span class="params">(struct cdev *p)</span></span></span><br></pre></td></tr></table></figure><br>了解了上面的基本操作之后，剩下的就是填空的操作了。</p>
+<p>一个简单的字符设备的驱动如下：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/init.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/module.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/fs.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/cdev.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/uaccess.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> DEVICE_NAME     <span class="meta-string">&quot;ZYNQCharDevice&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> DEVICE_NUM      (1)</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> BUF_SIZE        128</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* 定义字符设备的设备号 */</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">dev_t</span> dev_no;</span><br><span class="line"><span class="comment">/* 定义字符设备结构体 */</span></span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">cdev</span> <span class="title">char_dev</span>;</span></span><br><span class="line"><span class="comment">/* 定义一个简单的数据缓冲区 */</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">char</span> data_buf[BUF_SIZE];</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 声明file opreation所需要使用到的函数 */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">chr_dev_open</span><span class="params">(struct inode *inode, struct file *filp)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">chr_dev_release</span><span class="params">(struct inode *inode, struct file *filp)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">ssize_t</span> <span class="title">chr_dev_write</span><span class="params">(struct file *filp, <span class="keyword">const</span> <span class="keyword">char</span> __user * buf, <span class="keyword">size_t</span> count, <span class="keyword">loff_t</span> *ppos)</span></span>;</span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">ssize_t</span> <span class="title">chr_dev_read</span><span class="params">(struct file *filp, <span class="keyword">char</span> __user * buf, <span class="keyword">size_t</span> count, <span class="keyword">loff_t</span> *ppos)</span></span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 声明file operations结构体 */</span></span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">file_operations</span> <span class="title">chr_dev_fops</span> =</span> </span><br><span class="line">&#123;</span><br><span class="line">    .owner = THIS_MODULE,</span><br><span class="line">    .open = chr_dev_open,</span><br><span class="line">    .release = chr_dev_release,</span><br><span class="line">    .write = chr_dev_write,</span><br><span class="line">    .read = chr_dev_read,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 字符设备打开 */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">chr_dev_open</span><span class="params">(struct inode *inode, struct file *filp)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    printk(KERN_EMERG <span class="string">&quot;\nopen\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 字符设备释放 */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">chr_dev_release</span><span class="params">(struct inode *inode, struct file *filp)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    printk(KERN_EMERG <span class="string">&quot;\nrelease\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"><span class="comment">/* 向内核空间中写入数据 */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">ssize_t</span> <span class="title">chr_dev_write</span><span class="params">(struct file *filp, <span class="keyword">const</span> <span class="keyword">char</span> __user * buf, <span class="keyword">size_t</span> count, <span class="keyword">loff_t</span> *ppos)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> p = *ppos;</span><br><span class="line">    <span class="keyword">int</span> ret;</span><br><span class="line">    <span class="keyword">int</span> tmp = count ;</span><br><span class="line">    <span class="keyword">if</span>(p &gt; BUF_SIZE)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">if</span>(tmp &gt; BUF_SIZE - p)</span><br><span class="line">        tmp = BUF_SIZE - p;</span><br><span class="line">    ret = copy_from_user(data_buf, buf, tmp);</span><br><span class="line">    *ppos += tmp;</span><br><span class="line">    <span class="keyword">return</span> tmp;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 从内核空间中读出数据 */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">ssize_t</span> <span class="title">chr_dev_read</span><span class="params">(struct file *filp, <span class="keyword">char</span> __user * buf, <span class="keyword">size_t</span> count, <span class="keyword">loff_t</span> *ppos)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">unsigned</span> <span class="keyword">long</span> p = *ppos;</span><br><span class="line">    <span class="keyword">int</span> ret;</span><br><span class="line">    <span class="keyword">int</span> tmp = count ;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> i = <span class="number">0</span>;</span><br><span class="line">    i++;</span><br><span class="line">    <span class="keyword">if</span>(p &gt;= BUF_SIZE)</span><br><span class="line">        <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">    <span class="keyword">if</span>(tmp &gt; BUF_SIZE - p)</span><br><span class="line">        tmp = BUF_SIZE - p;</span><br><span class="line">    ret = copy_to_user(buf, data_buf+p, tmp);</span><br><span class="line">    *ppos +=tmp;</span><br><span class="line">    <span class="keyword">return</span> tmp;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">/* 字符设备初始化函数 */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> __init <span class="title">chr_dev_init</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="keyword">int</span> ret = <span class="number">0</span>;</span><br><span class="line">    printk(KERN_EMERG <span class="string">&quot;chrdev init!!!\n&quot;</span>);</span><br><span class="line">    <span class="comment">/* 采用动态分配的方式获取设备号 */</span></span><br><span class="line">    ret = alloc_chrdev_region(&amp;dev_no, <span class="number">0</span>, DEVICE_NUM, DEVICE_NAME);</span><br><span class="line">    <span class="keyword">if</span>(ret &lt; <span class="number">0</span>)&#123;</span><br><span class="line">        printk(KERN_EMERG <span class="string">&quot;fail to alloc devno\n&quot;</span>);</span><br><span class="line">        <span class="keyword">goto</span> alloc_err;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 关联字符设备结构体与文件操作结构体 */</span></span><br><span class="line">    cdev_init(&amp;char_dev, &amp;chr_dev_fops);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 添加字符设备到哈希表当中 */</span></span><br><span class="line">    ret = cdev_add(&amp;char_dev, dev_no, DEVICE_NUM);</span><br><span class="line">    <span class="keyword">if</span>(ret &lt;<span class="number">0</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        printk(KERN_EMERG <span class="string">&quot;failed to add char device\r\n&quot;</span>);</span><br><span class="line">        <span class="keyword">goto</span> add_err;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">add_err:</span><br><span class="line">    <span class="comment">/* 如果添加字符设备失败，需要注销设备号 */</span></span><br><span class="line">    unregister_chrdev_region(dev_no, DEVICE_NUM);</span><br><span class="line"></span><br><span class="line">alloc_err:</span><br><span class="line">    <span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br><span class="line">module_init(chr_dev_init);</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> __exit <span class="title">chr_dev_exit</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    printk(KERN_EMERG <span class="string">&quot; char device exit\r\n&quot;</span>);</span><br><span class="line">    <span class="comment">/* 注销字符设备 */</span></span><br><span class="line">    unregister_chrdev_region(dev_no, DEVICE_NUM);</span><br><span class="line">    cdev_del(&amp;char_dev);</span><br><span class="line">&#125;</span><br><span class="line">module_exit(chr_dev_exit);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL2&quot;</span>);</span><br><span class="line">MODULE_AUTHOR(<span class="string">&quot;wcc&quot;</span>);</span><br><span class="line">MODULE_DESCRIPTION(<span class="string">&quot;char device module&quot;</span>);</span><br><span class="line">MODULE_ALIAS(<span class="string">&quot;test_module&quot;</span>);</span><br></pre></td></tr></table></figure></p>
+<h2 id="3-字符设备的测试"><a href="#3-字符设备的测试" class="headerlink" title="3.字符设备的测试"></a>3.字符设备的测试</h2><p>为了测试上面的这个简单的字符设备的驱动，需要有一个简简单单的测试程序来验证一下功能。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;string.h&gt;</span></span></span><br><span class="line"><span class="keyword">char</span> *wbuf = <span class="string">&quot;Hello World\n&quot;</span>;</span><br><span class="line"><span class="keyword">char</span> rbuf[<span class="number">128</span>];</span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;CharDevice test\n&quot;</span>);</span><br><span class="line">    <span class="comment">/* 打开文件 */</span></span><br><span class="line">    <span class="keyword">int</span> fd = open(<span class="string">&quot;/dev/chrdev&quot;</span>, O_RDWR);</span><br><span class="line">    <span class="comment">/* 写入数据 */</span></span><br><span class="line">    write(fd, wbuf, <span class="built_in">strlen</span>(wbuf));</span><br><span class="line">    <span class="comment">/* 写入完毕，关闭文件 */</span></span><br><span class="line">    close(fd);</span><br><span class="line">    <span class="comment">/* 打开文件 */</span></span><br><span class="line">     fd = open(<span class="string">&quot;/dev/chrdev&quot;</span>, O_RDWR);</span><br><span class="line">    <span class="comment">/* 读取文件内容 */</span></span><br><span class="line">    read(fd, rbuf, <span class="number">128</span>);</span><br><span class="line">    <span class="comment">/* 打印读取的内容 */</span></span><br><span class="line">    <span class="built_in">printf</span>(<span class="string">&quot;The content : %s&quot;</span>, rbuf);</span><br><span class="line">    <span class="comment">/* 读取完毕，关闭文件 */</span></span><br><span class="line">    close(fd);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure><br>接下来就可以来编译这个内核模块了。</p>
+<p>Makefile的内容如下<br><figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></td><td class="code"><pre><span class="line">KERNEL_DIR=/home/wcc/Desktop/zynq_linux/linux-xlnx</span><br><span class="line"></span><br><span class="line">ARCH=arm</span><br><span class="line">CROSS_COMPILE=arm-linux-gnueabihf-</span><br><span class="line"><span class="keyword">export</span>  ARCH  CROSS_COMPILE</span><br><span class="line"></span><br><span class="line">obj-m := chrdev.o </span><br><span class="line">TEST = chrdev_test</span><br><span class="line"></span><br><span class="line"><span class="section">all:</span></span><br><span class="line">	<span class="variable">$(MAKE)</span> -C <span class="variable">$(KERNEL_DIR)</span> M=<span class="variable">$(CURDIR)</span> modules</span><br><span class="line">	<span class="variable">$(CROSS_COMPILE)</span>gcc -o <span class="variable">$(TEST)</span> main.c</span><br><span class="line"></span><br><span class="line"><span class="section">.PHONE:clean copy </span></span><br><span class="line"></span><br><span class="line"><span class="section">clean:</span></span><br><span class="line">	<span class="variable">$(MAKE)</span> -C <span class="variable">$(KERNEL_DIR)</span> M=<span class="variable">$(CURDIR)</span> clean	</span><br><span class="line">	rm <span class="variable">$(TEST)</span></span><br><span class="line"></span><br><span class="line"><span class="section">copy:</span></span><br><span class="line">	sudo  cp  *.ko  /home/wcc/Desktop/nfs</span><br><span class="line">	sudo cp  <span class="variable">$(TEST)</span> /home/wcc/Desktop/nfs</span><br></pre></td></tr></table></figure><br>需要将内核模块和测试程序都编译出来。然后就可以把编译出来的.ko文件和测试程序拷贝到开发板上了。</p>
+<h2 id="字符设备驱动测试"><a href="#字符设备驱动测试" class="headerlink" title="字符设备驱动测试"></a>字符设备驱动测试</h2><p>在开发板上导入驱动.ko文件，然后查看当前系统中存在的设备，可以看到当前在主设备号为245的地方分配了一个<strong>ZYNQCharDevice</strong>的设备，这说明驱动设备初始化成功。<br><img src="/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/字符设备驱动加载.png" alt="字符设备驱动加载"></p>
+<p>然后我们就可以使用mknod在/dev目录下新创建一个字符设备了。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mknod /dev/chrdev c 245 0</span><br></pre></td></tr></table></figure><br><img src="/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/创建字符设备.png" alt="创建字符设备"><br>再之后就可以调用测试程序来简单的验证一下字符设备的功能了。<br>可以看到在测试程序中两次打开和关闭了字符设备，并且打印出了写入的简单的字符串。<br><img src="/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/测试字符设备.png" alt="测试字符设备"><br>然后就可以卸载驱动和删除设备了。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">rmmod chrdev</span><br><span class="line">rm -f /dev/chrdev</span><br></pre></td></tr></table></figure><br><img src="/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/卸载设备.png" alt="卸载字符设备"></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/07/08/2021.7/FM%E8%B0%83%E5%88%B6/" rel="prev" title="FM调制">
+      <i class="fa fa-chevron-left"></i> FM调制
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/07/22/2021.7/FFT%E5%9C%A8Matlab%E5%BD%93%E4%B8%AD%E7%9A%84%E4%BD%BF%E7%94%A8/" rel="next" title="FFT在Matlab当中的使用">
+      FFT在Matlab当中的使用 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8%E5%BC%80%E5%8F%91%E6%B5%81%E7%A8%8B"><span class="nav-number">1.</span> <span class="nav-text">1.字符设备驱动开发流程</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E5%BC%80%E5%8F%91%E6%B5%81%E7%A8%8B%E4%B8%AD%E9%87%8D%E8%A6%81%E7%9A%84%E5%87%BD%E6%95%B0%E4%B8%8E%E7%BB%93%E6%9E%84%E4%BD%93"><span class="nav-number">2.</span> <span class="nav-text">2.字符设备开发流程中重要的函数与结构体</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E5%88%86%E9%85%8D%E8%AE%BE%E5%A4%87%E5%8F%B7"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 分配设备号</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E5%88%9D%E5%A7%8B%E5%8C%96"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 字符设备初始化</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E6%B7%BB%E5%8A%A0%E8%AE%BE%E5%A4%87%E5%88%B0%E5%93%88%E5%B8%8C%E8%A1%A8%E5%BD%93%E4%B8%AD"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 添加设备到哈希表当中</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E7%9A%84%E6%93%8D%E4%BD%9C"><span class="nav-number">2.4.</span> <span class="nav-text">2.4 字符设备的操作</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E5%88%A0%E9%99%A4%E5%92%8C%E5%8D%B8%E8%BD%BD%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87"><span class="nav-number">2.5.</span> <span class="nav-text">删除和卸载字符设备</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E7%9A%84%E6%B5%8B%E8%AF%95"><span class="nav-number">3.</span> <span class="nav-text">3.字符设备的测试</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8%E6%B5%8B%E8%AF%95"><span class="nav-number">4.</span> <span class="nav-text">字符设备驱动测试</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

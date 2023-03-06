@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. 前言在上一篇博客当中，已经完成了数据域的交织，数据域的数据经过交织之后，下一步就是需要对交织之后的bit进行星座图的映射了。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OFDM_802.11a学习----星座图映射与循环前缀">
+<meta property="og:url" content="https://black-pigeon.github.io/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="1. 前言在上一篇博客当中，已经完成了数据域的交织，数据域的数据经过交织之后，下一步就是需要对交织之后的bit进行星座图的映射了。">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/QAM64.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/BPSK_QPSK_16QAM.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/QAM64.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/归一化因子.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/正交调制.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/QAM64.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/QAM64映射表.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/OFDM子载波.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/导频所在位置.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/导频极性.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/struct.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/星座图映射.svg">
+<meta property="article:published_time" content="2022-05-05T06:37:16.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.805Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="SDR">
+<meta property="article:tag" content="FPGA">
+<meta property="article:tag" content="ZYNQ">
+<meta property="article:tag" content="OFDM">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/QAM64.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>OFDM_802.11a学习----星座图映射与循环前缀 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          OFDM_802.11a学习----星座图映射与循环前缀
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-05-05 14:37:16" itemprop="dateCreated datePublished" datetime="2022-05-05T14:37:16+08:00">2022-05-05</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/OFDM/" itemprop="url" rel="index"><span itemprop="name">OFDM</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/" class="post-meta-item leancloud_visitors" data-flag-title="OFDM_802.11a学习----星座图映射与循环前缀" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>在上一篇博客当中，已经完成了数据域的交织，数据域的数据经过交织之后，下一步就是需要对交织之后的bit进行星座图的映射了。<br><img src="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/QAM64.png" alt="64QAM"><br><span id="more"></span></p>
+<h1 id="2-调制"><a href="#2-调制" class="headerlink" title="2. 调制"></a>2. 调制</h1><p>在 ofdm 通信系统中根据不同的速率要求，其子载波需要用二进制相移键控（bpsk）、正交相移键控（qpsk）、或正交幅度调制（qam）方式进行调制。数据经过卷积编码和交织后，串行比特流每 1、2、4 或 6 个比特被分为一组，用一定的规律将比特流映射成为复数，形成 BPSK，QPSK，16QAM，64QAM 调制。<br><img src="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/BPSK_QPSK_16QAM.png" alt="BPSK_QPSK_16QAM"><br><img src="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/QAM64.png" alt="64QAM"><br>在传输过程中调制方式可能发生变化，如 signal 域的数据采用的是 bpsk 调制，而 data 域采用的是另一种调制方式，为了使所有的映射有一样的平均功率，需要对映射进行归一化。映射后的复数值乘上一个归一化的量 Kmod，即可得到输出数据。Kmod 的值根据不同的调制模式而不同。<br><img src="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/归一化因子.png" alt="归一化因子"></p>
+<h2 id="2-1-QAM调制"><a href="#2-1-QAM调制" class="headerlink" title="2.1 QAM调制"></a>2.1 QAM调制</h2><p>QAM 与其他调制技术相比，能得到更高的频谱效率，且具有抗噪声能力强等优点，因此得到了广泛的应用。QAM调制中，数据信号由相互正交的两个载波的幅度变化表示。QAM 是一种矢量调制，将输入比特先映射（一般采用格雷码）到一个复平面（星座图）上，形成复数调制符号，然后将该符号的 i、q 分量（即该复数的实部和虚部）分别对应调制在相互正交（时域正交）的两个载波cos 和 sin 上。<br>正交振幅调制可以表示为：</p>
+<script type="math/tex; mode=display">s(t)=A_{m}cos(wt)+B_{m}cos(wt) (0 \leq t\leq Ts)</script><p>上述式子当中$A<em>{m}, B</em>{m}$就是调制之后得到的实部和虚部的数据。<br><img src="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/正交调制.png" alt="正交调制"></p>
+<h2 id="2-2-QAM64-调制"><a href="#2-2-QAM64-调制" class="headerlink" title="2.2 QAM64 调制"></a>2.2 QAM64 调制</h2><p>64QAM在星座图上具有64个星座点，每个星座点代表一种状态，每6个bit表示一个星座点，其映射关系如下：<br><img src="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/QAM64.png" alt="64QAM"><br>穿行输入的bit，每6个bit构成一个星座点，第一个进来的是b0,进入的顺序依次排列为b0b1b2b3b4b5，根据映射表，可以得到虚部和实部的映射结果：<br><img src="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/QAM64映射表.png" alt="QAM64映射表"><br>b0b1b2对应I路，b3b4b5对应Q路数据，再乘以归一化因子，得到调制之后的IQ路的值。<br>根据上面的表格，我们可以将最终映射出来的结果计算出来，这里以1位符号位，1位整数位，30位小数位来对结果进行量化：<br><figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">//----------------QAM64 I/Q mapping------------------</span></span><br><span class="line"><span class="comment">//Fixed-point quantization, 1 sign bit, 1 bit interger, 30bit decimal</span></span><br><span class="line"><span class="keyword">localparam</span> QAM64_IQ_B000 = <span class="number">3135193572</span>; <span class="comment">//3&#x27;b000 ==&gt; -7, -7/sqrt(42) ==&gt;3135193572</span></span><br><span class="line"><span class="keyword">localparam</span> QAM64_IQ_B001 = <span class="number">3466557494</span>; <span class="comment">//3&#x27;b001 ==&gt; -5, -5/sqrt(42) ==&gt;3466557494</span></span><br><span class="line"><span class="keyword">localparam</span> QAM64_IQ_B011 = <span class="number">3797921415</span>; <span class="comment">//3&#x27;b011 ==&gt; -3, -3/sqrt(42) ==&gt; 3797921415</span></span><br><span class="line"><span class="keyword">localparam</span> QAM64_IQ_B010 = <span class="number">4129285336</span>; <span class="comment">//3&#x27;b010 ==&gt; -1, -1/sqrt(42) ==&gt;4129285336</span></span><br><span class="line"><span class="keyword">localparam</span> QAM64_IQ_B110 = <span class="number">165681960</span> ; <span class="comment">//3&#x27;b110 ==&gt; 1, 1/sqrt(42) ==&gt;165681960</span></span><br><span class="line"><span class="keyword">localparam</span> QAM64_IQ_B111 = <span class="number">497045881</span> ; <span class="comment">//3&#x27;b111 ==&gt; 3, 3/sqrt(42) ==&gt;497045881</span></span><br><span class="line"><span class="keyword">localparam</span> QAM64_IQ_B101 = <span class="number">828409802</span> ; <span class="comment">//3&#x27;b101 ==&gt; 5, 5/sqrt(42) ==&gt;828409802</span></span><br><span class="line"><span class="keyword">localparam</span> QAM64_IQ_B100 = <span class="number">1159773723</span>; <span class="comment">//3&#x27;b100 ==&gt; 7, 7/sqrt(42) ==&gt; 1159773723</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">localparam</span> QAM64_IQ_ONE = <span class="number">1073741824</span>;</span><br><span class="line"><span class="keyword">localparam</span> QAM64_IQ_MINUS_ONE = <span class="number">3221225472</span>;</span><br></pre></td></tr></table></figure></p>
+<h2 id="2-3-插入导频"><a href="#2-3-插入导频" class="headerlink" title="2.3 插入导频"></a>2.3 插入导频</h2><p>在接收机当中，虽然利用接收到的短/长训练序列，能够进行信道均衡，频偏校正，但符号还会存在一定的剩余频率偏差，并且偏差会随着时间的积累而累积，会造成所有子载波产生一定的剩余相位偏转。因此，还需要不断的对参考相位进行跟踪。要实现这一功能，需要在 52 个非零子载波中插入 4 个导频符号。<br><img src="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/OFDM子载波.png" alt="OFDM子载波"><br>Data 域的数据经过星座图映射后形成对应的复数值，每个 ofdm 符号周期可以通过 48 个子信道发出 48 个调制后的数据，所以把这些值每 48 个分成一组，每一组将对应一个 ofdm 符号。<br>子载波的数量一共有 53 个，每个子载波的标号为-26,-25,…,-1,0,1,…,26。其中 48 个复数数据分别对应到-26 至-22，-20 至-8，-6至-1，1 至 6，8 至 20，以及 20 至 26 这些子载波上，四个导频子信道分别对应到-21，-7，7 和 21 这 4 个子载波上。0 号子载波上填充零值（直流）。</p>
+<p><img src="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/导频所在位置.png" alt="导频所在位置"><br>导频所处位置的值，是根据一个循环的导频的极性控制序列来完成的，该极性控制序列如下：<br><img src="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/导频极性.png" alt="导频极性"><br>每个导频极性对应一个OFDM符号，比如第一个OFDM符号也就是signal域的符号，其导频极性控制为1，那么其输出导频位置所给的值就位1 1 1 -1，又比如第5个OFDM符号，也就是第4个data域的OFDM符号，其极性控制为-1，那么其导频位置所给的值就位-1 -1 -1 1。</p>
+<h1 id="3-星座图映射与导频插入"><a href="#3-星座图映射与导频插入" class="headerlink" title="3. 星座图映射与导频插入"></a>3. 星座图映射与导频插入</h1><p>了解了基本的原理之后就可以着手进行模块的设计了。在本模块当中主要实现的是如何来生成映射之后的数据。</p>
+<ul>
+<li>首先，串行的bit，需要按照QAM64的方式转换成一个个的6bit的星座点，然后将这个转换之后的星座点写入到一个FIFO当中。</li>
+<li>当一帧数据的所有星座点全部写入到FIFO之后，开始进行星座图的映射和导频的插入。</li>
+<li>使能一个计数器，计数器的技术值是从0~51，这个值对应着除0频之外的所有子载波的序号。然后再根据计数器的值，来控制是否从FIFO当红读取星座点进行映射，或者在计数到导频位置的时候，插入导频。</li>
+<li>等待一个OFDM传递给下一个模块，IFFT模块将一个OFDM符号处理完毕之后，在进行下一个OFDM符号的处理。直到所有的星座点全部处理完毕。</li>
+</ul>
+<p><img src="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/struct.png" alt="struct"><br>该过程的时序设计如下图所示：<br><img src="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/星座图映射.svg" alt="星座图映射"></p>
+<p><strong>NOTE: 在对数据域进行调制的时候，导频控制序列是从地址1开始累加，直到处理完126个OFDM符号是，这是导频控制序列读取到第126个，然后才会回到0，然后从0~126循环，因为在802.11a当中，第一个OFDM符号是signal域的符号，data域是从第二个符号开始。 </strong></p>
+<p>该模块的代码如下：</p>
+<figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br><span class="line">278</span><br><span class="line">279</span><br><span class="line">280</span><br><span class="line">281</span><br><span class="line">282</span><br><span class="line">283</span><br><span class="line">284</span><br><span class="line">285</span><br><span class="line">286</span><br><span class="line">287</span><br><span class="line">288</span><br><span class="line">289</span><br><span class="line">290</span><br><span class="line">291</span><br><span class="line">292</span><br><span class="line">293</span><br><span class="line">294</span><br><span class="line">295</span><br><span class="line">296</span><br><span class="line">297</span><br><span class="line">298</span><br><span class="line">299</span><br><span class="line">300</span><br><span class="line">301</span><br><span class="line">302</span><br><span class="line">303</span><br><span class="line">304</span><br><span class="line">305</span><br><span class="line">306</span><br><span class="line">307</span><br><span class="line">308</span><br><span class="line">309</span><br><span class="line">310</span><br><span class="line">311</span><br><span class="line">312</span><br><span class="line">313</span><br><span class="line">314</span><br><span class="line">315</span><br><span class="line">316</span><br><span class="line">317</span><br><span class="line">318</span><br><span class="line">319</span><br><span class="line">320</span><br><span class="line">321</span><br><span class="line">322</span><br><span class="line">323</span><br><span class="line">324</span><br><span class="line">325</span><br><span class="line">326</span><br><span class="line">327</span><br><span class="line">328</span><br><span class="line">329</span><br><span class="line">330</span><br><span class="line">331</span><br><span class="line">332</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">`<span class="meta-keyword">timescale</span> 1ns / 1ps</span></span><br><span class="line"><span class="keyword">module</span> tx_modulate(</span><br><span class="line">	<span class="keyword">input</span> 	<span class="keyword">wire</span>		clk_Modulation				,</span><br><span class="line">	<span class="keyword">input</span> 	<span class="keyword">wire</span>		reset						,</span><br><span class="line">	<span class="keyword">input</span> 	<span class="keyword">wire</span>		tx_modulate_in_valid		,</span><br><span class="line">	<span class="keyword">input</span> 	<span class="keyword">wire</span>		tx_modulate_in_bit			,</span><br><span class="line">	<span class="keyword">input</span> 	<span class="keyword">wire</span>		tx_freq_to_timed_cycle_flag	,</span><br><span class="line">	<span class="keyword">output</span> 	<span class="keyword">reg</span> [<span class="number">15</span>:<span class="number">0</span>]	n_ofdm_syms					,</span><br><span class="line">	<span class="keyword">output</span> 	<span class="keyword">reg</span> 		tx_modulate_out_valid		,</span><br><span class="line">	<span class="keyword">output</span> 	<span class="keyword">reg</span> [<span class="number">31</span>:<span class="number">0</span>]	tx_modulate_re_out			,</span><br><span class="line">	<span class="keyword">output</span> 	<span class="keyword">reg</span> [<span class="number">31</span>:<span class="number">0</span>]	tx_modulate_im_out</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">	<span class="comment">//====================================================</span></span><br><span class="line">	<span class="comment">// paramter define</span></span><br><span class="line">	<span class="comment">//====================================================</span></span><br><span class="line">	<span class="keyword">localparam</span> IDLE  	= <span class="number">3&#x27;b001</span>;</span><br><span class="line">	<span class="keyword">localparam</span> MODULATE = <span class="number">3&#x27;b010</span>;</span><br><span class="line">	<span class="keyword">localparam</span> ARBIT 	= <span class="number">3&#x27;b100</span>;	</span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------QAM64 I/Q mapping------------------</span></span><br><span class="line">	<span class="comment">//Fixed-point quantization, 1 sign bit, 1 bit interger, 30bit decimal</span></span><br><span class="line">	<span class="keyword">localparam</span> QAM64_IQ_B000 = <span class="number">3135193572</span>; <span class="comment">//3&#x27;b000 ==&gt; -7, -7/sqrt(42) ==&gt;3135193572</span></span><br><span class="line">	<span class="keyword">localparam</span> QAM64_IQ_B001 = <span class="number">3466557494</span>; <span class="comment">//3&#x27;b001 ==&gt; -5, -5/sqrt(42) ==&gt;3466557494</span></span><br><span class="line">	<span class="keyword">localparam</span> QAM64_IQ_B011 = <span class="number">3797921415</span>; <span class="comment">//3&#x27;b011 ==&gt; -3, -3/sqrt(42) ==&gt; 3,797,921,415</span></span><br><span class="line">	<span class="keyword">localparam</span> QAM64_IQ_B010 = <span class="number">4129285336</span>; <span class="comment">//3&#x27;b010 ==&gt; -1, -1/sqrt(42) ==&gt;4,129,285,336</span></span><br><span class="line">	<span class="keyword">localparam</span> QAM64_IQ_B110 = <span class="number">165681960</span> ; <span class="comment">//3&#x27;b110 ==&gt; 1, 1/sqrt(42) ==&gt;165,681,960</span></span><br><span class="line">	<span class="keyword">localparam</span> QAM64_IQ_B111 = <span class="number">497045881</span> ; <span class="comment">//3&#x27;b111 ==&gt; 3, 3/sqrt(42) ==&gt;497045881</span></span><br><span class="line">	<span class="keyword">localparam</span> QAM64_IQ_B101 = <span class="number">828409802</span> ; <span class="comment">//3&#x27;b101 ==&gt; 5, 5/sqrt(42) ==&gt;828409802</span></span><br><span class="line">	<span class="keyword">localparam</span> QAM64_IQ_B100 = <span class="number">1159773723</span>; <span class="comment">//3&#x27;b100 ==&gt; 7, 7/sqrt(42) ==&gt; 1159773723</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">localparam</span> QAM64_IQ_ONE = <span class="number">1073741824</span>;</span><br><span class="line">	<span class="keyword">localparam</span> QAM64_IQ_MINUS_ONE = <span class="number">3221225472</span>;</span><br><span class="line">	</span><br><span class="line">	<span class="comment">//====================================================</span></span><br><span class="line">	<span class="comment">// internal signals and registers</span></span><br><span class="line">	<span class="comment">//====================================================</span></span><br><span class="line">	<span class="keyword">reg</span>   			tx_modulate_in_valid_dly		; </span><br><span class="line">	<span class="keyword">wire</span>  			tx_modulate_in_valid_neg_pls	;</span><br><span class="line">	<span class="keyword">reg</span>  	[<span class="number">5</span>:<span class="number">0</span>] 	constellation_point 			; <span class="comment">// serial bit to parallel constellation ponit</span></span><br><span class="line">	<span class="keyword">reg</span>  			constellation_point_vld			; <span class="comment">// constellation point valid</span></span><br><span class="line">	<span class="keyword">reg</span> 	[<span class="number">3</span>:<span class="number">0</span>]	cnt_data_in 					; <span class="comment">// counter for the data shift register</span></span><br><span class="line">	<span class="keyword">reg</span>		[<span class="number">15</span>:<span class="number">0</span>]	cnt_constellation_point 		; <span class="comment">// counter for constellation point</span></span><br><span class="line">	<span class="keyword">reg</span>  	[<span class="number">15</span>:<span class="number">0</span>]	num_of_constellation_point 		; <span class="comment">// total number of constellation point</span></span><br><span class="line">	<span class="keyword">reg</span>   			num_of_constellation_point_vld 	;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">wire</span>  	[<span class="number">23</span>:<span class="number">0</span>] 	divider_result 					;</span><br><span class="line">	<span class="keyword">wire</span>   			divider_result_vld 				;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">reg</span>   	[<span class="number">2</span>:<span class="number">0</span>]	state  							; <span class="comment">// state register</span></span><br><span class="line">	<span class="keyword">reg</span>  	[<span class="number">7</span>:<span class="number">0</span>]	cnt_mapping 					;</span><br><span class="line">	<span class="keyword">reg</span>   			rd_fifo_en  					;</span><br><span class="line">	<span class="keyword">wire</span>    [<span class="number">5</span>:<span class="number">0</span>] 	rd_fifo_dout 					;</span><br><span class="line">	<span class="keyword">wire</span>   			full,empty  					;</span><br><span class="line">	<span class="keyword">reg</span>  	[<span class="number">7</span>:<span class="number">0</span>]	rom_addr 						;</span><br><span class="line">	<span class="keyword">wire</span>   			rom_dout 						;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------tx_modulate_in_valid_dly------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		tx_modulate_in_valid_dly &lt;= tx_modulate_in_valid;</span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">assign</span> tx_modulate_in_valid_neg_pls = tx_modulate_in_valid_dly &amp; (~tx_modulate_in_valid);</span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------constellation_ponit------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">			constellation_point &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(tx_modulate_in_valid_neg_pls)<span class="keyword">begin</span></span><br><span class="line">			constellation_point &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(tx_modulate_in_valid)<span class="keyword">begin</span></span><br><span class="line">			constellation_point &lt;= &#123;constellation_point[<span class="number">4</span>:<span class="number">0</span>], tx_modulate_in_bit&#125;;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------cnt_data_in------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">11&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_data_in &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(tx_modulate_in_valid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_data_in == <span class="number">&#x27;d5</span>)<span class="keyword">begin</span></span><br><span class="line">			cnt_data_in &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(tx_modulate_in_valid == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">			cnt_data_in &lt;= cnt_data_in + <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//---------------constellation_point_vld-------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">			constellation_point_vld &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(tx_modulate_in_valid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_data_in == <span class="number">&#x27;d5</span>)<span class="keyword">begin</span></span><br><span class="line">			constellation_point_vld &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			constellation_point_vld &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------cnt_constellation_point------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">			cnt_constellation_point &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(tx_modulate_in_valid_neg_pls)<span class="keyword">begin</span></span><br><span class="line">			cnt_constellation_point &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(tx_modulate_in_valid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_data_in == <span class="number">&#x27;d5</span>)<span class="keyword">begin</span></span><br><span class="line">			cnt_constellation_point &lt;= cnt_constellation_point + <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------num_of_constellation_point------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			num_of_constellation_point &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">			num_of_constellation_point_vld &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (tx_modulate_in_valid_neg_pls) <span class="keyword">begin</span></span><br><span class="line">			num_of_constellation_point &lt;= cnt_constellation_point;</span><br><span class="line">			num_of_constellation_point_vld &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			num_of_constellation_point_vld &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	div_gen_0 u_ofdm_symbol_cal (</span><br><span class="line">		<span class="variable">.aclk</span>(clk_Modulation),                                      <span class="comment">// input wire aclk</span></span><br><span class="line">		<span class="variable">.s_axis_divisor_tvalid</span>(num_of_constellation_point_vld),    <span class="comment">// input wire s_axis_divisor_tvalid</span></span><br><span class="line">		<span class="variable">.s_axis_divisor_tdata</span>(<span class="number">8&#x27;d48</span>),      <span class="comment">// input wire [7 : 0] s_axis_divisor_tdata</span></span><br><span class="line">		<span class="variable">.s_axis_dividend_tvalid</span>(num_of_constellation_point_vld),  <span class="comment">// input wire s_axis_dividend_tvalid</span></span><br><span class="line">		<span class="variable">.s_axis_dividend_tdata</span>(num_of_constellation_point),    <span class="comment">// input wire [15 : 0] s_axis_dividend_tdata</span></span><br><span class="line">		<span class="variable">.m_axis_dout_tvalid</span>(divider_result_vld),          <span class="comment">// output wire m_axis_dout_tvalid</span></span><br><span class="line">		<span class="variable">.m_axis_dout_tdata</span>(divider_result)            <span class="comment">// output wire [23 : 0] m_axis_dout_tdata</span></span><br><span class="line">	);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			n_ofdm_syms &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(divider_result_vld)<span class="keyword">begin</span></span><br><span class="line">			n_ofdm_syms &lt;=divider_result[<span class="number">23</span>:<span class="number">8</span>];</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	fifo_generator_tx_modulate u_fifo_generator_tx_modulate (</span><br><span class="line">		<span class="variable">.clk</span>(clk_Modulation),      <span class="comment">// input wire clk</span></span><br><span class="line">		<span class="variable">.srst</span>(reset),    <span class="comment">// input wire srst</span></span><br><span class="line">		<span class="variable">.din</span>(constellation_point),      <span class="comment">// input wire [5 : 0] din</span></span><br><span class="line">		<span class="variable">.wr_en</span>(constellation_point_vld),  <span class="comment">// input wire wr_en</span></span><br><span class="line">		<span class="variable">.rd_en</span>(rd_fifo_en),  <span class="comment">// input wire rd_en</span></span><br><span class="line">		<span class="variable">.dout</span>(rd_fifo_dout),    <span class="comment">// output wire [5 : 0] dout</span></span><br><span class="line">		<span class="variable">.full</span>(full),    <span class="comment">// output wire full</span></span><br><span class="line">		<span class="variable">.empty</span>(empty)  <span class="comment">// output wire empty</span></span><br><span class="line">	);</span><br><span class="line"></span><br><span class="line">	tx_pilot_rom u_tx_pilot_rom (</span><br><span class="line">		<span class="variable">.clka</span>(clk_Modulation),    <span class="comment">// input wire clka</span></span><br><span class="line">		<span class="variable">.addra</span>(rom_addr),  <span class="comment">// input wire [6 : 0] addra</span></span><br><span class="line">		<span class="variable">.douta</span>(rom_dout)  <span class="comment">// output wire [0 : 0] douta</span></span><br><span class="line">	);</span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------state------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">			state &lt;= IDLE;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			<span class="keyword">case</span>(state)</span><br><span class="line">				IDLE : <span class="keyword">begin</span></span><br><span class="line">					<span class="keyword">if</span>(tx_modulate_in_valid_neg_pls)<span class="keyword">begin</span></span><br><span class="line">						state &lt;= MODULATE;</span><br><span class="line">					<span class="keyword">end</span></span><br><span class="line">				<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">				MODULATE : <span class="keyword">begin</span></span><br><span class="line">					<span class="keyword">if</span> (cnt_mapping == <span class="number">&#x27;d51</span>) <span class="keyword">begin</span></span><br><span class="line">						state &lt;= ARBIT;</span><br><span class="line">					<span class="keyword">end</span></span><br><span class="line">				<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">				ARBIT : <span class="keyword">begin</span></span><br><span class="line">					<span class="keyword">if</span>(empty == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">						state &lt;= IDLE;</span><br><span class="line">					<span class="keyword">end</span></span><br><span class="line">					<span class="keyword">else</span> <span class="keyword">if</span>(tx_freq_to_timed_cycle_flag == <span class="number">1&#x27;b1</span> &amp;&amp; empty==<span class="number">1&#x27;b0</span>)<span class="keyword">begin</span></span><br><span class="line">						state &lt;= MODULATE;</span><br><span class="line">					<span class="keyword">end</span></span><br><span class="line">				<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">				<span class="keyword">default</span> : state &lt;= IDLE;</span><br><span class="line">			<span class="keyword">endcase</span></span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------cnt_mapping------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_mapping &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (state == MODULATE &amp;&amp; cnt_mapping == <span class="number">&#x27;d51</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_mapping &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (state == MODULATE) <span class="keyword">begin</span></span><br><span class="line">			cnt_mapping &lt;= cnt_mapping + <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			cnt_mapping &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			rom_addr &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (tx_modulate_in_valid_neg_pls) <span class="keyword">begin</span></span><br><span class="line">			rom_addr &lt;= <span class="number">1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (state == MODULATE &amp;&amp; cnt_mapping == <span class="number">&#x27;d51</span> &amp;&amp; rom_addr == <span class="number">126</span>) <span class="keyword">begin</span></span><br><span class="line">			rom_addr &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (state == MODULATE &amp;&amp; cnt_mapping == <span class="number">&#x27;d51</span> ) <span class="keyword">begin</span></span><br><span class="line">			rom_addr &lt;= rom_addr + <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------rd_fifo_en------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(*) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (state == MODULATE) <span class="keyword">begin</span></span><br><span class="line">			<span class="keyword">if</span> (cnt_mapping == <span class="number">&#x27;d5</span> || cnt_mapping == <span class="number">&#x27;d19</span> || cnt_mapping == <span class="number">&#x27;d32</span> || cnt_mapping == <span class="number">&#x27;d46</span>) <span class="keyword">begin</span></span><br><span class="line">				rd_fifo_en = <span class="number">1&#x27;b0</span>;</span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">			<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">				rd_fifo_en = <span class="number">1&#x27;b1</span>;</span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			rd_fifo_en = <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//------------------tx_modulate_re_out----------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			tx_modulate_re_out &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(state == MODULATE)<span class="keyword">begin</span></span><br><span class="line">			<span class="comment">// insert pilot according to the pilot index,when rom dout is 1, the inserted pilot is 1 1 1 -1</span></span><br><span class="line">			<span class="comment">// when rom dout is 0 the inserted pilot is -1 -1 -1 1</span></span><br><span class="line">			<span class="keyword">if</span>(cnt_mapping == <span class="number">&#x27;d5</span> || cnt_mapping == <span class="number">&#x27;d19</span> || cnt_mapping ==<span class="number">&#x27;d32</span>)<span class="keyword">begin</span></span><br><span class="line">				<span class="keyword">if</span> (rom_dout == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">					tx_modulate_re_out &lt;= QAM64_IQ_ONE;</span><br><span class="line">				<span class="keyword">end</span></span><br><span class="line">				<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">					tx_modulate_re_out &lt;= QAM64_IQ_MINUS_ONE;</span><br><span class="line">				<span class="keyword">end</span></span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">			<span class="keyword">else</span> <span class="keyword">if</span> (cnt_mapping == <span class="number">&#x27;d46</span>) <span class="keyword">begin</span></span><br><span class="line">				<span class="keyword">if</span> (rom_dout == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">					tx_modulate_re_out &lt;= QAM64_IQ_MINUS_ONE;</span><br><span class="line">				<span class="keyword">end</span></span><br><span class="line">				<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">					tx_modulate_re_out &lt;= QAM64_IQ_ONE;</span><br><span class="line">				<span class="keyword">end</span></span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">			<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">				<span class="keyword">case</span>(rd_fifo_dout[<span class="number">5</span>:<span class="number">3</span>])</span><br><span class="line">					<span class="number">3&#x27;b000</span>: tx_modulate_re_out &lt;= QAM64_IQ_B000;</span><br><span class="line">					<span class="number">3&#x27;b001</span>: tx_modulate_re_out &lt;= QAM64_IQ_B001;</span><br><span class="line">					<span class="number">3&#x27;b010</span>: tx_modulate_re_out &lt;= QAM64_IQ_B010;</span><br><span class="line">					<span class="number">3&#x27;b011</span>: tx_modulate_re_out &lt;= QAM64_IQ_B011;</span><br><span class="line">					<span class="number">3&#x27;b100</span>: tx_modulate_re_out &lt;= QAM64_IQ_B100;</span><br><span class="line">					<span class="number">3&#x27;b101</span>: tx_modulate_re_out &lt;= QAM64_IQ_B101;</span><br><span class="line">					<span class="number">3&#x27;b110</span>: tx_modulate_re_out &lt;= QAM64_IQ_B110;</span><br><span class="line">					<span class="number">3&#x27;b111</span>: tx_modulate_re_out &lt;= QAM64_IQ_B111;</span><br><span class="line">					<span class="keyword">default</span> : tx_modulate_re_out &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">				<span class="keyword">endcase</span></span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			 tx_modulate_re_out &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">		<span class="comment">//------------------tx_modulate_im_out----------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			tx_modulate_im_out &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(state == MODULATE)<span class="keyword">begin</span></span><br><span class="line">			<span class="comment">// insert pilot according to the pilot index,when rom dout is 1, the inserted pilot is 1 1 1 -1</span></span><br><span class="line">			<span class="comment">// when rom dout is 0 the inserted pilot is -1 -1 -1 1</span></span><br><span class="line">			<span class="keyword">if</span>(cnt_mapping == <span class="number">&#x27;d5</span> || cnt_mapping == <span class="number">&#x27;d19</span> || cnt_mapping ==<span class="number">&#x27;d32</span> || cnt_mapping == <span class="number">&#x27;d46</span>)<span class="keyword">begin</span></span><br><span class="line">				 tx_modulate_im_out &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">			<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">				<span class="keyword">case</span>(rd_fifo_dout[<span class="number">2</span>:<span class="number">0</span>])</span><br><span class="line">					<span class="number">3&#x27;b000</span>: tx_modulate_im_out &lt;= QAM64_IQ_B000;</span><br><span class="line">					<span class="number">3&#x27;b001</span>: tx_modulate_im_out &lt;= QAM64_IQ_B001;</span><br><span class="line">					<span class="number">3&#x27;b010</span>: tx_modulate_im_out &lt;= QAM64_IQ_B010;</span><br><span class="line">					<span class="number">3&#x27;b011</span>: tx_modulate_im_out &lt;= QAM64_IQ_B011;</span><br><span class="line">					<span class="number">3&#x27;b100</span>: tx_modulate_im_out &lt;= QAM64_IQ_B100;</span><br><span class="line">					<span class="number">3&#x27;b101</span>: tx_modulate_im_out &lt;= QAM64_IQ_B101;</span><br><span class="line">					<span class="number">3&#x27;b110</span>: tx_modulate_im_out &lt;= QAM64_IQ_B110;</span><br><span class="line">					<span class="number">3&#x27;b111</span>: tx_modulate_im_out &lt;= QAM64_IQ_B111;</span><br><span class="line">					<span class="keyword">default</span> : tx_modulate_im_out &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">				<span class="keyword">endcase</span></span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			 tx_modulate_im_out &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			tx_modulate_out_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (state == MODULATE) <span class="keyword">begin</span></span><br><span class="line">			tx_modulate_out_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			tx_modulate_out_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">endmodule</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/SDR/" rel="tag"># SDR</a>
+              <a href="/tags/FPGA/" rel="tag"># FPGA</a>
+              <a href="/tags/ZYNQ/" rel="tag"># ZYNQ</a>
+              <a href="/tags/OFDM/" rel="tag"># OFDM</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/05/04/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E5%9F%9F%E4%BA%A4%E7%BB%87/" rel="prev" title="OFDM_802.11a学习----数据域交织">
+      <i class="fa fa-chevron-left"></i> OFDM_802.11a学习----数据域交织
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/" rel="next" title="OFDM_802.11a学习----IFFT和添加循环前缀">
+      OFDM_802.11a学习----IFFT和添加循环前缀 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">1. 前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-%E8%B0%83%E5%88%B6"><span class="nav-number">2.</span> <span class="nav-text">2. 调制</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1-QAM%E8%B0%83%E5%88%B6"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 QAM调制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2-QAM64-%E8%B0%83%E5%88%B6"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 QAM64 调制</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-3-%E6%8F%92%E5%85%A5%E5%AF%BC%E9%A2%91"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 插入导频</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84%E4%B8%8E%E5%AF%BC%E9%A2%91%E6%8F%92%E5%85%A5"><span class="nav-number">3.</span> <span class="nav-text">3. 星座图映射与导频插入</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

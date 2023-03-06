@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="b205 core在前面的博客当中记录了 usrp b205 的整体的结构，只能说是从一个整体上对代码结构进行了分析，对其中细节的部分并不是十分了解，但是想要弄清楚 usrp b205 的具体的实现，还是要在这些部分下功夫才行。b205_core 的verilog module的结构如下图所示：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="usrp_b205 fpga源码(2)">
+<meta property="og:url" content="https://black-pigeon.github.io/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="b205 core在前面的博客当中记录了 usrp b205 的整体的结构，只能说是从一个整体上对代码结构进行了分析，对其中细节的部分并不是十分了解，但是想要弄清楚 usrp b205 的具体的实现，还是要在这些部分下功夫才行。b205_core 的verilog module的结构如下图所示：">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/b205_core_module.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/b205_core_structure.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/packet_breakdown.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/axi_dmux4.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/demux状态机.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/axis_mux4.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/radio_ctrl_proc模块.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/radio_ctrl_proc状态机.png">
+<meta property="article:published_time" content="2021-12-09T07:23:25.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.769Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="SDR">
+<meta property="article:tag" content="FPGA">
+<meta property="article:tag" content="usrp_b205">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/b205_core_module.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>usrp_b205 fpga源码(2) | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          usrp_b205 fpga源码(2)
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-12-09 15:23:25" itemprop="dateCreated datePublished" datetime="2021-12-09T15:23:25+08:00">2021-12-09</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/usrp/" itemprop="url" rel="index"><span itemprop="name">usrp</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/" class="post-meta-item leancloud_visitors" data-flag-title="usrp_b205 fpga源码(2)" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="b205-core"><a href="#b205-core" class="headerlink" title="b205 core"></a>b205 core</h1><p>在前面的博客当中记录了 usrp b205 的整体的结构，只能说是从一个整体上对代码结构进行了分析，对其中细节的部分并不是十分了解，但是想要弄清楚 usrp b205 的具体的实现，还是要在这些部分下功夫才行。<br>b205_core 的verilog module的结构如下图所示：</p>
+<p><img src="/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/b205_core_module.png" alt="b205_core_module"><br><span id="more"></span><br>经过简单的阅读这个模块的源代码之后，可以大概知道这个模块的接口信号的作用：</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>signal</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>bus_clk</td>
+<td>来自FX3的时钟</td>
+</tr>
+<tr>
+<td>bus_rst</td>
+<td>bus_clk时钟域的复位信号</td>
+</tr>
+<tr>
+<td>axis_tx</td>
+<td>上位机经由fx3发送至FPGA的IQ数据，axis总线</td>
+</tr>
+<tr>
+<td>axis_ctrl</td>
+<td>上位机经由fx发送至FPGA的控制信号，axis总线</td>
+</tr>
+<tr>
+<td>axis_rx</td>
+<td>FPGA采集到的IQ数据经由FX3发送至上位机, axis总线</td>
+</tr>
+<tr>
+<td>axis_ctrl</td>
+<td>FPGA响应上位机的控制信号并返回的响应，axis总线</td>
+</tr>
+<tr>
+<td>radio_clk</td>
+<td>radio时钟域下的时钟</td>
+</tr>
+<tr>
+<td>radio_rst</td>
+<td>radio时钟域下的复位信号</td>
+</tr>
+<tr>
+<td>tx_iq</td>
+<td>FPGA解析上位机发送来的IQ数据，转换成32位的IQ数据，发送给AD9361数据接口模块</td>
+</tr>
+<tr>
+<td>rx_iq</td>
+<td>FPGA将从AD9361接收到的32位IQ数据，经过FPGA内部的radio模块，转换成上位机能够解析的帧数据</td>
+</tr>
+<tr>
+<td>fe_gpio</td>
+<td>射频前段开关和LED的控制信号</td>
+</tr>
+<tr>
+<td>fp_gpio</td>
+<td>通用IO的控制输出</td>
+</tr>
+<tr>
+<td>cat_spi</td>
+<td>FPGA接卸上位机的控制信号，从而驱动AD936x的SPI控制总线</td>
+</tr>
+<tr>
+<td>misc_signals</td>
+<td>其他的一些控制信号</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h1 id="b205-core基本结构"><a href="#b205-core基本结构" class="headerlink" title="b205 core基本结构"></a>b205 core基本结构</h1><p><img src="/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/b205_core_structure.png" alt="b205 core的结构 "></p>
+<h2 id="b205-Core整体结构与信号梳理"><a href="#b205-Core整体结构与信号梳理" class="headerlink" title="b205 Core整体结构与信号梳理"></a>b205 Core整体结构与信号梳理</h2><p>分析B205 Core的源码，b205_core这个模块按照上图的方式进行简单的划分，当然这个只是我个人的划分方法，对原始的verilog模块中还是做了简化，只是能够简单的描述一下信号的流向。</p>
+<p>从整体结构图上来看，上位机向FPGA发送控制信号到FPGA内部是axis_ctrl这个总线，在b205_core内部，该axis_ctrl总线经过分流分成了送到两个不同的目标模块，其中一部分送到了内部的逻辑，也就是radio_ctrl_proc模块，另外一部分送到了rado信号处理模块。<br>radio_ctrl_proc模块接收到了控制信号之后，会去解析这些信号，并且去驱动FPGA的逻辑，比如控制AD936x，驱动内部逻辑产生返回给上位机的数据包，控制PPS信号的生成等。</p>
+<p>radio_legacy模块接收到控制信号之后，会在内部去响应这些信号，radio_legacy模块是整个b205_core模块当中最复杂的模块，在这个里面包含了关于对命令的解析，IQ数据的转换与流量控制，向上位机返回内部的响应等等，这个模块是之后分析的重点，在这里先不做过多介绍。</p>
+<p>radio_legacy模块和radio_ctrl_proc模块都会对上位机发出的控制命令做出响应，因此在b205_core模块里面还有用于将这两个响应信号生成源的axis总线上数据进行一个合路处理。这也就是axi_mux4这个模块的作用。</p>
+<p>除了上面这些模块之外，在b205_core当中还有一个十分重要的模块就是PPS产生模块，PPS信号可以是内部产生的也可以是由外部输入的，pps的选择就是由radio_ctrl_proc 这个模块响应了上位机的控制信号之后进行控制的。</p>
+<p>在usrp的源码当中，可以看到有一些模块的复用程度还是蛮高的，因此有必要弄清楚这些模块的具体的功能，能够帮助理整个系统的构成。因此接下来就会稍微研究一下在b205_core当中这些基础模块的作用。</p>
+<h2 id="CHDR数据格式"><a href="#CHDR数据格式" class="headerlink" title="CHDR数据格式"></a>CHDR数据格式</h2><p>在进行各个模块的功能分析之前，对传输的数据包先进行解析是有必要的，因为在verilog代码的实现的过程，都需要去解析这些数据包的内容。<br>关于USRP在传输过程中所传递的数据包，我也是在google上搜索了一番，在下面这个地址当中，有介绍usrp是如何同步的，其中就简单介绍了USRP在传输时的数据包的格式 CHDR数据包格式。</p>
+<p><a target="_blank" rel="noopener" href="https://kb.ettus.com/Synchronizing_USRP_Events_Using_Timed_Commands_in_UHD">Synchronizing_USRP_Events_Using_Timed_Commands_in_UHD</a></p>
+<p>我也找到了两个PDF文件，来介绍USRP3当中的CHDR在传输过程当中的一些情况。</p>
+<p><a target="_blank" rel="noopener" href="https://github.com/black-pigeon/black-pigeon.github.io/raw/hexo/source/_posts/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/USRP3_concepts.pdf">USRP3_concepts.pdf</a></p>
+<p><a target="_blank" rel="noopener" href="https://github.com/black-pigeon/black-pigeon.github.io/raw/hexo/source/_posts/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/Synchronizing_USRP_Events_Using_Timed_Commands_in_UHD.pdf">Synchronizing_USRP_Events_Using_Timed_Commands_in_UHD.pdf</a></p>
+<p>其中CHDR帧格式如下图所示：</p>
+<p><img src="/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/packet_breakdown.png" alt="packet_breakdown"></p>
+<p>可以看到一个CHDR数据帧主要包含包头，时间戳(optional),和数据。其中我认为最重要的就是包头和时间戳了，包头包含了一帧数据里面十分重要的信息，从途中的Compressed Header Bit Mapping也能够看出，在帧头的这64bit当中，决定了本帧数据的类型，是否包含时间戳，是否是一次突发的传输的最后一帧数据，以及帧的长度，序列号源和目的地址等等。</p>
+<p>其实在FPGA当中解析控制包和数据包的时候，主要也就是解析这个帧头的内容。简单了解了CHDR的帧格式之后，我就能够去看verilog源码当中的各个模块了。</p>
+<h2 id="axi-dmux4-amp-axi-mux4"><a href="#axi-dmux4-amp-axi-mux4" class="headerlink" title="axi_dmux4 &amp; axi_mux4"></a>axi_dmux4 &amp; axi_mux4</h2><p><strong>axi_dmux4</strong>模块是一个axis接口的分流器，如下图所示，它能够将一个输入的数据流分发到最多4个数据流通道上去，具体分发到哪一个数据流通道上，是根据这个输入的dest信号来决定的。</p>
+<p><img src="/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/axi_dmux4.png" alt="axi_dmux4"></p>
+<p>在这个模块内部实现了一个简单的状态机,如下图所示：</p>
+<p><img src="/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/demux状态机.png" alt="demux状态机"></p>
+<p>默认情况下，系统处于IDLE状态，当输入的数据帧有效的时候，将会根据输入的dest信号，跳转到4个不同的状态。在这四个不同的状态下，完成axis总线数据的分流。直到这一帧数据的结束，将会回到IDLE状态。</p>
+<p>值得说明的是，这个模块还有一个检测包头的输出，在b205_core这个模块当中，用于检测包头的数据，并且分析这一帧控制数据是用于内部逻辑控制还是内部的radio控制的。因为这些都是组合逻辑，所以会立即执行，因此能够完成时序的要求。</p>
+<p>该模块还有一个BUFFER属性，这个属性能够在内部表示是否对信号进行缓冲操作。<br><figure class="highlight v"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// 通过获取到的包头数据来判断是用于控制ad936x的还是用于控制内部逻辑的</span></span><br><span class="line"><span class="comment">// ctrl_dst=1  ad936x control</span></span><br><span class="line"><span class="comment">// ctrl_dst=0  radio control</span></span><br><span class="line"><span class="keyword">wire</span> [<span class="number">63</span>:<span class="number">0</span>] ctrl_hdr;</span><br><span class="line"><span class="keyword">wire</span> [<span class="number">1</span>:<span class="number">0</span>] ctrl_dst =</span><br><span class="line">    ((ctrl_hdr[<span class="number">7</span>:<span class="number">0</span>] &amp; DEMUX_SID_MASK) == R0_CTRL_SID)? <span class="number">0</span> : (</span><br><span class="line">    ((ctrl_hdr[<span class="number">7</span>:<span class="number">0</span>] &amp; DEMUX_SID_MASK) == L0_CTRL_SID)? <span class="number">1</span> : (</span><br><span class="line"><span class="number">3</span>));</span><br><span class="line">axi_demux4 <span class="variable">#(.ACTIVE_CHAN(4&#x27;b1111), .WIDTH(64), .BUFFER(1))</span> demux_for_ctrl</span><br><span class="line">(</span><br><span class="line">    <span class="variable">.clk</span>(bus_clk), <span class="variable">.reset</span>(bus_rst), <span class="variable">.clear</span>(<span class="number">1&#x27;b0</span>),</span><br><span class="line">    <span class="variable">.header</span>(ctrl_hdr), <span class="variable">.dest</span>(ctrl_dst),</span><br><span class="line">    <span class="variable">.i_tdata</span>(ctrl_tdata), <span class="variable">.i_tlast</span>(ctrl_tlast), <span class="variable">.i_tvalid</span>(ctrl_tvalid), <span class="variable">.i_tready</span>(ctrl_tready),</span><br><span class="line">    <span class="variable">.o0_tdata</span>(r0_ctrl_tdata), <span class="variable">.o0_tlast</span>(r0_ctrl_tlast), <span class="variable">.o0_tvalid</span>(r0_ctrl_tvalid), <span class="variable">.o0_tready</span>(r0_ctrl_tready),</span><br><span class="line">    <span class="variable">.o1_tdata</span>(l0_ctrl_tdata), <span class="variable">.o1_tlast</span>(l0_ctrl_tlast), <span class="variable">.o1_tvalid</span>(l0_ctrl_tvalid), <span class="variable">.o1_tready</span>(l0_ctrl_tready),</span><br><span class="line">    <span class="variable">.o2_tdata</span>(), <span class="variable">.o2_tlast</span>(), <span class="variable">.o2_tvalid</span>(), <span class="variable">.o2_tready</span>(<span class="number">1&#x27;b1</span>),</span><br><span class="line">    <span class="variable">.o3_tdata</span>(), <span class="variable">.o3_tlast</span>(), <span class="variable">.o3_tvalid</span>(), <span class="variable">.o3_tready</span>(<span class="number">1&#x27;b1</span>)</span><br><span class="line">);</span><br></pre></td></tr></table></figure></p>
+<p><strong>axi_mux4</strong>这个模块实现的功能，和<strong>axi_demux4</strong>这个模块的功能刚好相反，他是将最多4路不同的axis数据流合路到一路axis数据流上。</p>
+<p><img src="/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/axis_mux4.png" alt="axis_mux4"></p>
+<p>该模块在内部也实现了一个简单的状态机。根据该模块的属性PRIO的不同，这个状态机有两种不同的工作模式。当属性 <strong>PRIO=1</strong>的时候，状态机在接收完源的一帧数据之后，将会立即回到IDLE状态。 而当<strong>PRIO=0</strong>的时候，当接收完一路axis信号后，会继续检测其他路是否也有有效数据，如果有就会就会跳转到对应状态接收数据<br><figure class="highlight v"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// axi_mux -- takes 4 64-bit AXI stream, merges them to 1 output channel</span></span><br><span class="line"><span class="comment">// Round-robin if PRIO=0, priority if PRIO=1 (lower number ports get priority)</span></span><br><span class="line"><span class="comment">// Bubble cycles are inserted after each packet in PRIO mode, or on wraparound in Round Robin mode</span></span><br><span class="line"><span class="keyword">module</span> axi_mux4</span><br><span class="line">  #(<span class="keyword">parameter</span> PRIO=<span class="number">0</span>,</span><br><span class="line">    <span class="keyword">parameter</span> WIDTH=<span class="number">64</span>,</span><br><span class="line">    <span class="keyword">parameter</span> BUFFER=<span class="number">0</span>)</span><br><span class="line">   (<span class="keyword">input</span> clk, <span class="keyword">input</span> reset, <span class="keyword">input</span> clear,</span><br><span class="line">    <span class="keyword">input</span> [WIDTH-<span class="number">1</span>:<span class="number">0</span>] i0_tdata, <span class="keyword">input</span> i0_tlast, <span class="keyword">input</span> i0_tvalid, <span class="keyword">output</span> i0_tready,</span><br><span class="line">    <span class="keyword">input</span> [WIDTH-<span class="number">1</span>:<span class="number">0</span>] i1_tdata, <span class="keyword">input</span> i1_tlast, <span class="keyword">input</span> i1_tvalid, <span class="keyword">output</span> i1_tready,</span><br><span class="line">    <span class="keyword">input</span> [WIDTH-<span class="number">1</span>:<span class="number">0</span>] i2_tdata, <span class="keyword">input</span> i2_tlast, <span class="keyword">input</span> i2_tvalid, <span class="keyword">output</span> i2_tready,</span><br><span class="line">    <span class="keyword">input</span> [WIDTH-<span class="number">1</span>:<span class="number">0</span>] i3_tdata, <span class="keyword">input</span> i3_tlast, <span class="keyword">input</span> i3_tvalid, <span class="keyword">output</span> i3_tready,</span><br><span class="line">    <span class="keyword">output</span> [WIDTH-<span class="number">1</span>:<span class="number">0</span>] o_tdata, <span class="keyword">output</span> o_tlast, <span class="keyword">output</span> o_tvalid, <span class="keyword">input</span> o_tready);</span><br><span class="line"></span><br><span class="line"><span class="keyword">endmodule</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="radio-ctrl-proc-amp-setting-reg"><a href="#radio-ctrl-proc-amp-setting-reg" class="headerlink" title="radio_ctrl_proc &amp; setting_reg"></a>radio_ctrl_proc &amp; setting_reg</h2><h3 id="radio-ctrl-proc"><a href="#radio-ctrl-proc" class="headerlink" title="radio_ctrl_proc"></a>radio_ctrl_proc</h3><p><strong>radio_ctrl_proc</strong> 在我看来是这个usrp b205_core当中十分巧妙的设计，该模块能够响应上位机发来的控制命令，用于控制内部逻辑或者AD936x，与此同时还能够检测时间戳，比较命令的时间戳和本地的时间戳，这对与同步和需要时间戳控制的任务来说十分重要。<br>其结构和内部的状态机如下图所示：</p>
+<p><img src="/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/radio_ctrl_proc模块.png" alt="radio_ctrl_proc模块"></p>
+<p><img src="/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/radio_ctrl_proc状态机.png" alt="radio_ctrl_proc状态机"></p>
+<p>要理解这个模块的工作原理，首先就得把这个状态机给理清楚了：可以看到该状态机一共有8个状态，且各个状态之间的跳转关系也已经标出，要弄清楚这个模块的工作原理，就离不开前面介绍的CHDR的包格式了。这个状态机前半部分的主要工作就是解析上位机发送而来的控制包的数据，后半部分是产生对控制信号的响应。</p>
+<ul>
+<li><p>RC_HEAD状态：在该状态下，该模块会检测当前是否有有效数据，如果检测到了有效帧数据，也就是一帧数据的开始，那么就会从第一个64Bit开始解析了。会将序列号(seqnum)和源目的地址(sid)给记录下来，然后判断这一帧数据是不是控制帧(bit[63])。</p>
+<ul>
+<li>如果不是控制帧，那么就会跳转到<strong>RC_DUMP</strong>状态，相当于丢弃掉后续的数据。</li>
+<li>如果是控制帧，那么就会看是否包含时间戳，如果包含时间戳，那么就会跳转到接受时间戳的状态。</li>
+<li>如果不包含时间戳，那么就会跳转到接受数据的状态。</li>
+</ul>
+</li>
+<li><p>RC_TIME: 接收时间戳的状态。</p>
+<ul>
+<li>如果在该状态下，接受到的是本帧数据的最后一个64bit数据(也就是说，这一个控制帧，除了时间戳之外不包含任何数据），那么就会跳转到产生响应的状态了也就是 <strong>RC_RESP_HEAD</strong>。</li>
+<li>如果在该状态下，检测到当前本地的时间戳和上位机传下来的控制帧的时间戳相等或者本地超前(模块内部有一个时间比较模块，用于比较本地的时间戳和控制帧里面的时间戳)，那么才会继续接收后面的数据，也即是跳转到RC_DATA的状态。</li>
+</ul>
+</li>
+<li><p>RC_DATA: 接收数据状态(控制帧的第三个64bit)，</p>
+<ul>
+<li>在该状态下，如果检测到当前是本帧数据的最后一个64bit，那么将会跳转到产生 响应头的<strong>RC_RESP_HEAD</strong></li>
+<li>如果后续还有其他数据，将跳转到<strong>RC_DUMP</strong>状态，将后续数据丢弃。</li>
+<li>在该状态下，还会是控制外部逻辑的信号有效。也就是：<figure class="highlight v"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">assign</span> set_stb = (rc_state == RC_DATA) &amp; ready &amp; ctrl_tvalid;</span><br><span class="line"> <span class="keyword">assign</span> set_addr = ctrl_tdata[<span class="number">39</span>:<span class="number">32</span>];</span><br><span class="line"> <span class="keyword">assign</span> set_data = ctrl_tdata[<span class="number">31</span>:<span class="number">0</span>];</span><br></pre></td></tr></table></figure></li>
+</ul>
+</li>
+<li>RC_DUMP: 该状态就是丢弃数据的状态，直到一帧数据阶数的时候，跳转到响应状态。</li>
+<li>RC_RESP_HEAD,RC_RESP_TIME,RC_RESP_DATA: 这个三个状态的目的就是产生一个响应的CHDR数据帧，包含帧头，时间戳，响应数据等等。<figure class="highlight v"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">always</span> @(<span class="keyword">posedge</span> clk)</span><br><span class="line">   <span class="keyword">if</span> (set_stb)</span><br><span class="line">      cmd_time &lt;= vita_time;</span><br><span class="line"></span><br><span class="line"><span class="keyword">always</span> @*</span><br><span class="line">  <span class="keyword">case</span> (rc_state)</span><br><span class="line">    RC_RESP_HEAD : &#123; resp_tlast, resp_tdata &#125; &lt;= &#123;<span class="number">1&#x27;b0</span>, <span class="number">4&#x27;hA</span>, seqnum, <span class="number">16&#x27;d24</span>, sid[<span class="number">15</span>:<span class="number">0</span>], sid[<span class="number">31</span>:<span class="number">16</span>] &#125;;</span><br><span class="line">    RC_RESP_TIME : &#123; resp_tlast, resp_tdata &#125; &lt;= &#123;<span class="number">1&#x27;b0</span>, cmd_time&#125;;</span><br><span class="line">    RC_RESP_DATA : &#123; resp_tlast, resp_tdata &#125; &lt;= &#123;<span class="number">1&#x27;b1</span>, readback&#125;;</span><br><span class="line">    <span class="keyword">default</span> :      &#123; resp_tlast, resp_tdata &#125; &lt;= <span class="number">65&#x27;h0</span>;</span><br><span class="line">  <span class="keyword">endcase</span> <span class="comment">// case (rc_state)</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">assign</span> resp_tvalid = (rc_state == RC_RESP_HEAD) | (rc_state == RC_RESP_TIME) | (rc_state == RC_RESP_DATA);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+</li>
+</ul>
+<h3 id="setting-reg-模块"><a href="#setting-reg-模块" class="headerlink" title="setting_reg 模块"></a>setting_reg 模块</h3><p><strong>setting_reg</strong>实现的功能就特别简单了，应该说这个模块就是配合着前面的radio_ctrl_proc这个模块来使用的。<br>该模块的功能就是当radio_ctrl_proc产生了一个控制信号的时候(set_stb,set_addr,set_data)，setting_reg模块会比较当前的设置的地址是不是自己的属性所设置的地址，如果是就把输入的数据，寄存器输出到out上，并且产生一个一拍的changed信号。</p>
+<p>从b205_core的verilog源码来看，用于ad936x的配置也是通过这种形式产生的，最终将这个控制信号通过SPI给到ad936x从而实现从上位机对ad936x的配置。也就是源码当中的<strong>simple_spi_core</strong>模块。<br><figure class="highlight v"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br></pre></td><td class="code"><pre><span class="line">radio_ctrl_proc radio_ctrl_proc</span><br><span class="line">    (</span><br><span class="line">        <span class="variable">.clk</span>(bus_clk), <span class="variable">.reset</span>(bus_rst), <span class="variable">.clear</span>(<span class="number">1&#x27;b0</span>),</span><br><span class="line">        <span class="variable">.ctrl_tdata</span>(l0i_ctrl_tdata), <span class="variable">.ctrl_tlast</span>(l0i_ctrl_tlast), <span class="variable">.ctrl_tvalid</span>(l0i_ctrl_tvalid), <span class="variable">.ctrl_tready</span>(l0i_ctrl_tready),</span><br><span class="line">        <span class="variable">.resp_tdata</span>(l0_resp_tdata), <span class="variable">.resp_tlast</span>(l0_resp_tlast), <span class="variable">.resp_tvalid</span>(l0_resp_tvalid), <span class="variable">.resp_tready</span>(l0_resp_tready),</span><br><span class="line">        <span class="variable">.vita_time</span>(<span class="number">64&#x27;b0</span>),</span><br><span class="line">        <span class="variable">.set_stb</span>(set_stb), <span class="variable">.set_addr</span>(set_addr), <span class="variable">.set_data</span>(set_data),</span><br><span class="line">        <span class="variable">.ready</span>(spi_ready), <span class="variable">.readback</span>(rb_data),</span><br><span class="line">        <span class="variable">.debug</span>()</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    setting_reg <span class="variable">#(.my_addr(SR_CORE_MISC), .awidth(8), .width(32), .at_reset(8&#x27;h0))</span> sr_misc</span><br><span class="line">    (</span><br><span class="line">        <span class="variable">.clk</span>(bus_clk), <span class="variable">.rst</span>(bus_rst), <span class="variable">.strobe</span>(set_stb), <span class="variable">.addr</span>(set_addr), <span class="variable">.in</span>(set_data),</span><br><span class="line">        <span class="variable">.out</span>(misc_outs), <span class="variable">.changed</span>()</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    setting_reg <span class="variable">#(.my_addr(SR_CORE_READBACK), .awidth(8), .width(2))</span> sr_rdback</span><br><span class="line">    (</span><br><span class="line">        <span class="variable">.clk</span>(bus_clk), <span class="variable">.rst</span>(bus_rst), <span class="variable">.strobe</span>(set_stb), <span class="variable">.addr</span>(set_addr), <span class="variable">.in</span>(set_data),</span><br><span class="line">        <span class="variable">.out</span>(rb_addr), <span class="variable">.changed</span>()</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    setting_reg <span class="variable">#(.my_addr(SR_CORE_SYNC), .awidth(8), .width(3))</span> sr_sync</span><br><span class="line">    (</span><br><span class="line">        <span class="variable">.clk</span>(bus_clk), <span class="variable">.rst</span>(bus_rst), <span class="variable">.strobe</span>(set_stb), <span class="variable">.addr</span>(set_addr), <span class="variable">.in</span>(set_data),</span><br><span class="line">        <span class="variable">.out</span>(&#123;time_sync,pps_select&#125;), <span class="variable">.changed</span>()</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    simple_spi_core <span class="variable">#(.BASE(SR_CORE_SPI), .WIDTH(8), .CLK_IDLE(0), .SEN_IDLE(8&#x27;hFF))</span> misc_spi</span><br><span class="line">    (</span><br><span class="line">        <span class="variable">.clock</span>(bus_clk), <span class="variable">.reset</span>(bus_rst),</span><br><span class="line">        <span class="variable">.set_stb</span>(set_stb), <span class="variable">.set_addr</span>(set_addr), <span class="variable">.set_data</span>(set_data),</span><br><span class="line">        <span class="variable">.readback</span>(spi_readback), <span class="variable">.ready</span>(spi_ready),</span><br><span class="line">        <span class="variable">.sen</span>(sen), <span class="variable">.sclk</span>(sclk), <span class="variable">.mosi</span>(mosi), <span class="variable">.miso</span>(miso),</span><br><span class="line">        <span class="variable">.debug</span>()</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @*</span><br><span class="line">     <span class="keyword">case</span>(rb_addr)</span><br><span class="line">       <span class="number">2&#x27;d0</span> : rb_data &lt;= &#123; <span class="number">32&#x27;hACE0BA5E</span>, COMPAT_MAJOR, COMPAT_MINOR &#125;;</span><br><span class="line">       <span class="number">2&#x27;d1</span> : rb_data &lt;= &#123; <span class="number">32&#x27;b0</span>, spi_readback &#125;;</span><br><span class="line">       <span class="number">2&#x27;d2</span> : rb_data &lt;= &#123; <span class="number">16&#x27;b0</span>, <span class="number">8&#x27;d1</span>, <span class="number">8&#x27;d0</span>, rb_misc &#125;;</span><br><span class="line">       <span class="number">2&#x27;d3</span> : rb_data &lt;= &#123; <span class="number">30&#x27;h0</span>, lock_state_r &#125;;</span><br><span class="line">       <span class="keyword">default</span> : rb_data &lt;= <span class="number">64&#x27;d0</span>;</span><br><span class="line">     <span class="keyword">endcase</span> <span class="comment">// case (rb_addr)</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="radio-legacy模块"><a href="#radio-legacy模块" class="headerlink" title="radio_legacy模块"></a>radio_legacy模块</h2><p>接下来就剩下，b205_core当中最复杂的模块了，这个模块主要用于控制FPGA内部的radio信号，在之后再做介绍了。这个内容很多，还没有开始看，单上上面的一些模块，在这个模块当中也会使用到，这能够有助于我理解这个模块当中其他模块的功能。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/SDR/" rel="tag"># SDR</a>
+              <a href="/tags/FPGA/" rel="tag"># FPGA</a>
+              <a href="/tags/usrp-b205/" rel="tag"># usrp_b205</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/12/05/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-1/" rel="prev" title="usrp_b205 fpga源码(1)">
+      <i class="fa fa-chevron-left"></i> usrp_b205 fpga源码(1)
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/" rel="next" title="usrp-b205-fpga源码-3">
+      usrp-b205-fpga源码-3 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#b205-core"><span class="nav-number">1.</span> <span class="nav-text">b205 core</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#b205-core%E5%9F%BA%E6%9C%AC%E7%BB%93%E6%9E%84"><span class="nav-number">2.</span> <span class="nav-text">b205 core基本结构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#b205-Core%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E4%B8%8E%E4%BF%A1%E5%8F%B7%E6%A2%B3%E7%90%86"><span class="nav-number">2.1.</span> <span class="nav-text">b205 Core整体结构与信号梳理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#CHDR%E6%95%B0%E6%8D%AE%E6%A0%BC%E5%BC%8F"><span class="nav-number">2.2.</span> <span class="nav-text">CHDR数据格式</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#axi-dmux4-amp-axi-mux4"><span class="nav-number">2.3.</span> <span class="nav-text">axi_dmux4 &amp; axi_mux4</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#radio-ctrl-proc-amp-setting-reg"><span class="nav-number">2.4.</span> <span class="nav-text">radio_ctrl_proc &amp; setting_reg</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#radio-ctrl-proc"><span class="nav-number">2.4.1.</span> <span class="nav-text">radio_ctrl_proc</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#setting-reg-%E6%A8%A1%E5%9D%97"><span class="nav-number">2.4.2.</span> <span class="nav-text">setting_reg 模块</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#radio-legacy%E6%A8%A1%E5%9D%97"><span class="nav-number">2.5.</span> <span class="nav-text">radio_legacy模块</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

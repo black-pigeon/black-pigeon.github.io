@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="前言在上一篇博客当中简单的介绍了CDMA系统中用于捕获信号的三个方向，并且在matlab中实现了最低一层的PN码的搜索，那么接下来就可以进行频率的搜索。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="北斗卫星导航--4--频率搜索">
+<meta property="og:url" content="https://black-pigeon.github.io/2021/11/11/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AF%BC%E8%88%AA-4-%E9%A2%91%E7%8E%87%E6%90%9C%E7%B4%A2/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="前言在上一篇博客当中简单的介绍了CDMA系统中用于捕获信号的三个方向，并且在matlab中实现了最低一层的PN码的搜索，那么接下来就可以进行频率的搜索。">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/11/11/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AF%BC%E8%88%AA-4-%E9%A2%91%E7%8E%87%E6%90%9C%E7%B4%A2/二维搜索.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/11/11/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AF%BC%E8%88%AA-4-%E9%A2%91%E7%8E%87%E6%90%9C%E7%B4%A2/二维搜索结果.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/11/11/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AF%BC%E8%88%AA-4-%E9%A2%91%E7%8E%87%E6%90%9C%E7%B4%A2/具体搜索结果.png">
+<meta property="article:published_time" content="2021-11-11T05:53:19.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.769Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="SDR">
+<meta property="article:tag" content="Matlab">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2021/11/11/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AF%BC%E8%88%AA-4-%E9%A2%91%E7%8E%87%E6%90%9C%E7%B4%A2/二维搜索.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2021/11/11/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AF%BC%E8%88%AA-4-%E9%A2%91%E7%8E%87%E6%90%9C%E7%B4%A2/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>北斗卫星导航--4--频率搜索 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/11/11/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AF%BC%E8%88%AA-4-%E9%A2%91%E7%8E%87%E6%90%9C%E7%B4%A2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          北斗卫星导航--4--频率搜索
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-11-11 13:53:19" itemprop="dateCreated datePublished" datetime="2021-11-11T13:53:19+08:00">2021-11-11</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/SDR/" itemprop="url" rel="index"><span itemprop="name">SDR</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/11/11/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AF%BC%E8%88%AA-4-%E9%A2%91%E7%8E%87%E6%90%9C%E7%B4%A2/" class="post-meta-item leancloud_visitors" data-flag-title="北斗卫星导航--4--频率搜索" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2021/11/11/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AF%BC%E8%88%AA-4-%E9%A2%91%E7%8E%87%E6%90%9C%E7%B4%A2/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/11/11/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AF%BC%E8%88%AA-4-%E9%A2%91%E7%8E%87%E6%90%9C%E7%B4%A2/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在上一篇博客当中简单的介绍了CDMA系统中用于捕获信号的三个方向，并且在matlab中实现了最低一层的PN码的搜索，那么接下来就可以进行频率的搜索。<br><span id="more"></span></p>
+<h1 id="频率的搜索"><a href="#频率的搜索" class="headerlink" title="频率的搜索"></a>频率的搜索</h1><p>由于GPS发射机相对于接收机在高速运动，并且两者相隔万里，因此信号在发送出来到达接收机的时候，接收机并不能知道载波的具体的频率和相位。因此在接收机当中，需要本地生成一个载波信号用于信号的解调。<br>因此在这里需要进行第二个维度的搜索，也就是频率的搜索。有了上一篇博客的经验之后，在这里实现频率的搜索就比较简单了。<br>在这里假定一个搜索的频率范围是15KHz，因此我们需要在+/- 7.5KHz的频率范围进行搜索对应的信号，只有频率对上的时候，解调出来的效果才最好，这样在进行PN码搜索的时候才能获得最佳的相关峰。</p>
+<p>还是以前面介绍的二维搜索的图为示意，介绍频率和码片搜索的过程：</p>
+<p><img src="/2021/11/11/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AF%BC%E8%88%AA-4-%E9%A2%91%E7%8E%87%E6%90%9C%E7%B4%A2/二维搜索.png" alt="二维搜索"><br>在搜索的过程中，每个频率都需要进行码相位的搜索，每当完成一轮码相位的搜索之后，频率搜索的值增加一个步长，以此实现一个完整的搜索。</p>
+<h1 id="频率搜索的matlab实现"><a href="#频率搜索的matlab实现" class="headerlink" title="频率搜索的matlab实现"></a>频率搜索的matlab实现</h1><p>具体的实现的matlab代码如下，只需要在前面的码片搜索的基础上简单修改即可。</p>
+<figure class="highlight matlab"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br></pre></td><td class="code"><pre><span class="line">clc;</span><br><span class="line">close all;</span><br><span class="line">clear all;</span><br><span class="line"></span><br><span class="line"><span class="comment">%% parameter define</span></span><br><span class="line">PN_INDEX1   = <span class="number">8</span> ;       <span class="comment">% choose satellites </span></span><br><span class="line">PN_INDEX2   = <span class="number">10</span>;       <span class="comment">% choose satellites </span></span><br><span class="line">SAMP_RATE = <span class="number">8.184e6</span>;    <span class="comment">% sample rate</span></span><br><span class="line">CODE_RATE = <span class="number">2.046e6</span>;    <span class="comment">% standard PN code rate 2.046M </span></span><br><span class="line">NH_CODE_LEN = <span class="number">20</span>;       <span class="comment">% the length of NH code is 20bit</span></span><br><span class="line">SOURCE_DATA_LEN = <span class="number">300</span>;   <span class="comment">% the source data num</span></span><br><span class="line">PN_CODE_LEN = <span class="number">2046</span>;     <span class="comment">% standard PN cod length 2046</span></span><br><span class="line">PN_SAMP_LEN = (SAMP_RATE/CODE_RATE) * PN_CODE_LEN * NH_CODE_LEN * SOURCE_DATA_LEN; <span class="comment">% total pn sample for data to be send</span></span><br><span class="line"></span><br><span class="line"><span class="comment">%% generate bpsk modulation data</span></span><br><span class="line"><span class="comment">% source_data ==&gt; NH mod ==&gt; PN mod ==&gt; BPSK mod</span></span><br><span class="line"><span class="comment">% generate source data</span></span><br><span class="line">source_data = <span class="built_in">rand</span>(<span class="number">1</span>, SOURCE_DATA_LEN); <span class="comment">% generate test source data</span></span><br><span class="line">source_data(source_data &lt; <span class="number">0.5</span>) = <span class="number">-1</span>;</span><br><span class="line">source_data(source_data &gt;= <span class="number">0.5</span>) = <span class="number">1</span>;    </span><br><span class="line">source_data = repelem(source_data, <span class="number">1</span>, NH_CODE_LEN); <span class="comment">% upsample D1 signal source data to NH code modulated rate 1Kbps</span></span><br><span class="line"></span><br><span class="line"><span class="comment">% NH code</span></span><br><span class="line">nh_code = [<span class="number">0</span> <span class="number">0</span> <span class="number">0</span> <span class="number">0</span> <span class="number">0</span> <span class="number">1</span> <span class="number">0</span> <span class="number">0</span> <span class="number">1</span> <span class="number">1</span> <span class="number">0</span> <span class="number">1</span> <span class="number">0</span> <span class="number">1</span> <span class="number">0</span> <span class="number">0</span> <span class="number">1</span> <span class="number">1</span> <span class="number">1</span> <span class="number">0</span>];</span><br><span class="line">nh_code = <span class="built_in">repmat</span>(nh_code, <span class="number">1</span>, SOURCE_DATA_LEN);     </span><br><span class="line">nh_code(nh_code == <span class="number">0</span>) = <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">% NH code modulation</span></span><br><span class="line">nh_mod = source_data .* nh_code; <span class="comment">% using .* instead of xor</span></span><br><span class="line"></span><br><span class="line"><span class="comment">% upsample to sample rata</span></span><br><span class="line">nh_mod = repelem(nh_mod, <span class="number">1</span>, (SAMP_RATE/CODE_RATE)*PN_CODE_LEN);</span><br><span class="line"></span><br><span class="line"><span class="comment">% generate PN code &amp; PN sample</span></span><br><span class="line">[pn_code, pn_code_sample] = PNCode_Gen(PN_CODE_LEN, PN_SAMP_LEN, CODE_RATE, SAMP_RATE, PN_INDEX1);</span><br><span class="line"></span><br><span class="line"><span class="comment">% PN code modulation</span></span><br><span class="line">pn_mod = nh_mod .* pn_code_sample; <span class="comment">% using .* instead of xor</span></span><br><span class="line"></span><br><span class="line"><span class="comment">% generate carrier wave</span></span><br><span class="line">AMP = <span class="number">1</span>;</span><br><span class="line">ROM_DEPTH = <span class="number">4096</span>;</span><br><span class="line">CARRIER_FREQ = CODE_RATE; <span class="comment">% carrier frequency</span></span><br><span class="line">FREQ_CTRL_WORLD = CARRIER_FREQ * <span class="number">2</span>^<span class="number">32</span>/ SAMP_RATE;</span><br><span class="line"></span><br><span class="line">rom_addr = <span class="number">0</span>: <span class="number">1</span>/ROM_DEPTH: <span class="number">1</span><span class="number">-1</span>/ROM_DEPTH;</span><br><span class="line">carrier_wave_cos = AMP*<span class="built_in">cos</span>(<span class="number">2</span>*<span class="built_in">pi</span>*rom_addr);</span><br><span class="line">carrier_wave_sin = AMP*<span class="built_in">sin</span>(<span class="number">2</span>*<span class="built_in">pi</span>*rom_addr);</span><br><span class="line"><span class="comment">% bpsk modulation</span></span><br><span class="line">bpsk_mod = <span class="built_in">zeros</span>(<span class="number">1</span>,PN_SAMP_LEN);</span><br><span class="line">rom_index = <span class="number">1</span>;</span><br><span class="line">phase_accumulator = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> <span class="built_in">i</span>=<span class="number">1</span>:PN_SAMP_LEN</span><br><span class="line">    <span class="comment">%bpsk modulation</span></span><br><span class="line">    <span class="keyword">if</span>(pn_mod(<span class="built_in">i</span>) == <span class="number">-1</span>)</span><br><span class="line">        bpsk_mod(<span class="built_in">i</span>) = -carrier_wave_cos(rom_index);</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        bpsk_mod(<span class="built_in">i</span>) = carrier_wave_cos(rom_index);</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    phase_accumulator = phase_accumulator + FREQ_CTRL_WORLD;</span><br><span class="line">    <span class="keyword">if</span>(phase_accumulator &gt; <span class="number">2</span>^<span class="number">32</span>)</span><br><span class="line">        phase_accumulator = phase_accumulator - <span class="number">2</span>^<span class="number">32</span>;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    rom_index = <span class="built_in">round</span>(phase_accumulator/<span class="number">2</span>^<span class="number">20</span>);</span><br><span class="line">    <span class="keyword">if</span>(rom_index == <span class="number">0</span>)</span><br><span class="line">        rom_index = <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"><span class="comment">% plot the bpsk result</span></span><br><span class="line"><span class="built_in">figure</span>(<span class="number">1</span>);</span><br><span class="line"><span class="built_in">plot</span>(<span class="number">1</span>:<span class="number">1024</span>, bpsk_mod(<span class="number">1</span>:<span class="number">1024</span>), <span class="string">&#x27;r&#x27;</span>, <span class="number">1</span>:<span class="number">1024</span>, pn_mod(<span class="number">1</span>:<span class="number">1024</span>),<span class="string">&#x27;b&#x27;</span>);</span><br><span class="line">axis([<span class="number">0</span>, <span class="number">1024</span>, <span class="number">-2</span>, <span class="number">2</span>]);</span><br><span class="line"><span class="built_in">legend</span>(<span class="string">&#x27;bpsk mod&#x27;</span>, <span class="string">&#x27;pn mod&#x27;</span>);</span><br><span class="line">title(<span class="string">&quot;BPSK modulation&quot;</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">%% PN code capture</span></span><br><span class="line">DATA_OFFSET = <span class="number">1022</span>;</span><br><span class="line">data_in = bpsk_mod(DATA_OFFSET: <span class="keyword">end</span>);   <span class="comment">% input bpsk data offset</span></span><br><span class="line"></span><br><span class="line">FREQ_WIDTH = <span class="number">15e3</span>;                                      <span class="comment">% frequency search range 15kHz</span></span><br><span class="line">FREQ_STEP = <span class="number">500</span>;                                        <span class="comment">% frequency search step  500Hz</span></span><br><span class="line">FREQ_SEARCH_RANGE = <span class="built_in">round</span>(FREQ_WIDTH/FREQ_STEP);        <span class="comment">% frequency search range</span></span><br><span class="line"></span><br><span class="line">SAMP_PER_PN = <span class="built_in">round</span>((SAMP_RATE/CODE_RATE)*PN_CODE_LEN); <span class="comment">% for 1 complete PN code sample length</span></span><br><span class="line">HALF_CODE_WIDTH = <span class="built_in">round</span>((SAMP_RATE/CODE_RATE)/<span class="number">2</span>);       <span class="comment">% half code offset</span></span><br><span class="line">PN_SEARCH_RANGE = <span class="built_in">round</span>(SAMP_PER_PN/HALF_CODE_WIDTH);   <span class="comment">% the total search range for pn code capture</span></span><br><span class="line"></span><br><span class="line"><span class="comment">% the power of correlation result</span></span><br><span class="line">power_pre = <span class="built_in">zeros</span>(FREQ_SEARCH_RANGE, PN_SEARCH_RANGE);</span><br><span class="line">power_middle = <span class="built_in">zeros</span>(FREQ_SEARCH_RANGE, PN_SEARCH_RANGE);</span><br><span class="line">power_post = <span class="built_in">zeros</span>(FREQ_SEARCH_RANGE, PN_SEARCH_RANGE);</span><br><span class="line"></span><br><span class="line"><span class="comment">%% frequency search</span></span><br><span class="line"><span class="keyword">for</span> freq_index=<span class="number">1</span>:FREQ_SEARCH_RANGE</span><br><span class="line">    </span><br><span class="line">    <span class="comment">% generate PN code</span></span><br><span class="line">    [pn_code, pn_code_sample] = PNCode_Gen(PN_CODE_LEN, SAMP_PER_PN, CODE_RATE, SAMP_RATE, PN_INDEX1);</span><br><span class="line">    pn_pre = [pn_code_sample(HALF_CODE_WIDTH+<span class="number">1</span>:<span class="keyword">end</span>), pn_code_sample(<span class="number">1</span>:HALF_CODE_WIDTH)];</span><br><span class="line">    pn_middle = pn_code_sample;</span><br><span class="line">    pn_post =[pn_code_sample(SAMP_PER_PN-HALF_CODE_WIDTH+<span class="number">1</span>:<span class="keyword">end</span>), pn_code_sample(<span class="number">1</span>:SAMP_PER_PN-HALF_CODE_WIDTH)];</span><br><span class="line"></span><br><span class="line">    <span class="comment">% generate carrier wave</span></span><br><span class="line">    sin_carrier = <span class="built_in">zeros</span>(<span class="number">1</span>, SAMP_PER_PN);</span><br><span class="line">    cos_carrier = <span class="built_in">zeros</span>(<span class="number">1</span>, SAMP_PER_PN);</span><br><span class="line">    rom_index = <span class="number">1</span>;</span><br><span class="line">    phase_accumulator = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">% receiver frequency control word</span></span><br><span class="line">    rx_freq_ctrl_world = <span class="built_in">round</span>((CARRIER_FREQ + (FREQ_STEP*freq_index - FREQ_WIDTH/<span class="number">2</span>))* <span class="number">2</span>^<span class="number">32</span>/ SAMP_RATE);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> <span class="built_in">i</span>=<span class="number">1</span>:SAMP_PER_PN</span><br><span class="line">        sin_carrier(<span class="built_in">i</span>) = carrier_wave_sin(rom_index);</span><br><span class="line">        cos_carrier(<span class="built_in">i</span>) = carrier_wave_cos(rom_index);</span><br><span class="line">        phase_accumulator = phase_accumulator + rx_freq_ctrl_world;</span><br><span class="line">        <span class="keyword">if</span>(phase_accumulator &gt; <span class="number">2</span>^<span class="number">32</span>)</span><br><span class="line">            phase_accumulator = phase_accumulator - <span class="number">2</span>^<span class="number">32</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">        rom_index = <span class="built_in">round</span>(phase_accumulator/<span class="number">2</span>^<span class="number">20</span>);</span><br><span class="line">        <span class="keyword">if</span>(rom_index == <span class="number">0</span>)</span><br><span class="line">            rom_index = <span class="number">1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    signal = data_in(<span class="number">1</span>: SAMP_PER_PN);</span><br><span class="line">    sample_offset = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">% find correlation peak</span></span><br><span class="line">    <span class="keyword">for</span> code_index = <span class="number">1</span>: PN_SEARCH_RANGE</span><br><span class="line">        i_data = signal .* cos_carrier;</span><br><span class="line">        q_data = signal .* sin_carrier;</span><br><span class="line">        <span class="comment">% do correlation</span></span><br><span class="line">        temp_pre_i = sum(i_data .* pn_pre);</span><br><span class="line">        temp_middle_i = sum(i_data .* pn_middle);</span><br><span class="line">        temp_post_i = sum(i_data .* pn_post);</span><br><span class="line">        temp_pre_q = sum(q_data .* pn_pre);</span><br><span class="line">        temp_middle_q = sum(q_data .* pn_middle);</span><br><span class="line">        temp_post_q = sum(q_data .* pn_post);</span><br><span class="line"></span><br><span class="line">        <span class="comment">% calculate the power</span></span><br><span class="line">        power_pre(freq_index, code_index) = temp_pre_i^<span class="number">2</span> + temp_pre_q^<span class="number">2</span>;</span><br><span class="line">        power_middle(freq_index, code_index) = temp_middle_i^<span class="number">2</span> + temp_middle_q^<span class="number">2</span>;</span><br><span class="line">        power_post(freq_index, code_index) = temp_post_i^<span class="number">2</span> + temp_post_q^<span class="number">2</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">% sample_offset = sample_offset + SAMP_PER_PN + HALF_CODE_WIDTH;</span></span><br><span class="line">        <span class="comment">% signal = data_in(sample_offset+1:sample_offset+SAMP_PER_PN);</span></span><br><span class="line"></span><br><span class="line">        sample_offset = sample_offset + SAMP_PER_PN;</span><br><span class="line">        signal = data_in(sample_offset+<span class="number">1</span>: sample_offset+SAMP_PER_PN);</span><br><span class="line">        pn_pre = [pn_pre(HALF_CODE_WIDTH+<span class="number">1</span>:<span class="keyword">end</span>), pn_pre(<span class="number">1</span>:HALF_CODE_WIDTH)];</span><br><span class="line">        pn_middle = [pn_middle(HALF_CODE_WIDTH+<span class="number">1</span>:<span class="keyword">end</span>), pn_middle(<span class="number">1</span>:HALF_CODE_WIDTH)];</span><br><span class="line">        pn_post = [pn_post(HALF_CODE_WIDTH+<span class="number">1</span>:<span class="keyword">end</span>), pn_post(<span class="number">1</span>:HALF_CODE_WIDTH)];</span><br><span class="line"></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="built_in">figure</span>;mesh(<span class="number">1</span>:PN_SEARCH_RANGE, <span class="number">1</span>:FREQ_SEARCH_RANGE, power_pre );title(<span class="string">&#x27;power pre&#x27;</span>); </span><br><span class="line"><span class="built_in">figure</span>;mesh(<span class="number">1</span>:PN_SEARCH_RANGE, <span class="number">1</span>:FREQ_SEARCH_RANGE, power_middle);title(<span class="string">&#x27;power middle&#x27;</span>); </span><br><span class="line"><span class="built_in">figure</span>;mesh(<span class="number">1</span>:PN_SEARCH_RANGE, <span class="number">1</span>:FREQ_SEARCH_RANGE, power_post);title(<span class="string">&#x27;power post&#x27;</span>);</span><br></pre></td></tr></table></figure>
+<p><img src="/2021/11/11/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AF%BC%E8%88%AA-4-%E9%A2%91%E7%8E%87%E6%90%9C%E7%B4%A2/二维搜索结果.png" alt="二维搜索结果"></p>
+<p>加一点点细节之后的结果如下：<br><img src="/2021/11/11/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AF%BC%E8%88%AA-4-%E9%A2%91%E7%8E%87%E6%90%9C%E7%B4%A2/具体搜索结果.png" alt="具体结果"><br>可以看到在具体搜索的过程当中，在不同频率不同码相位下都会出现相关峰，但是只有在最佳频率和码相位的情况下出现的相关峰才会最大。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/SDR/" rel="tag"># SDR</a>
+              <a href="/tags/Matlab/" rel="tag"># Matlab</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/11/10/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-3-PN%E7%A0%81%E7%89%87%E6%90%9C%E7%B4%A2/" rel="prev" title="北斗卫星定位-3-PN码片搜索">
+      <i class="fa fa-chevron-left"></i> 北斗卫星定位-3-PN码片搜索
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/11/17/2021.11/pyqt%E5%85%A5%E9%97%A8-1-%E7%8E%AF%E5%A2%83%E6%90%AD%E5%BB%BA/" rel="next" title="pyqt入门--1--环境搭建">
+      pyqt入门--1--环境搭建 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%A2%91%E7%8E%87%E7%9A%84%E6%90%9C%E7%B4%A2"><span class="nav-number">2.</span> <span class="nav-text">频率的搜索</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%A2%91%E7%8E%87%E6%90%9C%E7%B4%A2%E7%9A%84matlab%E5%AE%9E%E7%8E%B0"><span class="nav-number">3.</span> <span class="nav-text">频率搜索的matlab实现</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

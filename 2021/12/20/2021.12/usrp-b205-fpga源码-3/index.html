@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="radio_legacy 模块在前面的两篇博客当中对USRP B205的整体的一个结构有了一定的了解。通过ettus网上的资料也能够找到一些关于USRP在传输命令时候的一些机制，并以此了解了时间戳的作用，并理解了一下数据是如何在时间戳的作用下进行同步的。 在radio_legacy 模块当中，主要涉及到的是关于无线信号的基带处理部分，在这一部分会与上位机之间进行数据的传输，因此弄懂如何进行IQ数据">
+<meta property="og:type" content="article">
+<meta property="og:title" content="usrp-b205-fpga源码-3">
+<meta property="og:url" content="https://black-pigeon.github.io/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="radio_legacy 模块在前面的两篇博客当中对USRP B205的整体的一个结构有了一定的了解。通过ettus网上的资料也能够找到一些关于USRP在传输命令时候的一些机制，并以此了解了时间戳的作用，并理解了一下数据是如何在时间戳的作用下进行同步的。 在radio_legacy 模块当中，主要涉及到的是关于无线信号的基带处理部分，在这一部分会与上位机之间进行数据的传输，因此弄懂如何进行IQ数据">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/radio_legacy模块大致结构.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/radio_legacy模块大致结构.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/tx_deframe.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/tx_ack.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/seq_error.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/rx_frame产生帧数据状态机.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/data_frame状态机.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/rx_control状态机.png">
+<meta property="article:published_time" content="2021-12-20T01:45:46.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.773Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="SDR">
+<meta property="article:tag" content="FPGA">
+<meta property="article:tag" content="usrp_b205">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/radio_legacy模块大致结构.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>usrp-b205-fpga源码-3 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          usrp-b205-fpga源码-3
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-12-20 09:45:46" itemprop="dateCreated datePublished" datetime="2021-12-20T09:45:46+08:00">2021-12-20</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/usrp/" itemprop="url" rel="index"><span itemprop="name">usrp</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/" class="post-meta-item leancloud_visitors" data-flag-title="usrp-b205-fpga源码-3" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="radio-legacy-模块"><a href="#radio-legacy-模块" class="headerlink" title="radio_legacy 模块"></a>radio_legacy 模块</h1><p>在前面的两篇博客当中对USRP B205的整体的一个结构有了一定的了解。通过ettus网上的资料也能够找到一些关于USRP在传输命令时候的一些机制，并以此了解了时间戳的作用，并理解了一下数据是如何在时间戳的作用下进行同步的。</p>
+<p>在radio_legacy 模块当中，主要涉及到的是关于无线信号的基带处理部分，在这一部分会与上位机之间进行数据的传输，因此弄懂如何进行IQ数据和上位机数据之间的转换是这一部分的一个重点。<br><span id="more"></span></p>
+<p>但是很遗憾，由于在这一部分，涉及到很多需要由上位机传递过来的命令，因此想要把这一部分完全搞懂，需要去阅读usrp的上位机的源码才可以，但是以我的实力，想必是不行。因此在这里只能说是对这个主要模块的信号流向进行一个简单的梳理，在之后如果自己需要使用到这个模块，就只把这个模块当做一个黑盒子，一个IP来使用了。</p>
+<p>radio_legacy的整体结构如下图所示：</p>
+<p><img src="/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/radio_legacy模块大致结构.png" alt="radio_legacy大致模块"></p>
+<h2 id="radio-ctrl-proc-amp-time-keeper"><a href="#radio-ctrl-proc-amp-time-keeper" class="headerlink" title="radio_ctrl_proc &amp; time_keeper"></a>radio_ctrl_proc &amp; time_keeper</h2><p><strong>radio_ctrl_proc</strong> 模块在之前就已经介绍过了，该模块负责接受来自上位机的控制命令，将上位机的控制命令，转换成FPGA内部的控制总线上的信号。并且还能够返回一个响应给到上位机。在前面介绍上层模块的时候，对于radio_ctrl_proc模块其输入的本地时间戳的值保持为0，而在<strong>radio_legacy</strong> 模块当中，可以看到有一个 <strong>time_keeper</strong> 模块，该模块的作用就是产生一个本地的计时器，提供一个在FPGA内部的时间戳。</p>
+<p>有关于时间戳的机制，在这里就不再重复的记录了，时间戳需要和上位机的代码一起才能够更好地理解。</p>
+<p>可以看到上位机发送过来的控制信号，首先会经过一个跨时钟域的模块，<strong>bus_clk</strong>时钟域的信号准换到 <strong>radio_clk</strong>当中，也即是说，在 <strong>radio_legacy</strong> 模块当中，大部分的模块都处于 <strong>radio_clk</strong>当中。</p>
+<p>返回给上位机的响应信号可以看到，在本模块当中会主要有两个来源，一个是由 <strong>radio_legacy</strong> 模块所产生的响应信号，还有一个是有无线信号的发送控制模块 <strong>new_tx_responder</strong> 产生。而响应信号的来源没有接收端的控制，这是因为接受段的响应信号是通过接受端的数据返回给上位机的。</p>
+<p>返回给上位机的信号需要经过一个时钟域转换模块，由 <strong>radio_clk</strong> 时钟域转换到 <strong>bus_clk</strong> 时钟域。</p>
+<h2 id="TX-channel"><a href="#TX-channel" class="headerlink" title="TX channel"></a>TX channel</h2><p>TX channel是数据有host发送到ad936x的通路，在这一个支路上，主要由下图当中的绿色的模块构成。</p>
+<p><img src="/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/radio_legacy模块大致结构.png" alt="radio_legacy大致模块"></p>
+<p>可以看到主要包含以下几个模块：</p>
+<ul>
+<li>tx_data_cross_domain: tx数据跨时钟域模块，完成发送数据的时钟域的转换，bus_clk到radio_clk。</li>
+<li>new_tx_frame：在b205源码当中的实例名为tx_deframe，主要完成的工作就是将上位机传来的帧数据进行解析，将其中一些重要信息进行解析之后，添加到信号的数据流当中。这样新的数据流当中的每一个数据都能够含有这些关键信息，便于之后的对流量的控制和处理。</li>
+<li>new_tx_control：完成的就是对解帧之后的数据进行检测和控制，由于在前面new_tx_frame模块当中对原始的数据帧进行了解析，使得新的数据流当中每个点都包含对应数据帧的帧头信息，因此在tx_control模块当中就可以来解析这些信息了。</li>
+<li>new_tx_responder:在这个模块当中，会根据数据发送成功或者失败产生一些响应信号，返回给上位机，上位机接收到这些信号之后，会在软件中进行下一步的处理。</li>
+<li>duc_chain： FPGA内部的数字上变频模块，在这个模块当中，包含有一些简单的DSP模块，经过这个模块的处理之后，数据就会发送到AD936x模块，并最终经过调制，发送到空中了。</li>
+</ul>
+<h3 id="tx-deframe-模块"><a href="#tx-deframe-模块" class="headerlink" title="tx_deframe 模块"></a>tx_deframe 模块</h3><p>在tx_deframe当中，有一个简单的状态机，该状态机的状态跳转图如下图所示：</p>
+<p><img src="/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/tx_deframe.png" alt="tx_deframe状态机"></p>
+<p>主要实现的功能就是在TD_HEAD状态下，进行数据帧的检测和解析，如果接受到的数据帧是控制帧，那么则需要将这一帧数据丢弃，状态跳转到TD_DUMP。如果是数据帧，那么就会将帧头当中的具体的信息解析出来，包括数据帧长度是奇数还是偶数odd，是否包含时间戳send_at，序列号seqnum，地址sid，突发结束eob等信息。如果包含时间戳则跳转到接受时间戳状态TD_TIME并进一步跳转到接受数据的状态。<br>最终将数据由CHDR的格式转换为帧头信息的数据流，如下面的对应关系所示：<br><figure class="highlight v"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">wire</span> [<span class="number">175</span>:<span class="number">0</span>]   fifo_tdata = &#123; odd, send_at, eob, i_tlast, seqnum<span class="comment">/*12*/</span>, sid, send_time<span class="comment">/*64*/</span>, i_tdata<span class="comment">/*64*/</span> &#125;;</span><br></pre></td></tr></table></figure></p>
+<h3 id="tx-control-模块-amp-tx-responder-模块"><a href="#tx-control-模块-amp-tx-responder-模块" class="headerlink" title="tx_control 模块 &amp; tx_responder 模块"></a>tx_control 模块 &amp; tx_responder 模块</h3><p>在tx_control模块当中主要实现一个控制功能，能够将接收到的解帧之后的数据，转换成DSP模块需要的IQ数据。<br>并且还会关注帧头当中的信息，当出现错误或者成功发送的时候会产生一个error_code来记录本次发送，并且这个error_code在之后通过tx_responder模块返回给上位机。<br>关于这一部分的内容，具体的可以看下面的文档。<br><a target="_blank" rel="noopener" href="https://github.com/black-pigeon/black-pigeon.github.io/blob/hexo/source/_posts/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/USRP3_concepts.pdf">USRP3_concepts.pdf</a></p>
+<p><img src="/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/tx_ack.png" alt="发送成功"></p>
+<p><img src="/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/seq_error.png" alt="序列号错误"></p>
+<h2 id="RX-channel"><a href="#RX-channel" class="headerlink" title="RX channel"></a>RX channel</h2><p>RX 通道主要包含前面结构图中蓝色的部分，具体包括DDC模块，new_rx_frame模块，new_rx_control模块。<br>由于这些模块里面都有一些由上位机发送下来的控制信号，因此想要弄明白具体某一个时候发生什么变化，目前来看还是不行的，因此就只能从整体结构上来梳理一下这些模块的作用了。</p>
+<h3 id="ddc-chain-模块"><a href="#ddc-chain-模块" class="headerlink" title="ddc_chain 模块"></a>ddc_chain 模块</h3><p>ddc_chain模块主要实现的是从AD936x接受数据，并将数据转换为复数IQ数据，一个IQ数据的位宽为32bit，在该模块内部会有一下DSP模块，这些模块在Spartan6和Artix7当中还有些不同，想要移植到Artix7的时候还需要注意其中的一些IP的使用才行，有一些IP在ISE当中和vivado当中已经不能够很好的兼容了，因此在使用到这些模块的时候，需要使用网表去对IP进行替换。</p>
+<h3 id="new-rx-frame模块"><a href="#new-rx-frame模块" class="headerlink" title="new_rx_frame模块"></a>new_rx_frame模块</h3><p>new_rx_frame 模块将会对经过DDC模块之后的数据进行整理，将经过DDC之后的IQ数据转换为UHD当中所支持的对应的帧格式的数据。<br>在这个模块当中，也有一些从上位机传递过来经过radio_core之后产生的setting_bus总线上的数据，因此也需要对上位机当中的具体的行为去做了解才行。因此还是只能对这些模块的作用进行简单的分析。<br>在new_rx_frmae 当中有两个状态机，其中一个状态机用于将32bit的IQ数据按照顺序填充到CHDR的64bit数据当中。另外一个状态机实现将整理好的64bit的CHDR数据组装成包含帧头和时间戳的具体帧数据。</p>
+<p><img src="/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/rx_frame产生帧数据状态机.png" alt="rx_frame 产生帧数据状态机"></p>
+<p>在这个状态机当中，主要完成的就是IQ数据的组装，最基本的一个工作就是在SECOND和FIRST状态的时候分别完成对第一个32bit IQ数据和第二个32bit IQ数据进行填充。还会对本帧数据产生记录一个时间戳，这在之后产生具体的帧数据是十分有效的。<br>需要注意的是，关于帧头信息，有一部分是从后续的rx_control模块得到的，因为rx_control模块能够根据帧的信息产生一个结束标志位等。<br><figure class="highlight v"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">always</span> @(<span class="keyword">posedge</span> clk)</span><br><span class="line">    <span class="keyword">if</span>(strobe &amp;&amp; run)<span class="keyword">begin</span></span><br><span class="line">        holding &lt;= sample;</span><br><span class="line">        <span class="keyword">if</span>(instate == START)</span><br><span class="line">            hold_time &lt;= vita_time; <span class="comment">// 保存一个时间戳，该时间戳是本帧数据产生时的时间戳</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"><span class="keyword">wire</span> [<span class="number">63</span>:<span class="number">0</span>] 	  sample_tdata = (instate == SECOND) ? &#123;holding, sample&#125; : &#123;sample, <span class="number">32&#x27;h0</span>&#125;;</span><br></pre></td></tr></table></figure><br>在完成IQ数据打包到帧数据当中之后，在new_rx_frame模块当中还有一个用于产生帧数据的状态机，其状态状态跳转图如下：</p>
+<p><img src="/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/data_frame状态机.png" alt="data_frame状态机"></p>
+<p>这个状态机的状态跳转就比较简单的，就是按照帧头，时间戳，IQ数据的格式产生一帧数据。</p>
+<h3 id="rx-control模块"><a href="#rx-control模块" class="headerlink" title="rx_control模块"></a>rx_control模块</h3><p>rx_control模块将会根据上一级的rx_frame 产生模块和DDC模块，来产生有关rx通路上的有关的状态和控制信息。其内部的工作，也和上位机通过setting bus的控制有关，因此该模块具体的工作细节，也需要联合上位机的程序来进行操作。因此在这里只是简单的分析一下该模块的工作流程。</p>
+<p><img src="/2021/12/20/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-3/rx_control状态机.png" alt="rx_control状态机"></p>
+<p>从rx_control模块内部的状态机来看，该模块的工作比较多的，但是仔细分析这个状态机，也不难看出这些模块的一个大概的功能还是比较清晰的，在接受帧数据的时候，可能会出现各种情况，比如时间戳不对啦，帧数据提前结束啦，数据不够啦等等。因此这个模块就会根据帧头信息来监测具体的工作状态。<br>当发生错误的时候，会产生一个响应包通过rx数据通道发送到上位机。</p>
+<p>在接受控制模块当中，需要注意和发送控制模块产生响应的区别，在发送模块当中，响应是通过resp这个通多发送给上位机，而在接受数据控制模块当中，响应信息是通过接受数据通道发送给上位机的。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/SDR/" rel="tag"># SDR</a>
+              <a href="/tags/FPGA/" rel="tag"># FPGA</a>
+              <a href="/tags/usrp-b205/" rel="tag"># usrp_b205</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/12/09/2021.12/usrp-b205-fpga%E6%BA%90%E7%A0%81-2/" rel="prev" title="usrp_b205 fpga源码(2)">
+      <i class="fa fa-chevron-left"></i> usrp_b205 fpga源码(2)
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/01/13/2022.1/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B-1/" rel="next" title="网络编程--1">
+      网络编程--1 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#radio-legacy-%E6%A8%A1%E5%9D%97"><span class="nav-number">1.</span> <span class="nav-text">radio_legacy 模块</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#radio-ctrl-proc-amp-time-keeper"><span class="nav-number">1.1.</span> <span class="nav-text">radio_ctrl_proc &amp; time_keeper</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#TX-channel"><span class="nav-number">1.2.</span> <span class="nav-text">TX channel</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#tx-deframe-%E6%A8%A1%E5%9D%97"><span class="nav-number">1.2.1.</span> <span class="nav-text">tx_deframe 模块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#tx-control-%E6%A8%A1%E5%9D%97-amp-tx-responder-%E6%A8%A1%E5%9D%97"><span class="nav-number">1.2.2.</span> <span class="nav-text">tx_control 模块 &amp; tx_responder 模块</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#RX-channel"><span class="nav-number">1.3.</span> <span class="nav-text">RX channel</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ddc-chain-%E6%A8%A1%E5%9D%97"><span class="nav-number">1.3.1.</span> <span class="nav-text">ddc_chain 模块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#new-rx-frame%E6%A8%A1%E5%9D%97"><span class="nav-number">1.3.2.</span> <span class="nav-text">new_rx_frame模块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#rx-control%E6%A8%A1%E5%9D%97"><span class="nav-number">1.3.3.</span> <span class="nav-text">rx_control模块</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

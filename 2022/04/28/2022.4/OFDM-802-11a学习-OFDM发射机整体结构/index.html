@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. 前言在上一篇博客当中，简单记录了一下802.11a的基本协议，想要在那么短短的篇幅当中把OFDM实现的细节讲完是不太现实的。在这一篇博客当中，我将会介绍整个802.11a的发射机的整体结构，对发射机的整体有一个大概的了解。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OFDM_802.11a学习----OFDM发射机整体结构">
+<meta property="og:url" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="1. 前言在上一篇博客当中，简单记录了一下802.11a的基本协议，想要在那么短短的篇幅当中把OFDM实现的细节讲完是不太现实的。在这一篇博客当中，我将会介绍整个802.11a的发射机的整体结构，对发射机的整体有一个大概的了解。">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/ofdm_tx_struct.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/PPDU帧结构.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/PPDU具体结构.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/短训练序列.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/长训练序列.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/signal域.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/signal域Rate表.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/Data域service域.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/pad比特计算.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/不同调制方式的速率.png">
+<meta property="article:published_time" content="2022-04-28T05:52:57.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.789Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="SDR">
+<meta property="article:tag" content="FPGA">
+<meta property="article:tag" content="ZYNQ">
+<meta property="article:tag" content="OFDM">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/ofdm_tx_struct.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>OFDM_802.11a学习----OFDM发射机整体结构 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          OFDM_802.11a学习----OFDM发射机整体结构
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-04-28 13:52:57" itemprop="dateCreated datePublished" datetime="2022-04-28T13:52:57+08:00">2022-04-28</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/OFDM/" itemprop="url" rel="index"><span itemprop="name">OFDM</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/" class="post-meta-item leancloud_visitors" data-flag-title="OFDM_802.11a学习----OFDM发射机整体结构" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>在上一篇博客当中，简单记录了一下802.11a的基本协议，想要在那么短短的篇幅当中把OFDM实现的细节讲完是不太现实的。<br>在这一篇博客当中，我将会介绍整个802.11a的发射机的整体结构，对发射机的整体有一个大概的了解。</p>
+<span id="more"></span>
+<h1 id="2-整体结构"><a href="#2-整体结构" class="headerlink" title="2. 整体结构"></a>2. 整体结构</h1><p>OFDM的发射机的结构如下图所示。可以将OFDM发射机分为5个部分，分别是上层用户数据产生模块， 802.11a前导码产生模块，802.11a signal域数据产生模块， 802.11a data域数据产生模块， 802.11a组帧模块。</p>
+<p><img src="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/ofdm_tx_struct.png" alt="整体架构.png"><br>在802.11a signal域模块和 802.11a data域模块当中又由许多小模块构成。<br>通过前导码产生模块，signal域数据产生模块，data域数据产生模块和最终的组帧模块，最终能够构建出来一个完整的PPDU数据。<br><img src="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/PPDU帧结构.png" alt="PPDU帧结构"></p>
+<h2 id="2-1-用户数据产生模块"><a href="#2-1-用户数据产生模块" class="headerlink" title="2.1 用户数据产生模块"></a>2.1 用户数据产生模块</h2><p>在进行OFDM实验的时候，希望能够产生一些测试数据，能够用于之后的系统的验证，在这里可以设计一个数据产生模块，该模块能够按照需要产生测试的数据，并且将数据的长度给到后续的模块进行使用。<br>这个数据长度是字节长度，数据长度将会填充在802.11a当中的signal域当中，除此之外，在计算OFDM 符号个数的时候，也需要使用数据的长度。<br>对用802.11a其可以像以太网一样用来传输网络数据，因此这个用户数据产生模块，在之后也可以替换成类似于以太网的组帧模块，这样就可以构建一个简单的系统。<br>当然在这里不会太详细地去实现这个模块。</p>
+<h2 id="2-2-Preamble产生模块"><a href="#2-2-Preamble产生模块" class="headerlink" title="2.2 Preamble产生模块"></a>2.2 Preamble产生模块</h2><p>在Preamble产生模块当中，实现802.11a的短训练序列和长训练序列的生成。<br><img src="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/PPDU具体结构.png" alt="PPDU具体结构"></p>
+<h3 id="2-2-1-短训练序列"><a href="#2-2-1-短训练序列" class="headerlink" title="2.2.1 短训练序列"></a>2.2.1 短训练序列</h3><p>短训练序列的主要用途是进行信号的检测、AGC和粗频偏估计。短训练序列都是经过精心的设计，每个短训练序列的长度为0.8us，在802.11a的前导码当中一共有10个短训练序列。这些短训练序列符号占据每个OFDM符号的52个非零子载波当中的12个。如果用-26~26来标识非零子载波的话，那么短训练序列的子载波的序号为{-24, -20, -16, -12, -8, -4, 4, 8, 12, 16, 20, 24},其中传输的传输数据为一个固定的伪随机序列，采用的QPSK的映射方式。<br><img src="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/短训练序列.png" alt="短训练序列"><br>由于短训练序列只用了52个子载波当中12个来传输符号，因此为了保证OFDM符号的功率稳定，需要乘以因子<script type="math/tex">\sqrt{13/6}</script>.<br>短训练序列的的选择可以是的在较大的范围内实现粗频率估计，通常对于周期为T的重复符号而言，最大可估计的频率偏差为1/2T,因此通过测量连续两个长度为0.8us的短训练序列符号的相位差，可以估计的频率偏差可达625KHz。</p>
+<h3 id="2-2-2-长训练序列"><a href="#2-2-2-长训练序列" class="headerlink" title="2.2.2 长训练序列"></a>2.2.2 长训练序列</h3><p>长训练序列的紧跟在短训练序列之后，长度为8us，长训练序列符号与正常的OFDM符号一样由53个子载波(包含直流处的空子载波)组成，分别占据-26~26信道，长训练序列采用传输的是BPSK符号。表示为：</p>
+<p><img src="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/长训练序列.png" alt="长训练序列"></p>
+<p>在实际使用过程当中，由与短训练序列和长训练序列是固定的，因此可以先使用matlab，python等工具先将短训练序列和长训练序列生成出来，然后将序列存储在ROM当中，在使用的时候，直接从ROM当中读取出来就可以了。</p>
+<h2 id="2-3-signal域"><a href="#2-3-signal域" class="headerlink" title="2.3 signal域"></a>2.3 signal域</h2><p>在前导码之后是signal域，signal域主要包含Rate和Length两个字段，Rate用于传输有关后续数据符号所用到调制信息和码速率。Length字段用于传输PSDU传输的用户数据的字节数。</p>
+<p><img src="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/signal域.png" alt="signal域"></p>
+<p>在Rate字段需要根据所需要的调制方式和码速率填入对应的值。<br><img src="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/signal域Rate表.png" alt="signal域Rate表"><br>Length字段需要注意的是，传输是从LSB到MSB。</p>
+<p>除了Rate字段和Length字段之外，还有一些还有一些其他校验位和空闲位。<br>其中bit4是保留位，bit17是偶校验位，用来对前面的16bit进行校验。还有6位的尾bit。</p>
+<h2 id="2-4-Data域"><a href="#2-4-Data域" class="headerlink" title="2.4 Data域"></a>2.4 Data域</h2><p>在signal域之后就是数据域，Data域主要包含16bit的service域，PSDU，6bit的tail 比特以及填充比特。<br><img src="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/Data域service域.png" alt="Data域service域"><br>service域的前7个比特需要给领用来初始化接收机的解扰器，剩下的为保留位，在发送机当中总给零，在之后就是PSDU域，该域由用户数据转换而来，用户数据转换为bit序列填入到PSDU域当中。在PSDU域结束之后是6bit的尾bit，尾bit之后是pad比特，pad比特的目的是使得DATA域的长度能够刚好为OFDM symbol的整数倍。<br>关于padbit的计算，在802.11a协议当中也给出了详细的说明：<br><img src="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/pad比特计算.png" alt="pad比特计算"></p>
+<p><img src="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/不同调制方式的速率.png" alt="不同调制方式的速率"><br>首先计算处当前数据长度下所需要的OFDM的symbol的数量，其中16+8*length+6，分别值得是，service域bit，psdu数据bit，6位尾bit，NDBPS表示每个OFDM包含的数据bit的数量。相处的结果进行向上取整，从而得到完整的OFDM的符号个数，在用完整的OFDM符号的个数所包含的bit数减去总共的bit数量，从而得到需要填充的pad比特。</p>
+<h2 id="2-5-802-11a组帧模块"><a href="#2-5-802-11a组帧模块" class="headerlink" title="2.5 802.11a组帧模块"></a>2.5 802.11a组帧模块</h2><p>在最后还有一个802.11a的组帧模块，该模块的作用是将前导码，signal域，Data域所产生的时域波形给整合成最终需要发送的OFDM的数据。按照前导码，signal域，Data域的形式进行排列。</p>
+<h1 id="3-Data域和Signal域的具体实现"><a href="#3-Data域和Signal域的具体实现" class="headerlink" title="3. Data域和Signal域的具体实现"></a>3. Data域和Signal域的具体实现</h1><p>在Data域和Signal域模块当中，还有一些子模块，这些子模块对实现整个802.11a发射机十分重要，在之后的博客当中会依次来慢慢实现。<br>其中主要从Data域入手，因为Signal域只包含一个OFDM符号，弄清楚了Data域的实现过程之后，signal域的实现就十分简单了。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/SDR/" rel="tag"># SDR</a>
+              <a href="/tags/FPGA/" rel="tag"># FPGA</a>
+              <a href="/tags/ZYNQ/" rel="tag"># ZYNQ</a>
+              <a href="/tags/OFDM/" rel="tag"># OFDM</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/04/27/2022.4/OFDM-802-11%E5%AD%A6%E4%B9%A0-802-11%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5/" rel="prev" title="OFDM_802.11学习----802.11的基本概念">
+      <i class="fa fa-chevron-left"></i> OFDM_802.11学习----802.11的基本概念
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/" rel="next" title="OFDM-802-11a学习-用户数据与CRC">
+      OFDM-802-11a学习-用户数据与CRC <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">1. 前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84"><span class="nav-number">2.</span> <span class="nav-text">2. 整体结构</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%BA%A7%E7%94%9F%E6%A8%A1%E5%9D%97"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 用户数据产生模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2-Preamble%E4%BA%A7%E7%94%9F%E6%A8%A1%E5%9D%97"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 Preamble产生模块</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-1-%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97"><span class="nav-number">2.2.1.</span> <span class="nav-text">2.2.1 短训练序列</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-2-%E9%95%BF%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97"><span class="nav-number">2.2.2.</span> <span class="nav-text">2.2.2 长训练序列</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-3-signal%E5%9F%9F"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 signal域</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-4-Data%E5%9F%9F"><span class="nav-number">2.4.</span> <span class="nav-text">2.4 Data域</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-5-802-11a%E7%BB%84%E5%B8%A7%E6%A8%A1%E5%9D%97"><span class="nav-number">2.5.</span> <span class="nav-text">2.5 802.11a组帧模块</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-Data%E5%9F%9F%E5%92%8CSignal%E5%9F%9F%E7%9A%84%E5%85%B7%E4%BD%93%E5%AE%9E%E7%8E%B0"><span class="nav-number">3.</span> <span class="nav-text">3. Data域和Signal域的具体实现</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

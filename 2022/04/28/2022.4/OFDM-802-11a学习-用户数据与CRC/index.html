@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. 前言在前面的博客介绍了OFDM发射机的整体结构，真个发射机的模块还是比较多的，因此在实现的时候，按照模块设计的方式来一一实现每一个模块。这篇博客当中会介绍用户数据生成模块和为用户数据添加CRC的模块。通过前面的介绍，我们可以知道，802.11a是可以实现传输网络数据的，在学习以太网的时候，我们可以知道在mac层上需要对数据进行crc校验，因此在实现802.11a的时候，同样可以对用户数据进行">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OFDM-802-11a学习-用户数据与CRC">
+<meta property="og:url" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="1. 前言在前面的博客介绍了OFDM发射机的整体结构，真个发射机的模块还是比较多的，因此在实现的时候，按照模块设计的方式来一一实现每一个模块。这篇博客当中会介绍用户数据生成模块和为用户数据添加CRC的模块。通过前面的介绍，我们可以知道，802.11a是可以实现传输网络数据的，在学习以太网的时候，我们可以知道在mac层上需要对数据进行crc校验，因此在实现802.11a的时候，同样可以对用户数据进行">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/用户数据生成模块.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/user_data_gen_timing.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/crc_8结构.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/802.11FCS.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/crc添加模块.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/add_crc_timing.png">
+<meta property="article:published_time" content="2022-04-28T08:34:22.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.793Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="SDR">
+<meta property="article:tag" content="FPGA">
+<meta property="article:tag" content="ZYNQ">
+<meta property="article:tag" content="OFDM">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/用户数据生成模块.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>OFDM-802-11a学习-用户数据与CRC | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          OFDM-802-11a学习-用户数据与CRC
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-04-28 16:34:22" itemprop="dateCreated datePublished" datetime="2022-04-28T16:34:22+08:00">2022-04-28</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/OFDM/" itemprop="url" rel="index"><span itemprop="name">OFDM</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/" class="post-meta-item leancloud_visitors" data-flag-title="OFDM-802-11a学习-用户数据与CRC" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>在前面的博客介绍了OFDM发射机的整体结构，真个发射机的模块还是比较多的，因此在实现的时候，按照模块设计的方式来一一实现每一个模块。这篇博客当中会介绍用户数据生成模块和为用户数据添加CRC的模块。<br>通过前面的介绍，我们可以知道，802.11a是可以实现传输网络数据的，在学习以太网的时候，我们可以知道在mac层上需要对数据进行crc校验，因此在实现802.11a的时候，同样可以对用户数据进行校验。<br><span id="more"></span></p>
+<h2 id="2-用户数据生成模块"><a href="#2-用户数据生成模块" class="headerlink" title="2. 用户数据生成模块"></a>2. 用户数据生成模块</h2><p>用户数据的主要作用是循环地产生一帧用户数据，以供后续的各个模块进行使用。<br>在该模块当中，需要指出一帧用户数据的起始和结束，同事需要将产生的有效数据传递给下游模块，与此同时，还需要将一帧数据的长度传递给其他模块进行使用。<br><img src="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/用户数据生成模块.png" alt="用户数据生成模块"></p>
+<p>该模块的功能比较简单，在实际的时候的时序设计如下图所示：<br><img src="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/user_data_gen_timing.png" alt="user_data_gen_timing"></p>
+<p>该部分的代码如下：<br><figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">`<span class="meta-keyword">timescale</span> 1ns/1ps</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">module</span> UserDataGen (</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            clk_User            , <span class="comment">// user domain clock</span></span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            reset               , <span class="comment">// system reset</span></span><br><span class="line">    </span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">reg</span>            user_tx_data_start  , <span class="comment">// start of user data</span></span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">reg</span>            user_tx_data_end    , <span class="comment">// end of yser data</span></span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">reg</span>    [<span class="number">15</span>:<span class="number">0</span>]  packetlength        , <span class="comment">// user data length including 4bytes crc</span></span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">reg</span>            user_tx_data_valid  , <span class="comment">// user data valid </span></span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">wire</span>   [<span class="number">7</span>:<span class="number">0</span>]   user_tx_data          <span class="comment">// user data</span></span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">reg</span> [<span class="number">15</span>:<span class="number">0</span>]  packet_cnt_r    ;  </span><br><span class="line">    <span class="keyword">reg</span> [<span class="number">15</span>:<span class="number">0</span>]  start_cnt_r     ;  </span><br><span class="line">    <span class="keyword">reg</span> [<span class="number">15</span>:<span class="number">0</span>]  cycle_cnt_r     ;  </span><br><span class="line"></span><br><span class="line">    <span class="keyword">reg</span> [<span class="number">15</span>:<span class="number">0</span>]  tvg_cnt         ; <span class="comment">// counter for user data generation</span></span><br><span class="line">    <span class="keyword">reg</span> [<span class="number">15</span>:<span class="number">0</span>]  pkt_cnt         ; <span class="comment">// counter for pakcet length</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------register user packet info------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            packet_cnt_r &lt;= <span class="number">&#x27;d150</span>; </span><br><span class="line">            start_cnt_r  &lt;= <span class="number">&#x27;d100</span>;</span><br><span class="line">            cycle_cnt_r  &lt;= <span class="number">&#x27;d19900</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            packet_cnt_r &lt;= packet_cnt_r;    </span><br><span class="line">            start_cnt_r  &lt;= start_cnt_r;</span><br><span class="line">            cycle_cnt_r  &lt;= cycle_cnt_r;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------tvg_cnt------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            tvg_cnt &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(tvg_cnt == cycle_cnt_r - <span class="number">1</span>)<span class="keyword">begin</span></span><br><span class="line">            tvg_cnt &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            tvg_cnt &lt;= tvg_cnt + <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//---------------user_tx_data_start-------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            user_tx_data_start &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(tvg_cnt == start_cnt_r - <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            user_tx_data_start &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            user_tx_data_start &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//---------------user_tx_data_end-------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            user_tx_data_end &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(pkt_cnt == packet_cnt - <span class="number">&#x27;d2</span>)<span class="keyword">begin</span></span><br><span class="line">            user_tx_data_end &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            user_tx_data_end &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------packetlength------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            packetlength &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="comment">// packet length include 4bytes crc</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(tvg_cnt == start_cnt_r - <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            packetlength &lt;= packet_cnt_r + <span class="number">&#x27;d4</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------user_tx_data_valid------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            user_tx_data_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(user_tx_data_valid==<span class="number">1&#x27;b1</span> &amp;&amp; pkt_cnt==packet_cnt_r-<span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            user_tx_data_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(tvg_cnt == start_cnt_r - <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            user_tx_data_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------pkt_cnt------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            pkt_cnt &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(user_tx_data_valid==<span class="number">1&#x27;b1</span> &amp;&amp; pkt_cnt==packet_cnt_r-<span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            pkt_cnt &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (user_tx_data_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            pkt_cnt &lt;= pkt_cnt + <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">assign</span> user_tx_data = pkt_cnt[<span class="number">7</span>:<span class="number">0</span>];</span><br><span class="line"></span><br><span class="line"><span class="keyword">endmodule</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="3-CRC校验模块"><a href="#3-CRC校验模块" class="headerlink" title="3. CRC校验模块"></a>3. CRC校验模块</h2><h2 id="3-1-从crc8作为起点"><a href="#3-1-从crc8作为起点" class="headerlink" title="3.1 从crc8作为起点"></a>3.1 从crc8作为起点</h2><p>crc是循环冗余校验，对于输入的每一个数据都进行校验，校验完成之后的结构需要添加到原始数据之后。<br>crc在进行校验的时候，有一个个生成多项式来指示crc的结构， crc多项式的最高位和最低位均为1，所有的crc-8生成多项式可以表示为：</p>
+<script type="math/tex; mode=display">G(x) = x^{8}+h_{7}x^{7}+h_{6}x^{6}+h_{5}x^{5}+h_{4}x^{4}+h_{3}x^{3}+h_{2}x^{2}+h_{1}x^{1}+x^{0}</script><p>其中$h_{x}$为相关性。</p>
+<h3 id="crc8的硬件实现"><a href="#crc8的硬件实现" class="headerlink" title="crc8的硬件实现"></a>crc8的硬件实现</h3><p>先假定一个crc-8的多项式系数为：<br>G(x)=0b1_0000_0111,根据CRC一位寄存器的规定，遇到1的地方就要有一个异或门，可以根据次来画出该系数下的crc-8的硬件结构。<br><img src="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/crc_8结构.png" alt="用户数据生成模块"><br>信息码进入之后按照图中的结构进行传输，假设进入的信息码为 0b1101,那么当4bit的信息从高位到低位依次经过crc-8之后，可以得到输出的crc校验结果。</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>input</th>
+<th>R0</th>
+<th>R1</th>
+<th>R2</th>
+<th>R3</th>
+<th>R4</th>
+<th>R5</th>
+<th>R6</th>
+<th>R7</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>INIT</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>0</td>
+<td>0</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+</tr>
+<tr>
+<td>1</td>
+<td>1</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+<td>0</td>
+<td>1</td>
+<td>0</td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>可以看到最终输出的crc校验结果是 <strong>0b0110_0011</strong><br>现在嘉定移位寄存器的初始值和输入的数据都是任意值，来推导默认的crc-8输出结果。<br>假定移位寄存器的初始值为 R7R6R5R4R3R2R1R0,输入的数据为D3D2D1D0,那么最终输出的crc-8的校验结果的计算过程如下：</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>input</th>
+<th>R0</th>
+<th>R1</th>
+<th>R2</th>
+<th>R3</th>
+<th>R4</th>
+<th>R5</th>
+<th>R6</th>
+<th>R7</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>INIT</td>
+<td>R0</td>
+<td>R1</td>
+<td>R2</td>
+<td>R3</td>
+<td>R4</td>
+<td>R5</td>
+<td>R6</td>
+<td>R7</td>
+</tr>
+<tr>
+<td>D3</td>
+<td>D3^R7</td>
+<td>D3^R7^R0</td>
+<td>D3^R7^R1</td>
+<td>R2</td>
+<td>R3</td>
+<td>R4</td>
+<td>R5</td>
+<td>R6</td>
+</tr>
+<tr>
+<td>D2</td>
+<td>D2^R6</td>
+<td>D2^R6^D3^R7</td>
+<td>D2^R6^D3^R7^R0</td>
+<td>D3^R7^R1</td>
+<td>R2</td>
+<td>R3</td>
+<td>R4</td>
+<td>R5</td>
+</tr>
+<tr>
+<td>D1</td>
+<td>D1^R5</td>
+<td>D1^R5^D2^R6</td>
+<td>D1^R5^D2^R6^D3^R7</td>
+<td>D2^R6^D3^R7^R0</td>
+<td>D3^R7^R1</td>
+<td>R2</td>
+<td>R3</td>
+<td>R4</td>
+</tr>
+<tr>
+<td>D0</td>
+<td>D0^R4</td>
+<td>D0^R4^D1^R5</td>
+<td>D0^R4^D1^R5^D2^R6</td>
+<td>D1^R5^D2^R6^D3^R7</td>
+<td>D2^R6^D3^R7^R0</td>
+<td>D3^R7^R1</td>
+<td>R2</td>
+<td>R3</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>经过上面的推导，能够得到最终输出的CRC-8的校验结果，通过这种当时能够直接得到CRC-8的校验结果。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></td><td class="code"><pre><span class="line">crc[<span class="number">0</span>] = D0^R4;</span><br><span class="line">crc[<span class="number">1</span>] = D0^R4^D1^R5;</span><br><span class="line">crc[<span class="number">2</span>] = D0^R4^D1^R5^D2^R6;</span><br><span class="line">crc[<span class="number">3</span>] = D1^R5^D2^R6^D3^R7;</span><br><span class="line">crc[<span class="number">4</span>] = D2^R6^D3^R7^R0;</span><br><span class="line">crc[<span class="number">5</span>] = D3^R7^R1;</span><br><span class="line">crc[<span class="number">6</span>] = R2;</span><br><span class="line">crc[<span class="number">6</span>] = R3;</span><br></pre></td></tr></table></figure></p>
+<h2 id="3-2-32位的crc校验"><a href="#3-2-32位的crc校验" class="headerlink" title="3.2 32位的crc校验"></a>3.2 32位的crc校验</h2><p>标准的crc32的校验生成多项式为：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">CRC polynomial coefficients: x^<span class="number">32</span> + x^<span class="number">26</span> + x^<span class="number">23</span> + x^<span class="number">22</span> + x^<span class="number">16</span> + x^<span class="number">12</span> + x^<span class="number">11</span> + x^<span class="number">10</span> + x^<span class="number">8</span> + x^<span class="number">7</span> + x^<span class="number">5</span> + x^<span class="number">4</span> + x^<span class="number">2</span> + x + <span class="number">1</span></span><br><span class="line">                             <span class="number">0x4C11DB7</span> (hex)</span><br><span class="line">CRC width:                   <span class="number">32</span> bits</span><br><span class="line">CRC shift direction:         left (big endian)</span><br><span class="line">Input word width:            <span class="number">8</span> bits</span><br></pre></td></tr></table></figure><br>关于crc32的生成多项式的设计，自己推的话，确实比较复杂，需要耗费大量的时间，可以参考下面的crc-32的生成网址，生成crc32的Verilog代码：<br><a target="_blank" rel="noopener" href="https://bues.ch/cms/hacking/crcgen">crc校验码生成</a></p>
+<p>其生成的crc32的verilog代码如下,实际使用的时候，我们可以直接基于这个模块进行之后的设计。<br><figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">`<span class="meta-keyword">ifndef</span> CRC_V_</span></span><br><span class="line"><span class="meta">`<span class="meta-keyword">define</span> CRC_V_</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// CRC polynomial coefficients: x^32 + x^26 + x^23 + x^22 + x^16 + x^12 + x^11 + x^10 + x^8 + x^7 + x^5 + x^4 + x^2 + x + 1</span></span><br><span class="line"><span class="comment">//                              0x4C11DB7 (hex)</span></span><br><span class="line"><span class="comment">// CRC width:                   32 bits</span></span><br><span class="line"><span class="comment">// CRC shift direction:         left (big endian)</span></span><br><span class="line"><span class="comment">// Input word width:            8 bits</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">module</span> crc (</span><br><span class="line">    <span class="keyword">input</span> [<span class="number">31</span>:<span class="number">0</span>] crcIn,</span><br><span class="line">    <span class="keyword">input</span> [<span class="number">7</span>:<span class="number">0</span>] data,</span><br><span class="line">    <span class="keyword">output</span> [<span class="number">31</span>:<span class="number">0</span>] crcOut</span><br><span class="line">);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">0</span>] = (crcIn[<span class="number">24</span>] ^ crcIn[<span class="number">30</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">6</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">1</span>] = (crcIn[<span class="number">24</span>] ^ crcIn[<span class="number">25</span>] ^ crcIn[<span class="number">30</span>] ^ crcIn[<span class="number">31</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">6</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">2</span>] = (crcIn[<span class="number">24</span>] ^ crcIn[<span class="number">25</span>] ^ crcIn[<span class="number">26</span>] ^ crcIn[<span class="number">30</span>] ^ crcIn[<span class="number">31</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">6</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">3</span>] = (crcIn[<span class="number">25</span>] ^ crcIn[<span class="number">26</span>] ^ crcIn[<span class="number">27</span>] ^ crcIn[<span class="number">31</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">4</span>] = (crcIn[<span class="number">24</span>] ^ crcIn[<span class="number">26</span>] ^ crcIn[<span class="number">27</span>] ^ crcIn[<span class="number">28</span>] ^ crcIn[<span class="number">30</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">6</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">5</span>] = (crcIn[<span class="number">24</span>] ^ crcIn[<span class="number">25</span>] ^ crcIn[<span class="number">27</span>] ^ crcIn[<span class="number">28</span>] ^ crcIn[<span class="number">29</span>] ^ crcIn[<span class="number">30</span>] ^ crcIn[<span class="number">31</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">6</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">6</span>] = (crcIn[<span class="number">25</span>] ^ crcIn[<span class="number">26</span>] ^ crcIn[<span class="number">28</span>] ^ crcIn[<span class="number">29</span>] ^ crcIn[<span class="number">30</span>] ^ crcIn[<span class="number">31</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">6</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">7</span>] = (crcIn[<span class="number">24</span>] ^ crcIn[<span class="number">26</span>] ^ crcIn[<span class="number">27</span>] ^ crcIn[<span class="number">29</span>] ^ crcIn[<span class="number">31</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">8</span>] = (crcIn[<span class="number">0</span>] ^ crcIn[<span class="number">24</span>] ^ crcIn[<span class="number">25</span>] ^ crcIn[<span class="number">27</span>] ^ crcIn[<span class="number">28</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">4</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">9</span>] = (crcIn[<span class="number">1</span>] ^ crcIn[<span class="number">25</span>] ^ crcIn[<span class="number">26</span>] ^ crcIn[<span class="number">28</span>] ^ crcIn[<span class="number">29</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">5</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">10</span>] = (crcIn[<span class="number">2</span>] ^ crcIn[<span class="number">24</span>] ^ crcIn[<span class="number">26</span>] ^ crcIn[<span class="number">27</span>] ^ crcIn[<span class="number">29</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">5</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">11</span>] = (crcIn[<span class="number">3</span>] ^ crcIn[<span class="number">24</span>] ^ crcIn[<span class="number">25</span>] ^ crcIn[<span class="number">27</span>] ^ crcIn[<span class="number">28</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">4</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">12</span>] = (crcIn[<span class="number">4</span>] ^ crcIn[<span class="number">24</span>] ^ crcIn[<span class="number">25</span>] ^ crcIn[<span class="number">26</span>] ^ crcIn[<span class="number">28</span>] ^ crcIn[<span class="number">29</span>] ^ crcIn[<span class="number">30</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">6</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">13</span>] = (crcIn[<span class="number">5</span>] ^ crcIn[<span class="number">25</span>] ^ crcIn[<span class="number">26</span>] ^ crcIn[<span class="number">27</span>] ^ crcIn[<span class="number">29</span>] ^ crcIn[<span class="number">30</span>] ^ crcIn[<span class="number">31</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">6</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">14</span>] = (crcIn[<span class="number">6</span>] ^ crcIn[<span class="number">26</span>] ^ crcIn[<span class="number">27</span>] ^ crcIn[<span class="number">28</span>] ^ crcIn[<span class="number">30</span>] ^ crcIn[<span class="number">31</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">6</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">15</span>] = (crcIn[<span class="number">7</span>] ^ crcIn[<span class="number">27</span>] ^ crcIn[<span class="number">28</span>] ^ crcIn[<span class="number">29</span>] ^ crcIn[<span class="number">31</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">16</span>] = (crcIn[<span class="number">8</span>] ^ crcIn[<span class="number">24</span>] ^ crcIn[<span class="number">28</span>] ^ crcIn[<span class="number">29</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">5</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">17</span>] = (crcIn[<span class="number">9</span>] ^ crcIn[<span class="number">25</span>] ^ crcIn[<span class="number">29</span>] ^ crcIn[<span class="number">30</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">6</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">18</span>] = (crcIn[<span class="number">10</span>] ^ crcIn[<span class="number">26</span>] ^ crcIn[<span class="number">30</span>] ^ crcIn[<span class="number">31</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">6</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">19</span>] = (crcIn[<span class="number">11</span>] ^ crcIn[<span class="number">27</span>] ^ crcIn[<span class="number">31</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">20</span>] = (crcIn[<span class="number">12</span>] ^ crcIn[<span class="number">28</span>] ^ data[<span class="number">4</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">21</span>] = (crcIn[<span class="number">13</span>] ^ crcIn[<span class="number">29</span>] ^ data[<span class="number">5</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">22</span>] = (crcIn[<span class="number">14</span>] ^ crcIn[<span class="number">24</span>] ^ data[<span class="number">0</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">23</span>] = (crcIn[<span class="number">15</span>] ^ crcIn[<span class="number">24</span>] ^ crcIn[<span class="number">25</span>] ^ crcIn[<span class="number">30</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">6</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">24</span>] = (crcIn[<span class="number">16</span>] ^ crcIn[<span class="number">25</span>] ^ crcIn[<span class="number">26</span>] ^ crcIn[<span class="number">31</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">25</span>] = (crcIn[<span class="number">17</span>] ^ crcIn[<span class="number">26</span>] ^ crcIn[<span class="number">27</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">3</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">26</span>] = (crcIn[<span class="number">18</span>] ^ crcIn[<span class="number">24</span>] ^ crcIn[<span class="number">27</span>] ^ crcIn[<span class="number">28</span>] ^ crcIn[<span class="number">30</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">6</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">27</span>] = (crcIn[<span class="number">19</span>] ^ crcIn[<span class="number">25</span>] ^ crcIn[<span class="number">28</span>] ^ crcIn[<span class="number">29</span>] ^ crcIn[<span class="number">31</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">28</span>] = (crcIn[<span class="number">20</span>] ^ crcIn[<span class="number">26</span>] ^ crcIn[<span class="number">29</span>] ^ crcIn[<span class="number">30</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">6</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">29</span>] = (crcIn[<span class="number">21</span>] ^ crcIn[<span class="number">27</span>] ^ crcIn[<span class="number">30</span>] ^ crcIn[<span class="number">31</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">6</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">30</span>] = (crcIn[<span class="number">22</span>] ^ crcIn[<span class="number">28</span>] ^ crcIn[<span class="number">31</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">    <span class="keyword">assign</span> crcOut[<span class="number">31</span>] = (crcIn[<span class="number">23</span>] ^ crcIn[<span class="number">29</span>] ^ data[<span class="number">5</span>]);</span><br><span class="line"><span class="keyword">endmodule</span></span><br><span class="line"></span><br><span class="line"><span class="meta">`<span class="meta-keyword">endif</span> // CRC_V_</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="3-3-crc校验模块设计"><a href="#3-3-crc校验模块设计" class="headerlink" title="3.3 crc校验模块设计"></a>3.3 crc校验模块设计</h2><p>在802.11a当中，crc校验的初始值全为1，最终的crc32输出需要将求得的crc32与32’hFFFF_FFFF异或之后作为最终的crc结果输出。</p>
+<p><img src="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/802.11FCS.png" alt="802.11FCS"></p>
+<p>有了上述的了解之后，接下来就可以着手进行crc的数据添加了。<br>该模块的接口设计如下，从用户数据产生模块得到的数据，输入到本模块当中，需要给这个模块添加上crc。<br><img src="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/crc添加模块.png" alt="crc添加模块"></p>
+<p>接下来可以尝试这个模块的时序设计，该模块的时序设计如下图所示：<br><img src="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/add_crc_timing.png" alt="crc添加模块"></p>
+<p>实现的代码如下：</p>
+<figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// -----------------------------------------------------------------------------</span></span><br><span class="line"><span class="comment">// Copyright (c) 2019-2022 All rights reserved</span></span><br><span class="line"><span class="comment">// -----------------------------------------------------------------------------</span></span><br><span class="line"><span class="comment">// Author 	 : WCC 1530604142@qq.com</span></span><br><span class="line"><span class="comment">// File   	 : crc32</span></span><br><span class="line"><span class="comment">// Create 	 : 2022-04-12</span></span><br><span class="line"><span class="comment">// Revise 	 : 2022-</span></span><br><span class="line"><span class="comment">// Editor 	 : Vscode, tab size (4)</span></span><br><span class="line"><span class="comment">// Functions : crc32 for 802.11</span></span><br><span class="line"><span class="comment">// CRC polynomial coefficients: x^32 + x^26 + x^23 + x^22 + x^16 + x^12 + x^11 + x^10 + x^8 + x^7 + x^5 + x^4 + x^2 + x + 1</span></span><br><span class="line"><span class="comment">//                              0x4C11DB7 (hex)</span></span><br><span class="line"><span class="comment">// CRC width:                   32 bits</span></span><br><span class="line"><span class="comment">// CRC shift direction:         left (big endian)</span></span><br><span class="line"><span class="comment">// Input word width:            8 bits</span></span><br><span class="line"><span class="comment">// -----------------------------------------------------------------------------</span></span><br><span class="line"></span><br><span class="line"><span class="meta">`<span class="meta-keyword">timescale</span> 1ns/1ps</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">module</span> crc32 (</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            clk_User,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            reset   ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            crc_en  ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>    [<span class="number">7</span>:<span class="number">0</span>]   data_in ,</span><br><span class="line"></span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">wire</span>            crc_data_valid  ,</span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">reg</span>     [<span class="number">7</span>:<span class="number">0</span>]   crc_data</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">    <span class="keyword">reg</span>         crc_en_dly      ;</span><br><span class="line">    <span class="keyword">wire</span>        crc_en_neg_pls  ;</span><br><span class="line">    <span class="keyword">reg</span>         crc_flag           ;</span><br><span class="line">    <span class="keyword">reg</span>         crc_flag_dly       ;</span><br><span class="line">    <span class="keyword">reg</span>         crc_en_neg_pls_dly;</span><br><span class="line">    <span class="keyword">reg</span>  [<span class="number">2</span>:<span class="number">0</span>]  cnt_crc         ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">reg</span> [<span class="number">31</span>:<span class="number">0</span>]  crc_in   ;</span><br><span class="line">    <span class="keyword">wire</span> [<span class="number">7</span>:<span class="number">0</span>]  data   ;</span><br><span class="line">    <span class="keyword">reg</span> [<span class="number">31</span>:<span class="number">0</span>]  crc_out;</span><br><span class="line">    <span class="keyword">reg</span> [<span class="number">31</span>:<span class="number">0</span>]  crc_q;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">assign</span> data = data_in;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------crc check------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(*) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(crc_en == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            crc_q[<span class="number">0</span>] = (crc_in[<span class="number">24</span>] ^ crc_in[<span class="number">30</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">6</span>]);</span><br><span class="line">            crc_q[<span class="number">1</span>] = (crc_in[<span class="number">24</span>] ^ crc_in[<span class="number">25</span>] ^ crc_in[<span class="number">30</span>] ^ crc_in[<span class="number">31</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">6</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">            crc_q[<span class="number">2</span>] = (crc_in[<span class="number">24</span>] ^ crc_in[<span class="number">25</span>] ^ crc_in[<span class="number">26</span>] ^ crc_in[<span class="number">30</span>] ^ crc_in[<span class="number">31</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">6</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">            crc_q[<span class="number">3</span>] = (crc_in[<span class="number">25</span>] ^ crc_in[<span class="number">26</span>] ^ crc_in[<span class="number">27</span>] ^ crc_in[<span class="number">31</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">            crc_q[<span class="number">4</span>] = (crc_in[<span class="number">24</span>] ^ crc_in[<span class="number">26</span>] ^ crc_in[<span class="number">27</span>] ^ crc_in[<span class="number">28</span>] ^ crc_in[<span class="number">30</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">6</span>]);</span><br><span class="line">            crc_q[<span class="number">5</span>] = (crc_in[<span class="number">24</span>] ^ crc_in[<span class="number">25</span>] ^ crc_in[<span class="number">27</span>] ^ crc_in[<span class="number">28</span>] ^ crc_in[<span class="number">29</span>] ^ crc_in[<span class="number">30</span>] ^ crc_in[<span class="number">31</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">6</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">            crc_q[<span class="number">6</span>] = (crc_in[<span class="number">25</span>] ^ crc_in[<span class="number">26</span>] ^ crc_in[<span class="number">28</span>] ^ crc_in[<span class="number">29</span>] ^ crc_in[<span class="number">30</span>] ^ crc_in[<span class="number">31</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">6</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">            crc_q[<span class="number">7</span>] = (crc_in[<span class="number">24</span>] ^ crc_in[<span class="number">26</span>] ^ crc_in[<span class="number">27</span>] ^ crc_in[<span class="number">29</span>] ^ crc_in[<span class="number">31</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">            crc_q[<span class="number">8</span>] = (crc_in[<span class="number">0</span>] ^ crc_in[<span class="number">24</span>] ^ crc_in[<span class="number">25</span>] ^ crc_in[<span class="number">27</span>] ^ crc_in[<span class="number">28</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">4</span>]);</span><br><span class="line">            crc_q[<span class="number">9</span>] = (crc_in[<span class="number">1</span>] ^ crc_in[<span class="number">25</span>] ^ crc_in[<span class="number">26</span>] ^ crc_in[<span class="number">28</span>] ^ crc_in[<span class="number">29</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">5</span>]);</span><br><span class="line">            crc_q[<span class="number">10</span>] = (crc_in[<span class="number">2</span>] ^ crc_in[<span class="number">24</span>] ^ crc_in[<span class="number">26</span>] ^ crc_in[<span class="number">27</span>] ^ crc_in[<span class="number">29</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">5</span>]);</span><br><span class="line">            crc_q[<span class="number">11</span>] = (crc_in[<span class="number">3</span>] ^ crc_in[<span class="number">24</span>] ^ crc_in[<span class="number">25</span>] ^ crc_in[<span class="number">27</span>] ^ crc_in[<span class="number">28</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">4</span>]);</span><br><span class="line">            crc_q[<span class="number">12</span>] = (crc_in[<span class="number">4</span>] ^ crc_in[<span class="number">24</span>] ^ crc_in[<span class="number">25</span>] ^ crc_in[<span class="number">26</span>] ^ crc_in[<span class="number">28</span>] ^ crc_in[<span class="number">29</span>] ^ crc_in[<span class="number">30</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">6</span>]);</span><br><span class="line">            crc_q[<span class="number">13</span>] = (crc_in[<span class="number">5</span>] ^ crc_in[<span class="number">25</span>] ^ crc_in[<span class="number">26</span>] ^ crc_in[<span class="number">27</span>] ^ crc_in[<span class="number">29</span>] ^ crc_in[<span class="number">30</span>] ^ crc_in[<span class="number">31</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">6</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">            crc_q[<span class="number">14</span>] = (crc_in[<span class="number">6</span>] ^ crc_in[<span class="number">26</span>] ^ crc_in[<span class="number">27</span>] ^ crc_in[<span class="number">28</span>] ^ crc_in[<span class="number">30</span>] ^ crc_in[<span class="number">31</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">6</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">            crc_q[<span class="number">15</span>] = (crc_in[<span class="number">7</span>] ^ crc_in[<span class="number">27</span>] ^ crc_in[<span class="number">28</span>] ^ crc_in[<span class="number">29</span>] ^ crc_in[<span class="number">31</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">            crc_q[<span class="number">16</span>] = (crc_in[<span class="number">8</span>] ^ crc_in[<span class="number">24</span>] ^ crc_in[<span class="number">28</span>] ^ crc_in[<span class="number">29</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">5</span>]);</span><br><span class="line">            crc_q[<span class="number">17</span>] = (crc_in[<span class="number">9</span>] ^ crc_in[<span class="number">25</span>] ^ crc_in[<span class="number">29</span>] ^ crc_in[<span class="number">30</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">6</span>]);</span><br><span class="line">            crc_q[<span class="number">18</span>] = (crc_in[<span class="number">10</span>] ^ crc_in[<span class="number">26</span>] ^ crc_in[<span class="number">30</span>] ^ crc_in[<span class="number">31</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">6</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">            crc_q[<span class="number">19</span>] = (crc_in[<span class="number">11</span>] ^ crc_in[<span class="number">27</span>] ^ crc_in[<span class="number">31</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">            crc_q[<span class="number">20</span>] = (crc_in[<span class="number">12</span>] ^ crc_in[<span class="number">28</span>] ^ data[<span class="number">4</span>]);</span><br><span class="line">            crc_q[<span class="number">21</span>] = (crc_in[<span class="number">13</span>] ^ crc_in[<span class="number">29</span>] ^ data[<span class="number">5</span>]);</span><br><span class="line">            crc_q[<span class="number">22</span>] = (crc_in[<span class="number">14</span>] ^ crc_in[<span class="number">24</span>] ^ data[<span class="number">0</span>]);</span><br><span class="line">            crc_q[<span class="number">23</span>] = (crc_in[<span class="number">15</span>] ^ crc_in[<span class="number">24</span>] ^ crc_in[<span class="number">25</span>] ^ crc_in[<span class="number">30</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">6</span>]);</span><br><span class="line">            crc_q[<span class="number">24</span>] = (crc_in[<span class="number">16</span>] ^ crc_in[<span class="number">25</span>] ^ crc_in[<span class="number">26</span>] ^ crc_in[<span class="number">31</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">            crc_q[<span class="number">25</span>] = (crc_in[<span class="number">17</span>] ^ crc_in[<span class="number">26</span>] ^ crc_in[<span class="number">27</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">3</span>]);</span><br><span class="line">            crc_q[<span class="number">26</span>] = (crc_in[<span class="number">18</span>] ^ crc_in[<span class="number">24</span>] ^ crc_in[<span class="number">27</span>] ^ crc_in[<span class="number">28</span>] ^ crc_in[<span class="number">30</span>] ^ data[<span class="number">0</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">6</span>]);</span><br><span class="line">            crc_q[<span class="number">27</span>] = (crc_in[<span class="number">19</span>] ^ crc_in[<span class="number">25</span>] ^ crc_in[<span class="number">28</span>] ^ crc_in[<span class="number">29</span>] ^ crc_in[<span class="number">31</span>] ^ data[<span class="number">1</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">            crc_q[<span class="number">28</span>] = (crc_in[<span class="number">20</span>] ^ crc_in[<span class="number">26</span>] ^ crc_in[<span class="number">29</span>] ^ crc_in[<span class="number">30</span>] ^ data[<span class="number">2</span>] ^ data[<span class="number">5</span>] ^ data[<span class="number">6</span>]);</span><br><span class="line">            crc_q[<span class="number">29</span>] = (crc_in[<span class="number">21</span>] ^ crc_in[<span class="number">27</span>] ^ crc_in[<span class="number">30</span>] ^ crc_in[<span class="number">31</span>] ^ data[<span class="number">3</span>] ^ data[<span class="number">6</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">            crc_q[<span class="number">30</span>] = (crc_in[<span class="number">22</span>] ^ crc_in[<span class="number">28</span>] ^ crc_in[<span class="number">31</span>] ^ data[<span class="number">4</span>] ^ data[<span class="number">7</span>]);</span><br><span class="line">            crc_q[<span class="number">31</span>] = (crc_in[<span class="number">23</span>] ^ crc_in[<span class="number">29</span>] ^ data[<span class="number">5</span>]);</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            crc_q = <span class="number">32&#x27;hFFFF_FFFF</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span>@(<span class="keyword">posedge</span> clk_User)<span class="keyword">begin</span></span><br><span class="line">        crc_en_dly &lt;= crc_en;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">assign</span> crc_en_neg_pls = (~crc_en) &amp; crc_en_dly;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span>@(<span class="keyword">posedge</span> clk_User)<span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            crc_in &lt;= <span class="number">32&#x27;hFFFF_FFFF</span>;</span><br><span class="line">            crc_out &lt;= <span class="number">32&#x27;hFFFF_FFFF</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(cnt_crc==<span class="number">&#x27;d3</span> &amp;&amp; crc_flag == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            crc_in &lt;= <span class="number">32&#x27;hFFFF_FFFF</span>;</span><br><span class="line">            crc_out &lt;= <span class="number">32&#x27;hFFFF_FFFF</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(crc_en)<span class="keyword">begin</span></span><br><span class="line">            crc_in &lt;= crc_q;</span><br><span class="line">            crc_out &lt;= crc_q ^ <span class="number">32&#x27;hFFFF_FFFF</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------crc_flag------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            crc_flag &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(cnt_crc==<span class="number">&#x27;d3</span> &amp;&amp; crc_flag == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            crc_flag &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(crc_en_neg_pls)<span class="keyword">begin</span></span><br><span class="line">            crc_flag &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        crc_flag_dly &lt;= crc_flag;</span><br><span class="line">        crc_en_neg_pls_dly &lt;= crc_en_neg_pls;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------cnt_crc------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            cnt_crc &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(cnt_crc==<span class="number">&#x27;d3</span> &amp;&amp; crc_flag == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            cnt_crc &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(crc_flag == <span class="number">1&#x27;b1</span> || crc_en_neg_pls)<span class="keyword">begin</span></span><br><span class="line">            cnt_crc &lt;= cnt_crc + <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------crc_data------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            crc_data &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(crc_en == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            crc_data &lt;= data_in;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(crc_en_neg_pls | crc_flag) <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">case</span>(cnt_crc)</span><br><span class="line">                <span class="number">0</span>: crc_data &lt;= crc_out[<span class="number">31</span>:<span class="number">24</span>];</span><br><span class="line">                <span class="number">1</span>: crc_data &lt;= crc_out[<span class="number">23</span>:<span class="number">16</span>];</span><br><span class="line">                <span class="number">2</span>: crc_data &lt;= crc_out[<span class="number">15</span>:<span class="number">8</span>];</span><br><span class="line">                <span class="number">3</span>: crc_data &lt;= crc_out[<span class="number">7</span>:<span class="number">0</span>];</span><br><span class="line">                <span class="keyword">default</span>: crc_data &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            <span class="keyword">endcase</span></span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            crc_data &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">assign</span> crc_data_valid = crc_en_dly | crc_en_neg_pls_dly | crc_flag_dly;</span><br><span class="line">    </span><br><span class="line"><span class="keyword">endmodule</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/SDR/" rel="tag"># SDR</a>
+              <a href="/tags/FPGA/" rel="tag"># FPGA</a>
+              <a href="/tags/ZYNQ/" rel="tag"># ZYNQ</a>
+              <a href="/tags/OFDM/" rel="tag"># OFDM</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/" rel="prev" title="OFDM_802.11a学习----OFDM发射机整体结构">
+      <i class="fa fa-chevron-left"></i> OFDM_802.11a学习----OFDM发射机整体结构
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/" rel="next" title="OFDM_802.11a学习----PPDU数据域数据生成与加扰">
+      OFDM_802.11a学习----PPDU数据域数据生成与加扰 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">1. 前言</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E7%94%9F%E6%88%90%E6%A8%A1%E5%9D%97"><span class="nav-number">1.1.</span> <span class="nav-text">2. 用户数据生成模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-CRC%E6%A0%A1%E9%AA%8C%E6%A8%A1%E5%9D%97"><span class="nav-number">1.2.</span> <span class="nav-text">3. CRC校验模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-1-%E4%BB%8Ecrc8%E4%BD%9C%E4%B8%BA%E8%B5%B7%E7%82%B9"><span class="nav-number">1.3.</span> <span class="nav-text">3.1 从crc8作为起点</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#crc8%E7%9A%84%E7%A1%AC%E4%BB%B6%E5%AE%9E%E7%8E%B0"><span class="nav-number">1.3.1.</span> <span class="nav-text">crc8的硬件实现</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-2-32%E4%BD%8D%E7%9A%84crc%E6%A0%A1%E9%AA%8C"><span class="nav-number">1.4.</span> <span class="nav-text">3.2 32位的crc校验</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-3-crc%E6%A0%A1%E9%AA%8C%E6%A8%A1%E5%9D%97%E8%AE%BE%E8%AE%A1"><span class="nav-number">1.5.</span> <span class="nav-text">3.3 crc校验模块设计</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

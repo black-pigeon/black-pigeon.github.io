@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="在上一篇博客当中，实现了载波同步中的二阶锁频环，通过锁频环能够实现相位的跟踪，但是在上篇博客的最后，还是可以看到，经过二阶锁频环之后，对于Q路上的数据，依然有较高的能量。然而在实际发送数据的时候，发送的只是一个实数数据，只有只有I路上有数据，因此在这里进一步地对相位同步才能实现最终的同步。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="北斗卫星定位--6--三阶锁相环">
+<meta property="og:url" content="https://black-pigeon.github.io/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="在上一篇博客当中，实现了载波同步中的二阶锁频环，通过锁频环能够实现相位的跟踪，但是在上篇博客的最后，还是可以看到，经过二阶锁频环之后，对于Q路上的数据，依然有较高的能量。然而在实际发送数据的时候，发送的只是一个实数数据，只有只有I路上有数据，因此在这里进一步地对相位同步才能实现最终的同步。">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/鉴相公式.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/三阶锁相环结构.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/三阶环路双线性变换.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/三阶环路滤波器参数.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/二阶辅三阶.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/锁相环结果.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/锁相环结果细节.png">
+<meta property="article:published_time" content="2021-11-27T08:32:29.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.765Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="SDR">
+<meta property="article:tag" content="Matlab">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/鉴相公式.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>北斗卫星定位--6--三阶锁相环 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          北斗卫星定位--6--三阶锁相环
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-11-27 16:32:29" itemprop="dateCreated datePublished" datetime="2021-11-27T16:32:29+08:00">2021-11-27</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/SDR/" itemprop="url" rel="index"><span itemprop="name">SDR</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/" class="post-meta-item leancloud_visitors" data-flag-title="北斗卫星定位--6--三阶锁相环" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>在上一篇博客当中，实现了载波同步中的二阶锁频环，通过锁频环能够实现相位的跟踪，但是在上篇博客的最后，还是可以看到，经过二阶锁频环之后，对于Q路上的数据，依然有较高的能量。然而在实际发送数据的时候，发送的只是一个实数数据，只有只有I路上有数据，因此在这里进一步地对相位同步才能实现最终的同步。<br><span id="more"></span></p>
+<h1 id="三阶锁相环"><a href="#三阶锁相环" class="headerlink" title="三阶锁相环"></a>三阶锁相环</h1><h2 id="鉴相器"><a href="#鉴相器" class="headerlink" title="鉴相器"></a>鉴相器</h2><p>在上一篇博客当中，有介绍过鉴频器，鉴相器相较于鉴频器更加简单，因为鉴频器是需要计算相位的变换的快慢，因此实现鉴相器可以在鉴频器之前进行。<br><img src="/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/鉴相公式.png" alt="鉴相公式"></p>
+<h2 id="环路滤波器结构"><a href="#环路滤波器结构" class="headerlink" title="环路滤波器结构"></a>环路滤波器结构</h2><p>在前面介绍了二阶环路的结构，其实三阶环路和二阶环路的结构基本一致。用于区分对应的锁频/锁相环是几阶段可以整个系统中有几个积分器。</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>PLL阶数</th>
+<th>环路滤波器</th>
+<th>NCO</th>
+<th>PLL阶数</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>一阶PLL</td>
+<td>0</td>
+<td>1</td>
+<td>1</td>
+</tr>
+<tr>
+<td>二阶PLL</td>
+<td>1</td>
+<td>1</td>
+<td>2</td>
+</tr>
+<tr>
+<td>三阶PLL</td>
+<td>2</td>
+<td>1</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>所以在这篇博客中主要关注三阶PLL，其结构如下：<br><img src="/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/三阶锁相环结构.png" alt="三阶锁相环结构"></p>
+<p>经过双线性变化之后，可以得到在离散域中其结构<br><img src="/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/三阶环路双线性变换.png" alt="三阶锁相环双线性变换"><br>这样在实现三阶环路的时候，只需要按照如下的结构去进行处理就可以了。</p>
+<h2 id="环路滤波器的关键参数"><a href="#环路滤波器的关键参数" class="headerlink" title="环路滤波器的关键参数"></a>环路滤波器的关键参数</h2><p>可以看到上面三阶环路滤波器的三条之路中有一些参数这些参数在实际设计PLL的时候十分重要，因此需要正确地计算这些参数，才能设计一个稳定的三阶PLL。<br>噪声带宽和三阶环路的特征频率关系如下：<br><img src="/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/三阶环路滤波器参数.png" alt="三阶环路滤波器参数"><br>其中a3, b3有推荐的参数分别为：</p>
+<script type="math/tex; mode=display">a3 = 1.1, b3 = 2.4</script><p>在实际设计的时候，只要制定了一个三阶环路可以容纳的噪声的带宽，那么就能够很容易地计算出三阶环路所需要的特征频率。</p>
+<h1 id="锁频环路具体实现"><a href="#锁频环路具体实现" class="headerlink" title="锁频环路具体实现"></a>锁频环路具体实现</h1><p>在实际的应用的时候，可以使用一个二阶锁频环路来辅助三阶锁相环路实现PLL的收敛，具体的结构如下：</p>
+<p><img src="/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/二阶辅三阶.png" alt="二阶辅三阶"><br>有了上篇博客的经验，实现这个结构还是比较简单的，matlab代码如下：<br><figure class="highlight m"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br></pre></td><td class="code"><pre><span class="line">clc;</span><br><span class="line">close <span class="built_in">all</span>;</span><br><span class="line">clear <span class="built_in">all</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">%% parameter define</span></span><br><span class="line">SAMP_RATE <span class="built_in">=</span> <span class="number">8.184</span>e6;    <span class="comment">% sample rate</span></span><br><span class="line">IF_FREQ   <span class="built_in">=</span> <span class="number">2.046</span>e6;    <span class="comment">% inner frequency 2.046M </span></span><br><span class="line">SOURCE_DATA_LEN <span class="built_in">=</span> <span class="number">30480</span>;  <span class="comment">% the source data num</span></span><br><span class="line">DATA_RATE <span class="built_in">=</span> IF_FREQ/<span class="number">16</span>; <span class="comment">% data rate</span></span><br><span class="line">SAMP_LEN  <span class="built_in">=</span> SOURCE_DATA_LEN*(SAMP_RATE/DATA_RATE);</span><br><span class="line">MEAN_FILTER_LEN <span class="built_in">=</span> <span class="number">32</span>;   <span class="comment">% mean filter length</span></span><br><span class="line">TS <span class="built_in">=</span> MEAN_FILTER_LEN/SAMP_RATE; <span class="comment">%loop filter update time</span></span><br><span class="line"></span><br><span class="line">TX_AMP <span class="built_in">=</span> <span class="number">1</span>;</span><br><span class="line">ROM_DEPTH <span class="built_in">=</span> <span class="number">4096</span>;</span><br><span class="line">TX_CARRIER_FREQ <span class="built_in">=</span> IF_FREQ; <span class="comment">% carrier frequency</span></span><br><span class="line">TX_FREQ_CTRL_WORD <span class="built_in">=</span> TX_CARRIER_FREQ * <span class="number">2</span>^<span class="number">32</span>/ SAMP_RATE; <span class="comment">% tx frequency control word</span></span><br><span class="line"></span><br><span class="line">RX_AMP <span class="built_in">=</span> <span class="number">2048</span>;</span><br><span class="line">FREQ_OFFSET <span class="built_in">=</span> -<span class="number">100</span>; <span class="comment">% frequency offset 100Hz</span></span><br><span class="line">RX_FREQ_CTRL_WORD <span class="built_in">=</span>  (TX_CARRIER_FREQ + FREQ_OFFSET)* <span class="number">2</span>^<span class="number">32</span>/ SAMP_RATE;</span><br><span class="line"></span><br><span class="line"><span class="comment">% calculate the order2 loop filter parameter</span></span><br><span class="line">RATIO <span class="built_in">=</span> <span class="number">0.707</span>; <span class="comment">% damping ratio</span></span><br><span class="line">NOISE_BW_F <span class="built_in">=</span> <span class="number">200</span>; <span class="comment">% noise band width </span></span><br><span class="line">WN_F <span class="built_in">=</span> <span class="number">2</span>*NOISE_BW_F/(RATIO+(<span class="number">1</span>/(<span class="number">4</span>*RATIO))); <span class="comment">%BL=WN*(RATIO+(1/(4*RATIO)))/2</span></span><br><span class="line">A2 <span class="built_in">=</span> <span class="number">2</span>*RATIO;</span><br><span class="line"></span><br><span class="line"><span class="comment">% calculate the order3 loop filter parameter</span></span><br><span class="line">NOISE_BW_P <span class="built_in">=</span> <span class="number">100</span>;</span><br><span class="line">A3 <span class="built_in">=</span> <span class="number">1.1</span>;</span><br><span class="line">B3 <span class="built_in">=</span> <span class="number">2.4</span>;</span><br><span class="line">WN_P <span class="built_in">=</span> (<span class="number">4</span>*(A3*B3-<span class="number">1</span>))*NOISE_BW_P/(A3*B3^<span class="number">2</span> + A3^<span class="number">2</span> - B3);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">%% generate bpsk modulation data</span></span><br><span class="line"><span class="comment">% source_data ==&gt; BPSK mod</span></span><br><span class="line"><span class="comment">% generate source data</span></span><br><span class="line">source_data <span class="built_in">=</span> rand(<span class="number">1</span>, SOURCE_DATA_LEN); <span class="comment">% generate test source data</span></span><br><span class="line">source_data(source_data &lt; <span class="number">0.5</span>) <span class="built_in">=</span> -<span class="number">1</span>;</span><br><span class="line">source_data(source_data &gt;<span class="built_in">=</span> <span class="number">0.5</span>) <span class="built_in">=</span> <span class="number">1</span>;    </span><br><span class="line">source_data <span class="built_in">=</span> repelem(source_data, <span class="number">1</span>, SAMP_RATE/DATA_RATE); <span class="comment">% upsample  signal source data to sample rate </span></span><br><span class="line"></span><br><span class="line"><span class="comment">% generate carrier wave</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">rom_addr <span class="built_in">=</span> <span class="number">0</span>: <span class="number">1</span>/ROM_DEPTH: <span class="number">1</span>-<span class="number">1</span>/ROM_DEPTH;</span><br><span class="line">carrier_wave_cos <span class="built_in">=</span> RX_AMP*cos(<span class="number">2</span>*pi*rom_addr);</span><br><span class="line">carrier_wave_sin <span class="built_in">=</span> RX_AMP*sin(<span class="number">2</span>*pi*rom_addr);</span><br><span class="line"><span class="comment">% bpsk modulation</span></span><br><span class="line">bpsk_mod <span class="built_in">=</span> zeros(<span class="number">1</span>,SAMP_LEN);</span><br><span class="line">rom_index <span class="built_in">=</span> <span class="number">1</span>;</span><br><span class="line">phase_accumulator <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">for i<span class="built_in">=</span><span class="number">1</span>:SAMP_LEN</span><br><span class="line">    <span class="comment">%bpsk modulation</span></span><br><span class="line">    <span class="built_in">if</span>(source_data(i) <span class="built_in">=</span><span class="built_in">=</span> -<span class="number">1</span>)</span><br><span class="line">        bpsk_mod(i) <span class="built_in">=</span> -carrier_wave_cos(rom_index);</span><br><span class="line">    <span class="built_in">else</span></span><br><span class="line">        bpsk_mod(i) <span class="built_in">=</span> carrier_wave_cos(rom_index);</span><br><span class="line">    end</span><br><span class="line"></span><br><span class="line">    phase_accumulator <span class="built_in">=</span> phase_accumulator + TX_FREQ_CTRL_WORD;</span><br><span class="line">    <span class="built_in">if</span>(phase_accumulator &gt; <span class="number">2</span>^<span class="number">32</span>)</span><br><span class="line">        phase_accumulator <span class="built_in">=</span> phase_accumulator - <span class="number">2</span>^<span class="number">32</span>;</span><br><span class="line">    end</span><br><span class="line"></span><br><span class="line">    rom_index <span class="built_in">=</span> round(phase_accumulator/<span class="number">2</span>^<span class="number">20</span>);</span><br><span class="line">    <span class="built_in">if</span>(rom_index <span class="built_in">=</span><span class="built_in">=</span> <span class="number">0</span>)</span><br><span class="line">        rom_index <span class="built_in">=</span> <span class="number">1</span>;</span><br><span class="line">    end</span><br><span class="line">end</span><br><span class="line"></span><br><span class="line"><span class="comment">% plot the bpsk result</span></span><br><span class="line"><span class="comment">% figure(1);</span></span><br><span class="line"><span class="comment">% plot(1:1024, bpsk_mod(1:1024), &#x27;r&#x27;, 1:1024, 1024*source_data(1:1024),&#x27;b&#x27;);</span></span><br><span class="line"><span class="comment">% legend(&#x27;bpsk mod&#x27;, &#x27;source data&#x27;);</span></span><br><span class="line"><span class="comment">% title(&quot;BPSK modulation&quot;);</span></span><br><span class="line"></span><br><span class="line"><span class="comment">%% bpsk demodulation using pll</span></span><br><span class="line"><span class="comment">% the demodulation steps</span></span><br><span class="line"><span class="comment">% 1. iq demod, using the iq demodulation to get the iq data, the receiver lo_freq is coming for nco</span></span><br><span class="line"><span class="comment">% 2. low pass the demod signal to filter out high frequency(using mean filter )</span></span><br><span class="line"><span class="comment">% 3. phase detect, calculate the phase error and generate the frequency error</span></span><br><span class="line"><span class="comment">% 4. loop filter parameter calculate</span></span><br><span class="line"><span class="comment">% 5. drive the nco to generate local carrier frequency</span></span><br><span class="line">rom_index <span class="built_in">=</span> <span class="number">1</span>;          <span class="comment">% rom index</span></span><br><span class="line">mean_cal_index <span class="built_in">=</span> <span class="number">1</span>;</span><br><span class="line">i_data<span class="built_in">=</span><span class="number">0</span>; q_data<span class="built_in">=</span><span class="number">0</span>;     <span class="comment">% i/q demod data</span></span><br><span class="line">i_acc <span class="built_in">=</span><span class="number">0</span>; q_acc <span class="built_in">=</span><span class="number">0</span>;     <span class="comment">% i/q accumulate value</span></span><br><span class="line">i_mean<span class="built_in">=</span><span class="number">1</span>; q_mean<span class="built_in">=</span><span class="number">1</span>;     <span class="comment">% mean value of i/q samples</span></span><br><span class="line">p_dot <span class="built_in">=</span><span class="number">1</span>; p_cross<span class="built_in">=</span><span class="number">1</span>;    <span class="comment">% dot/cross value of 2 vectors</span></span><br><span class="line">delta_phi <span class="built_in">=</span> <span class="number">0</span>;          <span class="comment">% phase error</span></span><br><span class="line">freq_err <span class="built_in">=</span> <span class="number">0</span>;           <span class="comment">% freq error</span></span><br><span class="line">phi <span class="built_in">=</span> <span class="number">0</span>;                <span class="comment">% phase error</span></span><br><span class="line">phase_accumulator <span class="built_in">=</span> <span class="number">0</span>;  <span class="comment">% clear the phase accumulator</span></span><br><span class="line">freq_err_out <span class="built_in">=</span> zeros(<span class="number">1</span>,SAMP_LEN);</span><br><span class="line">demod_i <span class="built_in">=</span> zeros(<span class="number">1</span>,SAMP_LEN);</span><br><span class="line">demod_q <span class="built_in">=</span> zeros(<span class="number">1</span>,SAMP_LEN);</span><br><span class="line">freq_err_control_word <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">freq_k1 <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line">freq_k2 <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line">phase_k1 <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line">phase_k2 <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line">phase_k3 <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line">loop_acc3 <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line">loop_acc2_t <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line">loop_acc2 <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line">loop_acc1_t <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line">loop_acc1 <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">for i<span class="built_in">=</span><span class="number">1</span>:SAMP_LEN</span><br><span class="line">    <span class="comment">% mixing</span></span><br><span class="line">    i_data <span class="built_in">=</span> bpsk_mod(i)*carrier_wave_cos(rom_index);</span><br><span class="line">    q_data <span class="built_in">=</span> -bpsk_mod(i)*carrier_wave_sin(rom_index);</span><br><span class="line"></span><br><span class="line">    <span class="comment">%% prepare mean filter(calculate MEAN_FILTER_LEN samples)</span></span><br><span class="line">    <span class="comment">% accumulate the samples</span></span><br><span class="line">    i_acc <span class="built_in">=</span> i_acc + i_data;</span><br><span class="line">    q_acc <span class="built_in">=</span> q_acc + q_data;</span><br><span class="line">    <span class="built_in">if</span> (mean_cal_index <span class="built_in">=</span><span class="built_in">=</span> MEAN_FILTER_LEN)</span><br><span class="line">        i_mean_t <span class="built_in">=</span> i_mean;</span><br><span class="line">        q_mean_t <span class="built_in">=</span> q_mean;</span><br><span class="line">        <span class="comment">% calculate mean value</span></span><br><span class="line">        i_mean <span class="built_in">=</span> i_acc/MEAN_FILTER_LEN;</span><br><span class="line">        q_mean <span class="built_in">=</span> q_acc/MEAN_FILTER_LEN;</span><br><span class="line">        <span class="comment">% clean accumulator</span></span><br><span class="line">        i_acc <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line">        q_acc <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">        <span class="comment">%% phase error detector</span></span><br><span class="line">        <span class="comment">% using atan2 to calculate the phase</span></span><br><span class="line">        <span class="built_in">if</span> (i_mean <span class="built_in">=</span><span class="built_in">=</span> <span class="number">0</span>) <span class="comment">% x=0</span></span><br><span class="line">            phi <span class="built_in">=</span> atan2(q_mean, <span class="number">1</span>); <span class="comment">%avoid divide 0</span></span><br><span class="line">        <span class="built_in">else</span></span><br><span class="line">            phi <span class="built_in">=</span> atan2(q_mean, i_mean);</span><br><span class="line">        end</span><br><span class="line"></span><br><span class="line">        <span class="comment">% determine the phase trough quadrant </span></span><br><span class="line">        <span class="built_in">if</span> (i_mean &lt; <span class="number">0</span> &amp;&amp; q_mean &gt; <span class="number">0</span>) <span class="comment">% second quadrant</span></span><br><span class="line">            phi <span class="built_in">=</span> phi - pi;</span><br><span class="line">        elseif (i_mean &lt; <span class="number">0</span> &amp;&amp; q_mean &lt; <span class="number">0</span>) <span class="comment">% third quadrant </span></span><br><span class="line">            phi <span class="built_in">=</span> phi + pi;</span><br><span class="line">        elseif (q_mean <span class="built_in">=</span><span class="built_in">=</span> <span class="number">0</span>) <span class="comment">% x axis</span></span><br><span class="line">            phi <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line">        end</span><br><span class="line"></span><br><span class="line">        <span class="comment">%% frequency detector(using vector)</span></span><br><span class="line">        p_dot <span class="built_in">=</span> i_mean*i_mean_t + q_mean*q_mean_t;</span><br><span class="line">        p_cross <span class="built_in">=</span> i_mean_t*q_mean - q_mean_t*i_mean;</span><br><span class="line"></span><br><span class="line">        <span class="comment">% using atan2 to calculate the phase</span></span><br><span class="line">        <span class="built_in">if</span> (p_dot <span class="built_in">=</span><span class="built_in">=</span> <span class="number">0</span>) <span class="comment">% x=0</span></span><br><span class="line">            delta_phi <span class="built_in">=</span> atan2(p_cross, <span class="number">1</span>); <span class="comment">%avoid divide 0</span></span><br><span class="line">        <span class="built_in">else</span></span><br><span class="line">            delta_phi <span class="built_in">=</span> atan2(p_cross, p_dot);</span><br><span class="line">        end</span><br><span class="line"></span><br><span class="line">        <span class="comment">% determine the phase trough quadrant </span></span><br><span class="line">        <span class="built_in">if</span> (p_dot &lt; <span class="number">0</span> &amp;&amp; p_cross &gt; <span class="number">0</span>) <span class="comment">% second quadrant</span></span><br><span class="line">            delta_phi <span class="built_in">=</span> delta_phi - pi;</span><br><span class="line">        elseif (p_dot &lt; <span class="number">0</span> &amp;&amp; p_cross &lt; <span class="number">0</span>) <span class="comment">% third quadrant </span></span><br><span class="line">            delta_phi <span class="built_in">=</span> delta_phi + pi;</span><br><span class="line">        elseif (p_cross <span class="built_in">=</span><span class="built_in">=</span> <span class="number">0</span>) <span class="comment">% x axis</span></span><br><span class="line">            delta_phi <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line">        end</span><br><span class="line"></span><br><span class="line">        <span class="comment">% calculate the frequency error 2*pi*f=delta_phi/delta_t</span></span><br><span class="line">        freq_err <span class="built_in">=</span> (delta_phi/(MEAN_FILTER_LEN/SAMP_RATE))/(<span class="number">2</span>*pi);</span><br><span class="line"></span><br><span class="line">        <span class="comment">%% loop filter, using order2 fll to improve order3 pll</span></span><br><span class="line">        freq_k1 <span class="built_in">=</span> freq_err*A2*WN_F*TS;</span><br><span class="line">        freq_k2 <span class="built_in">=</span> freq_err*(WN_F^<span class="number">2</span>)*TS;</span><br><span class="line">        phase_k1 <span class="built_in">=</span> phi*(WN_P^<span class="number">3</span>)*TS;</span><br><span class="line">        phase_k2 <span class="built_in">=</span> phi*(A3*WN_P^<span class="number">2</span>);</span><br><span class="line">        phase_k3 <span class="built_in">=</span> phi*B3*WN_P;</span><br><span class="line"></span><br><span class="line">        loop_acc3 <span class="built_in">=</span> (loop_acc2+loop_acc2_t)/<span class="number">2</span> + phase_k3;</span><br><span class="line">        loop_acc2_t <span class="built_in">=</span> loop_acc2;</span><br><span class="line">        loop_acc2 <span class="built_in">=</span> ((((loop_acc1+loop_acc1_t)/<span class="number">2</span>) + phase_k2)*TS)+freq_k1 + loop_acc2_t;</span><br><span class="line">        loop_acc1_t <span class="built_in">=</span> loop_acc1;</span><br><span class="line">        loop_acc1 <span class="built_in">=</span> freq_k2 + phase_k1 + loop_acc1_t;</span><br><span class="line"></span><br><span class="line">        freq_err_control_word <span class="built_in">=</span> (loop_acc3*<span class="number">2</span>^<span class="number">32</span>)/SAMP_RATE;</span><br><span class="line"></span><br><span class="line">        mean_cal_index <span class="built_in">=</span> <span class="number">0</span>;</span><br><span class="line">    end</span><br><span class="line">    mean_cal_index <span class="built_in">=</span> mean_cal_index + <span class="number">1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">%% NCO control using loop filter out value</span></span><br><span class="line">    phase_accumulator <span class="built_in">=</span> phase_accumulator + RX_FREQ_CTRL_WORD + freq_err_control_word;</span><br><span class="line">    <span class="built_in">if</span>(phase_accumulator &gt; <span class="number">2</span>^<span class="number">32</span>)</span><br><span class="line">        phase_accumulator <span class="built_in">=</span> phase_accumulator - <span class="number">2</span>^<span class="number">32</span>;</span><br><span class="line">    elseif (phase_accumulator &lt; <span class="number">0</span>)</span><br><span class="line">        phase_accumulator <span class="built_in">=</span> phase_accumulator +  <span class="number">2</span>^<span class="number">32</span>;</span><br><span class="line">    end</span><br><span class="line"></span><br><span class="line">    rom_index <span class="built_in">=</span> round(phase_accumulator/<span class="number">2</span>^<span class="number">20</span>);</span><br><span class="line">    <span class="built_in">if</span>(rom_index <span class="built_in">=</span><span class="built_in">=</span> <span class="number">0</span>)</span><br><span class="line">        rom_index <span class="built_in">=</span> <span class="number">1</span>;</span><br><span class="line">    end</span><br><span class="line"></span><br><span class="line">    <span class="comment">%% watch the output</span></span><br><span class="line">    freq_err_out(i) <span class="built_in">=</span> freq_err_control_word;</span><br><span class="line">    demod_i(i) <span class="built_in">=</span> i_mean;</span><br><span class="line">    demod_q(i) <span class="built_in">=</span> q_mean;</span><br><span class="line"></span><br><span class="line">end</span><br><span class="line"></span><br><span class="line">figure(<span class="number">2</span>);</span><br><span class="line">subplot(<span class="number">2</span>,<span class="number">1</span>,<span class="number">1</span>);</span><br><span class="line">plot(freq_err_out);</span><br><span class="line">title([<span class="string">&#x27;频率平均值=&#x27;</span>,num2str((sum(freq_err_out(<span class="number">1200</span>:end))/(SAMP_LEN-<span class="number">1200</span>))*SAMP_RATE/<span class="number">2</span>^<span class="number">32</span>),<span class="string">&#x27;频率误差&#x27;</span>,num2str((FREQ_OFFSET+(sum(freq_err_out(<span class="number">1200</span>:end))/(SAMP_LEN-<span class="number">1200</span>))*SAMP_RATE/<span class="number">2</span>^<span class="number">32</span>))]);</span><br><span class="line">subplot(<span class="number">2</span>,<span class="number">1</span>,<span class="number">2</span>);</span><br><span class="line">plot(demod_i,<span class="string">&#x27;r&#x27;</span>);  <span class="comment">% </span></span><br><span class="line">hold on;</span><br><span class="line">plot(source_data*<span class="number">1</span>e6, <span class="string">&#x27;b&#x27;</span>);</span><br><span class="line">hold on;</span><br><span class="line">plot(demod_q,<span class="string">&#x27;g&#x27;</span>);</span><br><span class="line">axis( [<span class="number">0</span> length(demod_i) -<span class="number">3</span>e6 <span class="number">3</span>e6 ]);</span><br><span class="line">legend(<span class="string">&#x27;i data&#x27;</span>, <span class="string">&#x27;source data&#x27;</span>, <span class="string">&#x27;q data&#x27;</span>);</span><br></pre></td></tr></table></figure><br><img src="/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/锁相环结果.png" alt="锁相环结果"><br>可以看到，实现了上面的结构之后，频率得到了锁定，并且可以看到Q路上的数据能量逐渐减小到了0值附近，这样可以认为该环路已经收敛，正确地解调出来数据。</p>
+<p><img src="/2021/11/27/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-6-%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF/锁相环结果细节.png" alt="锁相环结果细节"></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/SDR/" rel="tag"># SDR</a>
+              <a href="/tags/Matlab/" rel="tag"># Matlab</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/11/24/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-5-%E4%BA%8C%E9%98%B6%E9%94%81%E9%A2%91%E7%8E%AF%E8%B7%AF/" rel="prev" title="北斗卫星定位--5--二阶锁频环路">
+      <i class="fa fa-chevron-left"></i> 北斗卫星定位--5--二阶锁频环路
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/11/30/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-7-%E4%BF%A1%E5%8F%B7%E7%9A%84%E6%8D%95%E8%8E%B7%E4%B8%8E%E8%BD%BD%E6%B3%A2%E5%90%8C%E6%AD%A5/" rel="next" title="北斗卫星定位--7--信号的捕获与载波同步">
+      北斗卫星定位--7--信号的捕获与载波同步 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%B8%89%E9%98%B6%E9%94%81%E7%9B%B8%E7%8E%AF"><span class="nav-number">1.</span> <span class="nav-text">三阶锁相环</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E9%89%B4%E7%9B%B8%E5%99%A8"><span class="nav-number">1.1.</span> <span class="nav-text">鉴相器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%AF%E8%B7%AF%E6%BB%A4%E6%B3%A2%E5%99%A8%E7%BB%93%E6%9E%84"><span class="nav-number">1.2.</span> <span class="nav-text">环路滤波器结构</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%8E%AF%E8%B7%AF%E6%BB%A4%E6%B3%A2%E5%99%A8%E7%9A%84%E5%85%B3%E9%94%AE%E5%8F%82%E6%95%B0"><span class="nav-number">1.3.</span> <span class="nav-text">环路滤波器的关键参数</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E9%94%81%E9%A2%91%E7%8E%AF%E8%B7%AF%E5%85%B7%E4%BD%93%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.</span> <span class="nav-text">锁频环路具体实现</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

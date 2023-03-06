@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. 数据码在前面的博客中，学习了PN码是个什么玩意儿，并且学习了如何来进行相关等操作。今天将会学习在卫星定位系统中更高一层次的东西，也就是数据码。数据码也就是导航电文，导航电文提供了用于定位的最基础的信息。根据速率和结构不同，导航电文分为 D1 导航电文和 D2 导航电文。D1 导航电文速率为 50bps ，内容包含基本导航信息（本卫星基本导航信息、全部卫星历书信息、与其他系统时间同步信息；D2">
+<meta property="og:type" content="article">
+<meta property="og:title" content="北斗卫星定位(2)----数据码">
+<meta property="og:url" content="https://black-pigeon.github.io/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="1. 数据码在前面的博客中，学习了PN码是个什么玩意儿，并且学习了如何来进行相关等操作。今天将会学习在卫星定位系统中更高一层次的东西，也就是数据码。数据码也就是导航电文，导航电文提供了用于定位的最基础的信息。根据速率和结构不同，导航电文分为 D1 导航电文和 D2 导航电文。D1 导航电文速率为 50bps ，内容包含基本导航信息（本卫星基本导航信息、全部卫星历书信息、与其他系统时间同步信息；D2">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/NHCode_PNCode.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/D1_Code_Mod.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/BPSK调制.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/PN码数据.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/BPSK细节.png">
+<meta property="article:published_time" content="2021-06-09T05:45:46.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.781Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="SDR">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/NHCode_PNCode.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>北斗卫星定位(2)----数据码 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          北斗卫星定位(2)----数据码
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-06-09 13:45:46" itemprop="dateCreated datePublished" datetime="2021-06-09T13:45:46+08:00">2021-06-09</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/SDR/" itemprop="url" rel="index"><span itemprop="name">SDR</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/" class="post-meta-item leancloud_visitors" data-flag-title="北斗卫星定位(2)----数据码" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="1-数据码"><a href="#1-数据码" class="headerlink" title="1. 数据码"></a>1. 数据码</h1><p>在前面的博客中，学习了PN码是个什么玩意儿，并且学习了如何来进行相关等操作。今天将会学习在卫星定位系统中更高一层次的东西，也就是数据码。数据码也就是导航电文，导航电文提供了用于定位的最基础的信息。<br>根据速率和结构不同，导航电文分为 <strong>D1</strong> 导航电文和 <strong>D2</strong> 导航电文。<strong>D1</strong> 导航电文速率为 <strong>50bps</strong> ，内容包含基本导航信息（本卫星基本导航信息、全部卫星历书信息、与其他系统时间同步信息；<strong>D2</strong> 导航电文速率为 <strong>500bps</strong> ，内容包含基本导航信息和广域差分信息（北斗系统的差分及完成性信息和格网点电离层信息）。<br><span id="more"></span></p>
+<h2 id="1-1-D1导航电文的基本结构"><a href="#1-1-D1导航电文的基本结构" class="headerlink" title="1.1 D1导航电文的基本结构"></a>1.1 D1导航电文的基本结构</h2><p><strong>D1</strong>导航电文在实际使用的时候，首先需要经过一个<strong>NH码</strong>调制，也就是说，<strong>D1</strong>导航电文当中的每一个bit，都需要使用<strong>NH码</strong>进行调制，也就是对应的bit和NH码进行异或。<br><strong>D1</strong> 导航电文的速率是 <strong>50bps</strong> ,也即 <strong>D1</strong> 导航电文的bit周期是 <strong>20ms</strong>。 <strong>NH码</strong>的周期也就是刚好是 <strong>D1</strong>导航电文一个bit周期。 <strong>NH码</strong>为20bit： <strong>00000100110101001110</strong> 。<br>从上面可以看到 <strong>NH码</strong>的一个bit周期是1ms，这也正好与前面学习的一个 <strong>PN码</strong> 的周期是相同的，所以  <strong>NH码</strong>的每一个bit都可以使用 <strong>PN码</strong>进行调制。因此D1导航电文的调制层次如下图所示：<br><img src="/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/NHCode_PNCode.png" alt="NH码调制结构"><br>扩频码首先与NH码进行异或进行一次调制，调制之后的结果需要和D1导航电文进行异或进行一个二次调制。<br>也可以看到调制的速率的变化情况：D1导航电文50bps ——&gt; NH码调制1Kbps ——&gt; PN码调制2.046Mbps。<br><img src="/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/D1_Code_Mod.png" alt="调制层次"></p>
+<h1 id="2-使用matlab模拟D1导航电文的BPSK调制"><a href="#2-使用matlab模拟D1导航电文的BPSK调制" class="headerlink" title="2. 使用matlab模拟D1导航电文的BPSK调制"></a>2. 使用matlab模拟D1导航电文的BPSK调制</h1><p>有了上面的D1导航电文的基本的调制层次。接下来就可以使用matlab来简单的仿真一下这个调制的过程了，其实也还算比较简单，需要弄清楚D1导航电文调制的三个层次就很简单了。PN码在前面的博客当中已经实现了，在这里只需要使用NH码调制调制和最终的BPSK调制就好了。<br><figure class="highlight matlab"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br></pre></td><td class="code"><pre><span class="line">clc;</span><br><span class="line">clear all;</span><br><span class="line">close all;</span><br><span class="line"></span><br><span class="line">PN_CODE_LEN = <span class="number">2046</span>;     <span class="comment">% PN Code length</span></span><br><span class="line">CODE_RATE   = <span class="number">2.046e6</span>;  <span class="comment">% standard pn code rate</span></span><br><span class="line">SAMP_RATE   = CODE_RATE*<span class="number">8</span>; <span class="comment">% sample rate</span></span><br><span class="line">PN_INDEX1   = <span class="number">8</span> ;       <span class="comment">% choose satellites </span></span><br><span class="line">PN_INDEX2   = <span class="number">10</span>;       <span class="comment">% choose satellites </span></span><br><span class="line">SOURCE_DATA_NUM = <span class="number">10</span>;   <span class="comment">% source data number</span></span><br><span class="line">NH_CODE_LEN = <span class="number">20</span>;       <span class="comment">% NH code length 20bit</span></span><br><span class="line">PN_SAMP_LEN = (SAMP_RATE/CODE_RATE)*PN_CODE_LEN*NH_CODE_LEN*SOURCE_DATA_NUM;</span><br><span class="line"></span><br><span class="line"><span class="comment">% generate source data</span></span><br><span class="line">source_data = <span class="built_in">rand</span>(<span class="number">1</span>,SOURCE_DATA_NUM); <span class="comment">% 10 test datas</span></span><br><span class="line">source_data(source_data &lt; <span class="number">0.5</span>) = <span class="number">-1</span>;</span><br><span class="line">source_data(source_data &gt;= <span class="number">0.5</span>) = <span class="number">1</span>;</span><br><span class="line">source_data = repelem(source_data, <span class="number">1</span>, NH_CODE_LEN); <span class="comment">% upsample D1 signal source to NH code modulated rate 1Kbps</span></span><br><span class="line"></span><br><span class="line"><span class="comment">% NH code</span></span><br><span class="line">nh_code = [<span class="number">0</span> <span class="number">0</span> <span class="number">0</span> <span class="number">0</span> <span class="number">0</span> <span class="number">1</span> <span class="number">0</span> <span class="number">0</span> <span class="number">1</span> <span class="number">1</span> <span class="number">0</span> <span class="number">1</span> <span class="number">0</span> <span class="number">1</span> <span class="number">0</span> <span class="number">0</span> <span class="number">1</span> <span class="number">1</span> <span class="number">1</span> <span class="number">0</span>];</span><br><span class="line">nh_code = <span class="built_in">repmat</span>(nh_code, SOURCE_DATA_NUM);     <span class="comment">% 10bit D1 source data needs 10 PN code</span></span><br><span class="line">nh_code(nh_code == <span class="number">0</span>) = <span class="number">-1</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">% NH code modulation</span></span><br><span class="line">nh_mod = source_data .* nh_code; <span class="comment">% using .* instead of xor</span></span><br><span class="line"></span><br><span class="line"><span class="comment">% upsample to sample rate</span></span><br><span class="line">nh_mod = repelem(nh_mod, <span class="number">1</span>, (SAMP_RATE/CODE_RATE)*PN_CODE_LEN);</span><br><span class="line"></span><br><span class="line"><span class="comment">% generate PN code </span></span><br><span class="line">[pn_code, pn_code_sample] = PNCode_Gen(PN_CODE_LEN, PN_SAMP_LEN, CODE_RATE, SAMP_RATE, PN_INDEX1);</span><br><span class="line"></span><br><span class="line"><span class="comment">% PN code modulation</span></span><br><span class="line">pn_mod = nh_mod .* pn_code_sample;  <span class="comment">% using .* instead of xor</span></span><br><span class="line"></span><br><span class="line"><span class="comment">% generate carrier wave lut, using lut</span></span><br><span class="line">AMP = <span class="number">1</span>;</span><br><span class="line">ROM_DEEPTH = <span class="number">4096</span>;</span><br><span class="line">CARRIER_FREQ = CODE_RATE;   <span class="comment">% carrier wave frequency</span></span><br><span class="line">FREQ_CTRL_WORLD = CARRIER_FREQ * <span class="number">2</span>^<span class="number">32</span> / SAMP_RATE; <span class="comment">% frequency control world</span></span><br><span class="line"></span><br><span class="line">rom_addr = <span class="number">0</span>: <span class="number">1</span>/ROM_DEEPTH : <span class="number">1</span><span class="number">-1</span>/ROM_DEEPTH;</span><br><span class="line">carrier_wave = AMP*<span class="built_in">cos</span>(<span class="number">2</span>*<span class="built_in">pi</span>*rom_addr);  <span class="comment">% carrier wave lut</span></span><br><span class="line"></span><br><span class="line"><span class="comment">% bpsk modulation</span></span><br><span class="line">bpsk_mod = <span class="built_in">zeros</span>(<span class="number">1</span>,PN_SAMP_LEN);</span><br><span class="line">rom_index = <span class="number">1</span>;</span><br><span class="line">phase_accumulator = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">for</span> <span class="built_in">i</span>=<span class="number">1</span>:PN_SAMP_LEN</span><br><span class="line">    <span class="comment">% bpsk modulation</span></span><br><span class="line">    <span class="keyword">if</span>(pn_mod(<span class="built_in">i</span>) == <span class="number">-1</span>)</span><br><span class="line">        bpsk_mod(<span class="built_in">i</span>) = -carrier_wave(rom_index);</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        bpsk_mod(<span class="built_in">i</span>) = carrier_wave(rom_index) ;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    phase_accumulator = phase_accumulator + FREQ_CTRL_WORLD;</span><br><span class="line">    <span class="comment">% phase accumulator has accumulator over 1 period</span></span><br><span class="line">    <span class="keyword">if</span>(phase_accumulator &gt; <span class="number">2</span>^<span class="number">32</span>)</span><br><span class="line">        phase_accumulator = phase_accumulator - <span class="number">2</span>^<span class="number">32</span>;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">% get the rom_index to generate wave through LUT</span></span><br><span class="line">    rom_index = <span class="built_in">round</span>(phase_accumulator/<span class="number">2</span>^<span class="number">20</span>);</span><br><span class="line">    <span class="keyword">if</span>(rom_index == <span class="number">0</span>)</span><br><span class="line">        rom_index = <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"><span class="comment">% plot the result</span></span><br><span class="line"><span class="built_in">figure</span>(<span class="number">1</span>);</span><br><span class="line"><span class="built_in">plot</span>(<span class="number">1</span>:<span class="number">1024</span>, bpsk_mod(<span class="number">1</span>:<span class="number">1024</span>), <span class="string">&#x27;r&#x27;</span>, <span class="number">1</span>:<span class="number">1024</span>, pn_mod(<span class="number">1</span>:<span class="number">1024</span>),<span class="string">&#x27;b&#x27;</span>);</span><br><span class="line">axis([<span class="number">0</span>, <span class="number">1024</span>, <span class="number">-2</span>, <span class="number">2</span>]);</span><br><span class="line"><span class="built_in">legend</span>(<span class="string">&#x27;bpsk mod&#x27;</span>, <span class="string">&#x27;pn mod&#x27;</span>);</span><br><span class="line">title(<span class="string">&quot;BPSK modulation&quot;</span>);</span><br></pre></td></tr></table></figure><br>调制的结果如下图所示：<br><img src="/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/BPSK调制.png" alt="BPSK 调制结果"><br>标准的PN码数据如下：<br><img src="/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/PN码数据.png" alt="PN 码的数据"><br>最终调制的具体的结果如下图所示：<br><img src="/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/BPSK细节.png" alt="BPSK调制细节"><br>可以看到，在不同的符号下，使用到的波形的相位是不同的。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/SDR/" rel="tag"># SDR</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/06/07/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-1-PN%E7%A0%81/" rel="prev" title="北斗卫星定位(1)----PN码">
+      <i class="fa fa-chevron-left"></i> 北斗卫星定位(1)----PN码
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/06/13/2021.6/Linux%E5%9C%A8ZYNQ%E4%B8%8A%E7%9A%84%E7%A7%BB%E6%A4%8D/" rel="next" title="Linux在ZYNQ上的移植">
+      Linux在ZYNQ上的移植 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E6%95%B0%E6%8D%AE%E7%A0%81"><span class="nav-number">1.</span> <span class="nav-text">1. 数据码</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-1-D1%E5%AF%BC%E8%88%AA%E7%94%B5%E6%96%87%E7%9A%84%E5%9F%BA%E6%9C%AC%E7%BB%93%E6%9E%84"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 D1导航电文的基本结构</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-%E4%BD%BF%E7%94%A8matlab%E6%A8%A1%E6%8B%9FD1%E5%AF%BC%E8%88%AA%E7%94%B5%E6%96%87%E7%9A%84BPSK%E8%B0%83%E5%88%B6"><span class="nav-number">2.</span> <span class="nav-text">2. 使用matlab模拟D1导航电文的BPSK调制</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

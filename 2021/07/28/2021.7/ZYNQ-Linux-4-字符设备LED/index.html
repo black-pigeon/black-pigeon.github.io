@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. Linux驱动LED在前面学习了字符设备的驱动，当时实现的是一个虚拟的字符设备。能够完成简单的数据的发送和接收的工作。在实际的使用中LED在linux当中也属于字符设备。所以第一个点灯实验就可以在Linux的字符设备的基础上进行操作了。在使用到实际的物理设备的时候，需要在linux当中使用到一个MMU设备，这个设备能够完成地址的映射等工作。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ZYNQ-Linux--4-字符设备LED">
+<meta property="og:url" content="https://black-pigeon.github.io/2021/07/28/2021.7/ZYNQ-Linux-4-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87LED/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="1. Linux驱动LED在前面学习了字符设备的驱动，当时实现的是一个虚拟的字符设备。能够完成简单的数据的发送和接收的工作。在实际的使用中LED在linux当中也属于字符设备。所以第一个点灯实验就可以在Linux的字符设备的基础上进行操作了。在使用到实际的物理设备的时候，需要在linux当中使用到一个MMU设备，这个设备能够完成地址的映射等工作。">
+<meta property="og:locale" content="zh_CH">
+<meta property="article:published_time" content="2021-07-28T14:25:59.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.785Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="Linux">
+<meta name="twitter:card" content="summary">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2021/07/28/2021.7/ZYNQ-Linux-4-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87LED/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>ZYNQ-Linux--4-字符设备LED | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/07/28/2021.7/ZYNQ-Linux-4-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87LED/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          ZYNQ-Linux--4-字符设备LED
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-07-28 22:25:59" itemprop="dateCreated datePublished" datetime="2021-07-28T22:25:59+08:00">2021-07-28</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/07/28/2021.7/ZYNQ-Linux-4-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87LED/" class="post-meta-item leancloud_visitors" data-flag-title="ZYNQ-Linux--4-字符设备LED" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2021/07/28/2021.7/ZYNQ-Linux-4-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87LED/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/07/28/2021.7/ZYNQ-Linux-4-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87LED/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="1-Linux驱动LED"><a href="#1-Linux驱动LED" class="headerlink" title="1. Linux驱动LED"></a>1. Linux驱动LED</h2><p>在前面学习了字符设备的驱动，当时实现的是一个虚拟的字符设备。能够完成简单的数据的发送和接收的工作。在实际的使用中LED在linux当中也属于字符设备。所以第一个点灯实验就可以在Linux的字符设备的基础上进行操作了。<br>在使用到实际的物理设备的时候，需要在linux当中使用到一个MMU设备，这个设备能够完成地址的映射等工作。<br><span id="more"></span></p>
+<h3 id="1-1-MMU"><a href="#1-1-MMU" class="headerlink" title="1.1 MMU"></a>1.1 MMU</h3><p>MMU全称叫做Memory Manage Unit,也就是内存管理单元,其完成的功能主要有：</p>
+<ul>
+<li>完成虚拟空间到物理空间的映射。</li>
+<li>内存保护，设置存储器的访问权限，设置虚拟存储空间的缓冲特性</li>
+</ul>
+<p>对于内存的映射，是相较于实际的物理内存和操作系统支持的最大的寻址范围来说的。对于32位处理器，最大的寻址范围是2^32=4GB。对于实际的物理设备，可能寻址空间没有这么大，比如ZYNQ上PS侧的DDR的最大容量为1GB，有了MMU这个工具，就能够完成这个１GB的物理内存到4GB的虚拟内存空间的一个转换。<br>完成物理地址到虚拟地址的映射需要使用的函数如下：</p>
+<figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment">@param: paddr： 被映射的IO起始地址（物理地址）；</span></span><br><span class="line"><span class="comment">@param: size： 需要映射的空间大小，以字节为单位；</span></span><br><span class="line"><span class="comment">@return: 一个指向__iomem类型的指针，当映射成功后便返回一段虚拟地址空间的起始地址，我们可以通过访问这段虚拟地址来实现实际物理地址的读写操作</span></span><br><span class="line"><span class="comment">*/</span></span><br><span class="line"><span class="function"><span class="keyword">void</span> __iomem *<span class="title">ioremap</span><span class="params">(<span class="keyword">phys_addr_t</span> paddr, <span class="keyword">unsigned</span> <span class="keyword">long</span> size)</span></span></span><br></pre></td></tr></table></figure>
+<p>当将物理地址映射为虚拟地址之后，我们就可以通过linux提供的一些函数来访问对应的地址了，常见的访问虚拟地址的函数是。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">u8 <span class="title">readb</span><span class="params">(<span class="keyword">const</span> <span class="keyword">volatile</span> <span class="keyword">void</span> __iomem *addr)</span></span></span><br><span class="line"><span class="function">u16 <span class="title">readw</span><span class="params">(<span class="keyword">const</span> <span class="keyword">volatile</span> <span class="keyword">void</span> __iomem *addr)</span></span></span><br><span class="line"><span class="function">u32 <span class="title">readl</span><span class="params">(<span class="keyword">const</span> <span class="keyword">volatile</span> <span class="keyword">void</span> __iomem *addr)</span></span></span><br><span class="line"><span class="function"></span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">writeb</span><span class="params">(u8 value, <span class="keyword">volatile</span> <span class="keyword">void</span> __iomem *addr)</span></span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">writew</span><span class="params">(u16 value, <span class="keyword">volatile</span> <span class="keyword">void</span> __iomem *addr)</span></span></span><br><span class="line"><span class="function"><span class="keyword">void</span> <span class="title">writel</span><span class="params">(u32 value, <span class="keyword">volatile</span> <span class="keyword">void</span> __iomem *addr)</span></span></span><br></pre></td></tr></table></figure><br>可以看到这些函数的作用分别是向对应的虚拟地址写入或读取一字节两字节和四字节长度的数据。</p>
+<h2 id="2-ZYNQ-PS-LED寄存器"><a href="#2-ZYNQ-PS-LED寄存器" class="headerlink" title="2. ZYNQ PS LED寄存器"></a>2. ZYNQ PS LED寄存器</h2><p>使用在这里如果使用直接查找寄存器的方式来进行字符设备的驱动，其实和开发裸机程序没有什么太大的区别，只是在这里需要将物理地址进行一个映射才可以。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/types.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/kernel.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/delay.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/ide.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/init.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/module.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/errno.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/gpio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;asm/mach/map.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;asm/uaccess.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;asm/io.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/fs.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/cdev.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/uaccess.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> DEVICE_NAME     <span class="meta-string">&quot;ZynqLed&quot;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> DEVICE_NUM      (1)</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* 定义字符设备的设备号 */</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">dev_t</span> dev_no;</span><br><span class="line"><span class="comment">/* 定义字符设备结构体 */</span></span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">cdev</span> <span class="title">char_dev</span>;</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* </span></span><br><span class="line"><span class="comment"> * GPIO相关寄存器地址定义</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> ZYNQ_GPIO_REG_BASE			0xE000A000</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> DATA_OFFSET					0x00000044</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> DIRM_OFFSET					0x00000244</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> OUTEN_OFFSET				0x00000248</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> INTDIS_OFFSET				0x00000254</span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">define</span> APER_CLK_CTRL				0xF800012C</span></span><br><span class="line"></span><br><span class="line"><span class="comment">/* 映射后的寄存器虚拟地址指针 */</span></span><br><span class="line"><span class="keyword">static</span> <span class="keyword">void</span> __iomem *data_addr;</span><br><span class="line"><span class="keyword">static</span> <span class="keyword">void</span> __iomem *dirm_addr;</span><br><span class="line"><span class="keyword">static</span> <span class="keyword">void</span> __iomem *outen_addr;</span><br><span class="line"><span class="keyword">static</span> <span class="keyword">void</span> __iomem *intdis_addr;</span><br><span class="line"><span class="keyword">static</span> <span class="keyword">void</span> __iomem *aper_clk_ctrl_addr;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * @description		: 打开设备</span></span><br><span class="line"><span class="comment"> * @param – inode	: 传递给驱动的inode</span></span><br><span class="line"><span class="comment"> * @param - filp	: 设备文件，file结构体有个叫做private_data的成员变量</span></span><br><span class="line"><span class="comment"> * 					  一般在open的时候将private_data指向设备结构体。</span></span><br><span class="line"><span class="comment"> * @return			: 0 成功;其他 失败</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">led_open</span><span class="params">(struct inode *inode, struct file *filp)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * @description		: 从设备读取数据 </span></span><br><span class="line"><span class="comment"> * @param - filp	: 要打开的设备文件(文件描述符)</span></span><br><span class="line"><span class="comment"> * @param - buf		: 返回给用户空间的数据缓冲区</span></span><br><span class="line"><span class="comment"> * @param - cnt		: 要读取的数据长度</span></span><br><span class="line"><span class="comment"> * @param - offt	: 相对于文件首地址的偏移</span></span><br><span class="line"><span class="comment"> * @return			: 读取的字节数，如果为负值，表示读取失败</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">ssize_t</span> <span class="title">led_read</span><span class="params">(struct file *filp, <span class="keyword">char</span> __user *buf,</span></span></span><br><span class="line"><span class="params"><span class="function">			<span class="keyword">size_t</span> cnt, <span class="keyword">loff_t</span> *offt)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * @description		: 向设备写数据 </span></span><br><span class="line"><span class="comment"> * @param - filp	: 设备文件，表示打开的文件描述符</span></span><br><span class="line"><span class="comment"> * @param - buf		: 要写给设备写入的数据</span></span><br><span class="line"><span class="comment"> * @param - cnt		: 要写入的数据长度</span></span><br><span class="line"><span class="comment"> * @param - offt	: 相对于文件首地址的偏移</span></span><br><span class="line"><span class="comment"> * @return			: 写入的字节数，如果为负值，表示写入失败</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">ssize_t</span> <span class="title">led_write</span><span class="params">(struct file *filp, <span class="keyword">const</span> <span class="keyword">char</span> __user *buf,</span></span></span><br><span class="line"><span class="params"><span class="function">			<span class="keyword">size_t</span> cnt, <span class="keyword">loff_t</span> *offt)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">int</span> ret;</span><br><span class="line">	<span class="keyword">int</span> val;</span><br><span class="line">	<span class="keyword">char</span> kern_buf[<span class="number">1</span>];</span><br><span class="line"></span><br><span class="line">	ret = copy_from_user(kern_buf, buf, cnt);	<span class="comment">// 得到应用层传递过来的数据</span></span><br><span class="line">	<span class="keyword">if</span>(<span class="number">0</span> &gt; ret) &#123;</span><br><span class="line">		printk(KERN_ERR <span class="string">&quot;kernel write failed!\r\n&quot;</span>);</span><br><span class="line">		<span class="keyword">return</span> -EFAULT;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	val = readl(data_addr);</span><br><span class="line">	<span class="keyword">if</span> (<span class="number">0</span> == kern_buf[<span class="number">0</span>])</span><br><span class="line">		val &amp;= ~(<span class="number">0x1</span>U &lt;&lt; <span class="number">18</span>);		<span class="comment">// 如果传递过来的数据是0则关闭led</span></span><br><span class="line">	<span class="keyword">else</span> <span class="keyword">if</span> (<span class="number">1</span> == kern_buf[<span class="number">0</span>])</span><br><span class="line">		val |= (<span class="number">0x1</span>U &lt;&lt; <span class="number">18</span>);			<span class="comment">// 如果传递过来的数据是1则点亮led</span></span><br><span class="line"></span><br><span class="line">	writel(val, data_addr);</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * @description		: 关闭/释放设备</span></span><br><span class="line"><span class="comment"> * @param – filp	: 要关闭的设备文件(文件描述符)</span></span><br><span class="line"><span class="comment"> * @return			: 0 成功;其他 失败</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> <span class="title">led_release</span><span class="params">(struct inode *inode, struct file *filp)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 设备操作函数 */</span></span><br><span class="line"><span class="keyword">static</span> <span class="class"><span class="keyword">struct</span> <span class="title">file_operations</span> <span class="title">led_fops</span> =</span> &#123;</span><br><span class="line">	.owner		= THIS_MODULE,</span><br><span class="line">	.open		= led_open,</span><br><span class="line">	.read		= led_read,</span><br><span class="line">	.write		= led_write,</span><br><span class="line">	.release	= led_release,</span><br><span class="line">&#125;;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> __init <span class="title">led_init</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	u32 val;</span><br><span class="line">	<span class="keyword">int</span> ret;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 寄存器地址映射 */</span></span><br><span class="line">	data_addr = ioremap(ZYNQ_GPIO_REG_BASE + DATA_OFFSET, <span class="number">4</span>);</span><br><span class="line">	dirm_addr = ioremap(ZYNQ_GPIO_REG_BASE + DIRM_OFFSET, <span class="number">4</span>);</span><br><span class="line">	outen_addr = ioremap(ZYNQ_GPIO_REG_BASE + OUTEN_OFFSET, <span class="number">4</span>);</span><br><span class="line">	intdis_addr = ioremap(ZYNQ_GPIO_REG_BASE + INTDIS_OFFSET, <span class="number">4</span>);</span><br><span class="line">	aper_clk_ctrl_addr = ioremap(APER_CLK_CTRL, <span class="number">4</span>);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 使能GPIO时钟 */</span></span><br><span class="line">	val = readl(aper_clk_ctrl_addr);</span><br><span class="line">	val |= (<span class="number">0x1</span>U &lt;&lt; <span class="number">22</span>);</span><br><span class="line">	writel(val, aper_clk_ctrl_addr);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 关闭中断功能 */</span></span><br><span class="line">	val |= (<span class="number">0x1</span>U &lt;&lt; <span class="number">18</span>);</span><br><span class="line">	writel(val, intdis_addr);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 设置GPIO为输出功能 */</span></span><br><span class="line">	val = readl(dirm_addr);</span><br><span class="line">	val |= (<span class="number">0x1</span>U &lt;&lt; <span class="number">18</span>);</span><br><span class="line">	writel(val, dirm_addr);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 使能GPIO输出功能 */</span></span><br><span class="line">	val = readl(outen_addr);</span><br><span class="line">	val |= (<span class="number">0x1</span>U &lt;&lt; <span class="number">18</span>);</span><br><span class="line">	writel(val, outen_addr);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 默认关闭LED */</span></span><br><span class="line">	val = readl(data_addr);</span><br><span class="line">	val &amp;= ~(<span class="number">0x1</span>U &lt;&lt; <span class="number">18</span>);</span><br><span class="line">	writel(val, data_addr);</span><br><span class="line"></span><br><span class="line">    printk(KERN_EMERG <span class="string">&quot;chrdev init!!!\n&quot;</span>);</span><br><span class="line">    <span class="comment">/* 采用动态分配的方式获取设备号 */</span></span><br><span class="line">    ret = alloc_chrdev_region(&amp;dev_no, <span class="number">0</span>, DEVICE_NUM, DEVICE_NAME);</span><br><span class="line">    <span class="keyword">if</span>(ret &lt; <span class="number">0</span>)&#123;</span><br><span class="line">        printk(KERN_EMERG <span class="string">&quot;fail to alloc devno\n&quot;</span>);</span><br><span class="line">        <span class="keyword">goto</span> alloc_err;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 关联字符设备结构体与文件操作结构体 */</span></span><br><span class="line">    cdev_init(&amp;char_dev, &amp;led_fops);</span><br><span class="line"></span><br><span class="line">    <span class="comment">/* 添加字符设备到哈希表当中 */</span></span><br><span class="line">    ret = cdev_add(&amp;char_dev, dev_no, DEVICE_NUM);</span><br><span class="line">    <span class="keyword">if</span>(ret &lt;<span class="number">0</span>)</span><br><span class="line">    &#123;</span><br><span class="line">        printk(KERN_EMERG <span class="string">&quot;failed to add char device\r\n&quot;</span>);</span><br><span class="line">        <span class="keyword">goto</span> add_err;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">add_err:</span><br><span class="line">    <span class="comment">/* 如果添加字符设备失败，需要注销设备号 */</span></span><br><span class="line">    unregister_chrdev_region(dev_no, DEVICE_NUM);</span><br><span class="line"></span><br><span class="line">alloc_err:</span><br><span class="line">    <span class="keyword">return</span> ret;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> __exit <span class="title">led_exit</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="comment">/* 注销字符设备 */</span></span><br><span class="line">    unregister_chrdev_region(dev_no, DEVICE_NUM);</span><br><span class="line">    cdev_del(&amp;char_dev);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 2.取消内存映射 */</span></span><br><span class="line">	iounmap(data_addr);</span><br><span class="line">	iounmap(dirm_addr);</span><br><span class="line">	iounmap(outen_addr);</span><br><span class="line">	iounmap(intdis_addr);</span><br><span class="line">	iounmap(aper_clk_ctrl_addr);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="comment">/* 驱动模块入口和出口函数注册 */</span></span><br><span class="line">module_init(led_init);</span><br><span class="line">module_exit(led_exit);</span><br><span class="line"></span><br><span class="line">MODULE_AUTHOR(<span class="string">&quot;wcc&quot;</span>);</span><br><span class="line">MODULE_DESCRIPTION(<span class="string">&quot;char led&quot;</span>);</span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL&quot;</span>);s</span><br></pre></td></tr></table></figure></p>
+<h2 id="2-2测试程序"><a href="#2-2测试程序" class="headerlink" title="2.2测试程序"></a>2.2测试程序</h2><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdio.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;unistd.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/types.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;sys/stat.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;fcntl.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;stdlib.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;string.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="comment">/*</span></span><br><span class="line"><span class="comment"> * @description		: main主程序</span></span><br><span class="line"><span class="comment"> * @param - argc	: argv数组元素个数</span></span><br><span class="line"><span class="comment"> * @param - argv	: 具体参数</span></span><br><span class="line"><span class="comment"> * @return			: 0 成功;其他 失败</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="function"><span class="keyword">int</span> <span class="title">main</span><span class="params">(<span class="keyword">int</span> argc, <span class="keyword">char</span> *argv[])</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">	<span class="keyword">int</span> fd, ret;</span><br><span class="line">	<span class="keyword">unsigned</span> <span class="keyword">char</span> buf[<span class="number">1</span>];</span><br><span class="line"></span><br><span class="line">	<span class="keyword">if</span>(<span class="number">3</span> != argc) &#123;</span><br><span class="line">		<span class="built_in">printf</span>(<span class="string">&quot;Usage:\n&quot;</span></span><br><span class="line">		<span class="string">&quot;\t./ledApp /dev/led 1		@ close LED\n&quot;</span></span><br><span class="line">		<span class="string">&quot;\t./ledApp /dev/led 0		@ open LED\n&quot;</span></span><br><span class="line">		);</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 打开设备 */</span></span><br><span class="line">	fd = open(argv[<span class="number">1</span>], O_RDWR);</span><br><span class="line">	<span class="keyword">if</span>(<span class="number">0</span> &gt; fd) &#123;</span><br><span class="line">		<span class="built_in">printf</span>(<span class="string">&quot;file %s open failed!\r\n&quot;</span>, argv[<span class="number">1</span>]);</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 将字符串转换为int型数据 */</span></span><br><span class="line">	buf[<span class="number">0</span>] = atoi(argv[<span class="number">2</span>]);</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 向驱动写入数据 */</span></span><br><span class="line">	ret = write(fd, buf, <span class="keyword">sizeof</span>(buf));</span><br><span class="line">	<span class="keyword">if</span>(<span class="number">0</span> &gt; ret)&#123;</span><br><span class="line">		<span class="built_in">printf</span>(<span class="string">&quot;LED Control Failed!\r\n&quot;</span>);</span><br><span class="line">		close(fd);</span><br><span class="line">		<span class="keyword">return</span> <span class="number">-1</span>;</span><br><span class="line">	&#125;</span><br><span class="line"></span><br><span class="line">	<span class="comment">/* 关闭设备 */</span></span><br><span class="line">	close(fd);</span><br><span class="line">	<span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<p>之后就和前面的字符设备的驱动测试是类似的，使用mknod创建一个设备节点之后，就可以进行led的亮灭的驱动了。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/07/22/2021.7/FFT%E5%9C%A8Matlab%E5%BD%93%E4%B8%AD%E7%9A%84%E4%BD%BF%E7%94%A8/" rel="prev" title="FFT在Matlab当中的使用">
+      <i class="fa fa-chevron-left"></i> FFT在Matlab当中的使用
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/11/10/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-3-PN%E7%A0%81%E7%89%87%E6%90%9C%E7%B4%A2/" rel="next" title="北斗卫星定位-3-PN码片搜索">
+      北斗卫星定位-3-PN码片搜索 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-Linux%E9%A9%B1%E5%8A%A8LED"><span class="nav-number">1.</span> <span class="nav-text">1. Linux驱动LED</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-MMU"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 MMU</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-ZYNQ-PS-LED%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-number">2.</span> <span class="nav-text">2. ZYNQ PS LED寄存器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2%E6%B5%8B%E8%AF%95%E7%A8%8B%E5%BA%8F"><span class="nav-number">3.</span> <span class="nav-text">2.2测试程序</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

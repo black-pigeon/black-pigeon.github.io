@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="在前面的博客当中介绍了如何使用hexo来创建一个博客，并使用github来部署博客。得到了一个最基础的博客模板，在这个文章当中会介绍如何使用和配置一下NexT主题。本篇博客主要参考这位作者的：Next主题配置">
+<meta property="og:type" content="article">
+<meta property="og:title" content="建立博客-(2)">
+<meta property="og:url" content="https://black-pigeon.github.io/2021/05/14/2021.5/build-blog-2/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="在前面的博客当中介绍了如何使用hexo来创建一个博客，并使用github来部署博客。得到了一个最基础的博客模板，在这个文章当中会介绍如何使用和配置一下NexT主题。本篇博客主要参考这位作者的：Next主题配置">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/05/14/2021.5/build-blog-2/next.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/05/14/2021.5/build-blog-2/修改主题.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/05/14/2021.5/build-blog-2/menu设置.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/05/14/2021.5/build-blog-2/页面.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/05/14/2021.5/build-blog-2/生成页面.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/05/14/2021.5/build-blog-2/页面分类.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/05/14/2021.5/build-blog-2/联系方式.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/05/14/2021.5/build-blog-2/头像设置.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/05/14/2021.5/build-blog-2/新分支.png">
+<meta property="article:published_time" content="2021-05-14T07:14:39.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.777Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="博客">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2021/05/14/2021.5/build-blog-2/next.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2021/05/14/2021.5/build-blog-2/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>建立博客-(2) | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/05/14/2021.5/build-blog-2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          建立博客-(2)
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-05-14 15:14:39" itemprop="dateCreated datePublished" datetime="2021-05-14T15:14:39+08:00">2021-05-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E5%8D%9A%E5%AE%A2/" itemprop="url" rel="index"><span itemprop="name">博客</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/05/14/2021.5/build-blog-2/" class="post-meta-item leancloud_visitors" data-flag-title="建立博客-(2)" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2021/05/14/2021.5/build-blog-2/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/05/14/2021.5/build-blog-2/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>在前面的博客当中介绍了如何使用hexo来创建一个博客，并使用github来部署博客。得到了一个最基础的博客模板，在这个文章当中会介绍如何使用和配置一下<a target="_blank" rel="noopener" href="https://github.com/theme-next/hexo-theme-next">NexT</a>主题。<br>本篇博客主要参考这位作者的：<a target="_blank" rel="noopener" href="https://www.jianshu.com/p/e4db4f7ed45f">Next主题配置</a><br><span id="more"></span></p>
+<h1 id="1-安装next"><a href="#1-安装next" class="headerlink" title="1. 安装next"></a>1. 安装next</h1><p>在博客根目录下使用git命令将NexT主题可克隆到themes文件夹下面。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/theme-next/hexo-theme-next themes/next</span><br></pre></td></tr></table></figure><br>可以在themes下面看到下载下来的next主题<br><img src="/2021/05/14/2021.5/build-blog-2/next.png" alt="next"><br>然后可以将hexo的配置文件<code>_config.yml</code>中的主题设置为next。<br><img src="/2021/05/14/2021.5/build-blog-2/修改主题.png" alt="修改主题"><br>然后我们就可以在本地调试当中，来看看更换主题之后的样子了。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">hexo clean </span><br><span class="line">hexo g</span><br><span class="line">hexo s</span><br></pre></td></tr></table></figure></p>
+<h1 id="2-主题配置"><a href="#2-主题配置" class="headerlink" title="2. 主题配置"></a>2. 主题配置</h1><p>接下来就可以配置主题了。next主题的配置文件在<code>themes/next/_config.yml</code>下，我们的主题主要修改的地方也就在这个里面了。</p>
+<h2 id="2-1-page创建"><a href="#2-1-page创建" class="headerlink" title="2.1 page创建"></a>2.1 page创建</h2><p>使用hexo的时候，用于创建文章一般都是使用<code>hexo new post &quot;blog-name&quot;</code>, hexo也可以用来创建一个新的页面，也就我们点击对应的地方会跳转到一个新的页面当中，这需要使用到<code>hexo new page page_name</code><br>在Next的配置主题当中，为我们提供了几个模板页面，需要使用到那些界面就使能对应的页面,下方的icon设置可以用来显示图标。<br><img src="/2021/05/14/2021.5/build-blog-2/menu设置.png" alt="menu设置"></p>
+<p><img src="/2021/05/14/2021.5/build-blog-2/页面.png" alt="页面"><br>现在已经使能了这些页面了，那么如何在博客上反应出来，当点击了对应的位置会跳转到对应的页面当中呢。<br>这时候就需要使用<code>hexo new page page_name</code>来创建新的页面了。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br></pre></td><td class="code"><pre><span class="line">hexo new page about</span><br><span class="line">hexo new page  tags</span><br><span class="line">hexo new page  categories</span><br><span class="line">hexo new page  archives</span><br></pre></td></tr></table></figure><br>这时候我们看到在source目录下面就新生成了几个文件夹，分别对应着page的名字。<br><img src="/2021/05/14/2021.5/build-blog-2/生成页面.png" alt="生成页面"><br>在生成的这几个page中，需要在markdown文本中添加一些语句，让其能够和对应的归类联系起来。比如：<br><img src="/2021/05/14/2021.5/build-blog-2/页面分类.png" alt="页面分类.png"></p>
+<h2 id="2-2-联系方式设置"><a href="#2-2-联系方式设置" class="headerlink" title="2.2 联系方式设置"></a>2.2 联系方式设置</h2><p>next主题里面很贴心地准备了一些联系方式，这样当别人想要通过博客联系到你的时候就可以很轻松地找到你了。<br>找到social选项，然后使能对应的联系方式，没有的也可以自己添加，前面是显示的联系方式的名称后续是网址或者邮箱。<br><img src="/2021/05/14/2021.5/build-blog-2/联系方式.png" alt="联系方式"></p>
+<h2 id="2-3-头像设置"><a href="#2-3-头像设置" class="headerlink" title="2.3 头像设置"></a>2.3 头像设置</h2><p>在avatar中设置是否在侧边栏中显示头像，头像的源文件需要保存在<code>themes/next/source/images/</code>下面，这样才能正确地找到这个头像。<br><img src="/2021/05/14/2021.5/build-blog-2/头像设置.png" alt="头像设置"></p>
+<h2 id="2-4-样式设置"><a href="#2-4-样式设置" class="headerlink" title="2.4 样式设置"></a>2.4 样式设置</h2><p>Schemes方案设置有以下几种，选择一种你喜欢的就好。<br><figure class="highlight yml"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Schemes</span></span><br><span class="line"><span class="comment">#scheme: Muse</span></span><br><span class="line"><span class="attr">scheme:</span> <span class="string">Mist</span></span><br><span class="line"><span class="comment">#scheme: Pisces</span></span><br><span class="line"><span class="comment">#scheme: Gemini</span></span><br></pre></td></tr></table></figure><br>到这里我们就能够完成一个博客的基本的搭建了，其他什么需要设置的，可以参考其他人的设置，主要修改_config.yml文件就可以了。</p>
+<h1 id="3-部署文件"><a href="#3-部署文件" class="headerlink" title="3.部署文件"></a>3.部署文件</h1><p>设置完成之后，就可以部署网站了。和前面的博客一样，使用hexo来部署网页。<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">hexo clean</span><br><span class="line">hexo g</span><br><span class="line">hexo d</span><br></pre></td></tr></table></figure><br>这样就能够把生成的文件部署到github上了。<br>但是当前我们只是把生成的网页文件用github进行了部署，对于源文件，我们还没有部署。这个我们可以使用git，创建一个分支，然后把这个分支push上去就好了。<br>在这里创建一个<code>.gitignore</code>文件，把不需要管理的文件忽略掉。<br>.gitignore文件内容如下</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line">.DS_Store</span><br><span class="line">Thumbs.db</span><br><span class="line">db.json</span><br><span class="line">*.log</span><br><span class="line">node_modules/</span><br><span class="line">public/</span><br><span class="line">.deploy*/</span><br></pre></td></tr></table></figure>
+<p>然后使用git来新建一个分支，把这个分支push到github对应的分支上。这样就能够完成管理，于此同时也就可以在不同的地方来完成博客的建立了。<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line">git branch hexo</span><br><span class="line">git checkout hexo </span><br><span class="line">git add .</span><br><span class="line">git commit -m <span class="string">&quot;initial repo&quot;</span></span><br><span class="line">git push origin dev:dev</span><br></pre></td></tr></table></figure><br><img src="/2021/05/14/2021.5/build-blog-2/新分支.png" alt="新分支"></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/%E5%8D%9A%E5%AE%A2/" rel="tag"># 博客</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/05/12/2021.5/build-blog-1/" rel="prev" title="建立博客-(1)">
+      <i class="fa fa-chevron-left"></i> 建立博客-(1)
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/05/15/2021.5/build-blog-3/" rel="next" title="建立博客(3)">
+      建立博客(3) <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E5%AE%89%E8%A3%85next"><span class="nav-number">1.</span> <span class="nav-text">1. 安装next</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-%E4%B8%BB%E9%A2%98%E9%85%8D%E7%BD%AE"><span class="nav-number">2.</span> <span class="nav-text">2. 主题配置</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-1-page%E5%88%9B%E5%BB%BA"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 page创建</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2-%E8%81%94%E7%B3%BB%E6%96%B9%E5%BC%8F%E8%AE%BE%E7%BD%AE"><span class="nav-number">2.2.</span> <span class="nav-text">2.2 联系方式设置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-3-%E5%A4%B4%E5%83%8F%E8%AE%BE%E7%BD%AE"><span class="nav-number">2.3.</span> <span class="nav-text">2.3 头像设置</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-4-%E6%A0%B7%E5%BC%8F%E8%AE%BE%E7%BD%AE"><span class="nav-number">2.4.</span> <span class="nav-text">2.4 样式设置</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-%E9%83%A8%E7%BD%B2%E6%96%87%E4%BB%B6"><span class="nav-number">3.</span> <span class="nav-text">3.部署文件</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

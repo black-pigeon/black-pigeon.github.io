@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. 前言在之前的博客当中，实现了数据的卷积编码，在卷积编码当中需要注意的是对于tail bit的部分，需要在最中的输出结果处置零。在数据域的处理当中，下一步的操作就是实现数据域的交织了。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OFDM_802.11a学习----数据域交织">
+<meta property="og:url" content="https://black-pigeon.github.io/2022/05/04/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E5%9F%9F%E4%BA%A4%E7%BB%87/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="1. 前言在之前的博客当中，实现了数据的卷积编码，在卷积编码当中需要注意的是对于tail bit的部分，需要在最中的输出结果处置零。在数据域的处理当中，下一步的操作就是实现数据域的交织了。">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/04/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E5%9F%9F%E4%BA%A4%E7%BB%87/交织原理.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/04/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E5%9F%9F%E4%BA%A4%E7%BB%87/交织计算.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/04/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E5%9F%9F%E4%BA%A4%E7%BB%87/交织表.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/04/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E5%9F%9F%E4%BA%A4%E7%BB%87/交织时序.png">
+<meta property="article:published_time" content="2022-05-04T08:48:55.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.805Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="SDR">
+<meta property="article:tag" content="FPGA">
+<meta property="article:tag" content="ZYNQ">
+<meta property="article:tag" content="OFDM">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2022/05/04/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E5%9F%9F%E4%BA%A4%E7%BB%87/交织原理.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2022/05/04/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E5%9F%9F%E4%BA%A4%E7%BB%87/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>OFDM_802.11a学习----数据域交织 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/05/04/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E5%9F%9F%E4%BA%A4%E7%BB%87/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          OFDM_802.11a学习----数据域交织
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-05-04 16:48:55" itemprop="dateCreated datePublished" datetime="2022-05-04T16:48:55+08:00">2022-05-04</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/OFDM/" itemprop="url" rel="index"><span itemprop="name">OFDM</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2022/05/04/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E5%9F%9F%E4%BA%A4%E7%BB%87/" class="post-meta-item leancloud_visitors" data-flag-title="OFDM_802.11a学习----数据域交织" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2022/05/04/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E5%9F%9F%E4%BA%A4%E7%BB%87/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2022/05/04/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E5%9F%9F%E4%BA%A4%E7%BB%87/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>在之前的博客当中，实现了数据的卷积编码，在卷积编码当中需要注意的是对于tail bit的部分，需要在最中的输出结果处置零。<br>在数据域的处理当中，下一步的操作就是实现数据域的交织了。<br><img src="/2022/05/04/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E5%9F%9F%E4%BA%A4%E7%BB%87/交织原理.png" alt="交织原理"></p>
+<span id="more"></span>
+<h1 id="2-分组交织器"><a href="#2-分组交织器" class="headerlink" title="2. 分组交织器"></a>2. 分组交织器</h1><p>分组交织器是针对一组bit进行的，该分组当中bit的数量称为交织深度，交织深度越大，离散度越大，抗突发差错的能力也就越大，相应的引起的交织编码处理时间也越长。</p>
+<p>我们可以用一个矩阵来描述分组交织器，将数据按照行进行写入数据，按照列的方式进行读出，或者按照相反的方式也是可以的。<br>4x5的分组交织器，由此可见交织深度为20，以行的方式进行写入，以列的方式进行读出。</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>0</th>
+<th>1</th>
+<th>2</th>
+<th>3</th>
+<th>4</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5</td>
+<td>6</td>
+<td>7</td>
+<td>8</td>
+<td>9</td>
+</tr>
+<tr>
+<td>10</td>
+<td>11</td>
+<td>12</td>
+<td>13</td>
+<td>14</td>
+</tr>
+<tr>
+<td>15</td>
+<td>16</td>
+<td>17</td>
+<td>18</td>
+<td>19</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>反交织的作用与交织的作用正好相反，将上图当中的矩阵进行转秩，然后同样按照以行的方式进行写入，以列的方式进行读出，即可将原始的数据恢复。</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>0</th>
+<th>5</th>
+<th>10</th>
+<th>15</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>6</td>
+<td>11</td>
+<td>16</td>
+</tr>
+<tr>
+<td>2</td>
+<td>7</td>
+<td>12</td>
+<td>17</td>
+</tr>
+<tr>
+<td>3</td>
+<td>8</td>
+<td>13</td>
+<td>18</td>
+</tr>
+<tr>
+<td>4</td>
+<td>9</td>
+<td>14</td>
+<td>19</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h1 id="3-802-11a当中的交织"><a href="#3-802-11a当中的交织" class="headerlink" title="3. 802.11a当中的交织"></a>3. 802.11a当中的交织</h1><p>802.11a当中交织的深度为一个OFDM符号，因此这是一个分组交织器，交织深度与所采用的调制方式有关：BPSK，QPSK，16QAM，64QAM的交织深度分别为48，96，192，288个bit。每种调制当时的交织深度是通过数据子载波的数量与每个符号当中bit的个数相乘得到的。</p>
+<p>文档当中规定802.11a的数据域的交织分为两个步骤：<br>第一次交织的目的是保证相邻的比特在经过ofdm调制之后数据会落在不相邻的子载波上。<br>第二次交织是在第一次交织的基础上进行的，在这一过程中是将一小段比特数据在它们所占的位置上重新排列。<br>这两次交织的目的就是最大程度上的避免数据流连续的被映射到星座图的某一部分区域情况的出现，同时，交织后的数据在发送过程中可能会出现突发错误，当在对数据进行解交织的时候就可以将连续的错误离散的分布到各个子信道上，从而减轻衰落信道对系统性能的影响，随工作模式的不同，第一步处理的交织深度和交织方式都会不同，而第二次交织方式甚至是否进行也都不尽相同。</p>
+<p>定义第一次交织前的编码比特序列角标顺序号用 k 表示，交织之后的数据序列角标顺序号用 i 表示，第二次交织后数据序列角标顺序号用 j 来表示，我们可以得到如下公式：<br><img src="/2022/05/04/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E5%9F%9F%E4%BA%A4%E7%BB%87/交织计算.png" alt="交织计算"><br>因此在调制方式为QAM64，速率为54Mb/s的情况下能够确定s=3，$N_{CBPS}=288$<br>有了这些参数之后，我们就可以在matlab当中将这个交织的变换关系给计算出来，并将这些值存储在一个ROM当中，这样在之后，我们只需要根据这个关系进行将数据写入到一个RAM对应的地址当中，再依次将数据从RAM中读取出来即可以完成交织的工作。</p>
+<p><img src="/2022/05/04/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E5%9F%9F%E4%BA%A4%E7%BB%87/交织表.png" alt="交织表"></p>
+<h2 id="3-1-matlab生成交织表"><a href="#3-1-matlab生成交织表" class="headerlink" title="3.1 matlab生成交织表"></a>3.1 matlab生成交织表</h2><figure class="highlight matlab"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line">interleaver_depth = <span class="number">288</span>;</span><br><span class="line">n_syms_per_ofdm_sym = <span class="number">48</span>;</span><br><span class="line"></span><br><span class="line">idx=<span class="built_in">zeros</span>(<span class="number">1</span>,interleaver_depth);</span><br><span class="line"></span><br><span class="line">s = <span class="built_in">max</span>([interleaver_depth/n_syms_per_ofdm_sym/<span class="number">2</span> <span class="number">1</span>]);</span><br><span class="line"></span><br><span class="line">intlvr_patt = interleaver_depth/<span class="number">16</span>*<span class="built_in">rem</span>(<span class="number">0</span>:interleaver_depth<span class="number">-1</span>,<span class="number">16</span>) + <span class="built_in">floor</span>((<span class="number">0</span>:interleaver_depth<span class="number">-1</span>)/<span class="number">16</span>);</span><br><span class="line"></span><br><span class="line">perm_patt = s*<span class="built_in">floor</span>(intlvr_patt/s)+ ...</span><br><span class="line">   <span class="built_in">mod</span>(intlvr_patt+interleaver_depth-<span class="built_in">floor</span>(<span class="number">16</span>*intlvr_patt/interleaver_depth),s);</span><br><span class="line"></span><br><span class="line">idx = perm_patt;</span><br><span class="line"></span><br><span class="line">fid = fopen(<span class="string">&#x27;index.coe&#x27;</span>,<span class="string">&#x27;w&#x27;</span>);</span><br><span class="line">fprintf(fid,<span class="string">&#x27;memory_initialization_radix = 10;\n&#x27;</span>);</span><br><span class="line">fprintf(fid,<span class="string">&#x27;memory_initialization_vector = \n&#x27;</span>);</span><br><span class="line">fprintf(fid,<span class="string">&#x27;%d,\n&#x27;</span>,idx(<span class="number">1</span>:<span class="keyword">end</span><span class="number">-1</span>)); </span><br><span class="line">fprintf(fid,<span class="string">&#x27;%d;\n&#x27;</span>,idx(<span class="keyword">end</span>)); </span><br><span class="line">fclose(fid);</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h2 id="4-交织模块的实现"><a href="#4-交织模块的实现" class="headerlink" title="4. 交织模块的实现"></a>4. 交织模块的实现</h2><p>有了前面的交织模块的介绍，实现交织模块就不是什么难事了。交织模块的时序设计如下：<br><img src="/2022/05/04/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E5%9F%9F%E4%BA%A4%E7%BB%87/交织时序.png" alt="交织时序"><br>具体的过程如下：</p>
+<ul>
+<li>首先经过删余之后的数据进入到交织模块当中，交织模块会使用一个FIFO将数据进行缓存，在将一帧数据缓存结束的时候，统计处一共有多少数据。</li>
+<li>当数据写入到FIFO当中之后，开始将ROM当中的数据读出，ROM_DOUT作为RAM的写地址，于此同事将从FIFO当中读出的数据写入到该地址当中。</li>
+<li>ROM中只存有0~287的地址，因此每当处理完一个符号的交织之后，之后再写入RAM的地址需要做一个OFDM符号深度的偏移。</li>
+<li>当RAM当中已经有完整的一帧交织过后的数据之后，将数据从RAM中读出，给到下一级模块进行使用。</li>
+</ul>
+<p>具体的代码如下：</p>
+<figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="meta">`<span class="meta-keyword">timescale</span> 1ns/1ps</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">module</span> tx_interleaver (</span><br><span class="line">	<span class="keyword">input</span>	<span class="keyword">wire</span>  			clk_Modulation	,</span><br><span class="line">	<span class="keyword">input</span> 	<span class="keyword">wire</span>  			reset 			,</span><br><span class="line">	<span class="keyword">input</span> 	<span class="keyword">wire</span>  	[<span class="number">1</span>:<span class="number">0</span>]	tx_Modulation		,<span class="comment">//调制模式</span></span><br><span class="line">	<span class="keyword">input</span> 	<span class="keyword">wire</span> 			tx_interleaver_in_valid	,</span><br><span class="line">	<span class="keyword">input</span> 	<span class="keyword">wire</span> 			tx_interleaver_in_bit		,</span><br><span class="line">	<span class="keyword">input</span> 	<span class="keyword">wire</span> 			tx_puncture_bit_cnt_valid	,</span><br><span class="line">	<span class="keyword">input</span> 	<span class="keyword">wire</span>  	[<span class="number">15</span>:<span class="number">0</span>]	tx_puncture_bit_cnt	,</span><br><span class="line">	<span class="keyword">output</span> 	<span class="keyword">reg</span> 			intlvr_patt_valid	,</span><br><span class="line">	<span class="keyword">output</span> 	<span class="keyword">reg</span> 	[<span class="number">15</span>:<span class="number">0</span>]	intlvr_patt	,</span><br><span class="line">	<span class="keyword">output</span> 	<span class="keyword">wire</span> 			interleaved_bit_valid,</span><br><span class="line">	<span class="keyword">output</span> 	<span class="keyword">wire</span> 			interleaved_bit			</span><br><span class="line"></span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">	<span class="comment">//====================================================</span></span><br><span class="line">	<span class="comment">// internal signals and registers</span></span><br><span class="line">	<span class="comment">//====================================================</span></span><br><span class="line">	<span class="keyword">reg</span>  	[<span class="number">8</span>:<span class="number">0</span>]	multi_rate_rom_start_addr	; <span class="comment">// the interleaver mapping rom start addr (depending on the code rate)</span></span><br><span class="line">	<span class="keyword">reg</span>  	[<span class="number">8</span>:<span class="number">0</span>]	multi_rate_rom_end_addr 	; <span class="comment">// the interleaver mapping rom end addr (depending on the code rate)</span></span><br><span class="line">	<span class="keyword">reg</span>  	[<span class="number">8</span>:<span class="number">0</span>]	multi_rate_rom_length 		; <span class="comment">// the length of interleaver mapping rom (depending on the code rate)</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">reg</span>  			tx_interleaver_in_valid_dly	;</span><br><span class="line">	<span class="keyword">wire</span>  			tx_interleaver_in_valid_neg_pls;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">reg</span>  	[<span class="number">15</span>:<span class="number">0</span>]	cnt_data_in 				;</span><br><span class="line">	<span class="keyword">reg</span>  	[<span class="number">15</span>:<span class="number">0</span>]	data_len 					;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">reg</span>  	[<span class="number">15</span>:<span class="number">0</span>]	cnt_fifo_rd 				;</span><br><span class="line">	<span class="keyword">reg</span>  			rd_rom_fifo_en 				;</span><br><span class="line">	<span class="keyword">wire</span>  			fifo_dout 					;</span><br><span class="line">	<span class="keyword">wire</span>  			full,empty 					;</span><br><span class="line">	<span class="keyword">wire</span>  	[<span class="number">8</span>:<span class="number">0</span>]	rom_dout 					;</span><br><span class="line">	<span class="keyword">reg</span>  	[<span class="number">8</span>:<span class="number">0</span>]	rom_addr					;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">reg</span>   			wr_ram_en 					;</span><br><span class="line">	<span class="keyword">reg</span>  			wr_ram_en_dly 				;</span><br><span class="line">	<span class="keyword">wire</span>  			wr_ram_en_neg_pls 			;</span><br><span class="line">	<span class="keyword">reg</span>  	[<span class="number">15</span>:<span class="number">0</span>]	wr_ram_addr_base 			;</span><br><span class="line">	<span class="keyword">wire</span>  	[<span class="number">15</span>:<span class="number">0</span>]	wr_ram_addr 				;</span><br><span class="line">	<span class="keyword">wire</span>  	[<span class="number">15</span>:<span class="number">0</span>]	rd_ram_addr 				;</span><br><span class="line">	<span class="keyword">reg</span>  			rd_ram_en 					;</span><br><span class="line">	<span class="keyword">reg</span>  	[<span class="number">15</span>:<span class="number">0</span>]	cnt_ram_rd  				;</span><br><span class="line">	<span class="keyword">wire</span>  			ram_dout 					;</span><br><span class="line">	<span class="keyword">reg</span>  			ram_dout_valid				;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			multi_rate_rom_start_addr &lt;= <span class="number">&#x27;d0</span>; </span><br><span class="line">			multi_rate_rom_end_addr &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">			multi_rate_rom_length &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(tx_Modulation == <span class="number">&#x27;d3</span>)<span class="keyword">begin</span></span><br><span class="line">			multi_rate_rom_start_addr &lt;= <span class="number">&#x27;d0</span>; </span><br><span class="line">			multi_rate_rom_end_addr &lt;= <span class="number">&#x27;d287</span>;</span><br><span class="line">			multi_rate_rom_length &lt;= <span class="number">&#x27;d288</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------cnt_data_in------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_data_in &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(tx_interleaver_in_valid)<span class="keyword">begin</span></span><br><span class="line">			cnt_data_in &lt;= cnt_data_in + <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			cnt_data_in &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		tx_interleaver_in_valid_dly &lt;= tx_interleaver_in_valid;</span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">assign</span> tx_interleaver_in_valid_neg_pls = tx_interleaver_in_valid_dly &amp; (~tx_interleaver_in_valid);</span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------data_len------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			data_len &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(tx_interleaver_in_valid_neg_pls)<span class="keyword">begin</span></span><br><span class="line">			data_len &lt;= cnt_data_in;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">	fifo_generator_tx_interleaver u_fifo_generator_tx_interleaver (</span><br><span class="line">		<span class="variable">.clk</span>(clk_Modulation),      <span class="comment">// input wire clk</span></span><br><span class="line">		<span class="variable">.srst</span>(reset),    <span class="comment">// input wire srst</span></span><br><span class="line">		<span class="variable">.din</span>(tx_interleaver_in_bit),      <span class="comment">// input wire [0 : 0] din</span></span><br><span class="line">		<span class="variable">.wr_en</span>(tx_interleaver_in_valid),  <span class="comment">// input wire wr_en</span></span><br><span class="line">		<span class="variable">.rd_en</span>(rd_rom_fifo_en),  <span class="comment">// input wire rd_en</span></span><br><span class="line">		<span class="variable">.dout</span>(fifo_dout),    <span class="comment">// output wire [0 : 0] dout</span></span><br><span class="line">		<span class="variable">.full</span>(full),    <span class="comment">// output wire full</span></span><br><span class="line">		<span class="variable">.empty</span>(empty)  <span class="comment">// output wire empty</span></span><br><span class="line">	);</span><br><span class="line"></span><br><span class="line">	blk_mem_gen_single_intlvr_patt u_blk_mem_gen_single_intlvr_patt (</span><br><span class="line">		<span class="variable">.clka</span>(clk_Modulation),    <span class="comment">// input wire clka</span></span><br><span class="line">		<span class="variable">.addra</span>(rom_addr),  <span class="comment">// input wire [8 : 0] addra</span></span><br><span class="line">		<span class="variable">.douta</span>(rom_dout)  <span class="comment">// output wire [8 : 0] douta</span></span><br><span class="line">	);</span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------rd_rom_fifo_en------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			rd_rom_fifo_en &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(rd_rom_fifo_en == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_fifo_rd == data_len-<span class="number">1</span>)<span class="keyword">begin</span></span><br><span class="line">			rd_rom_fifo_en &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(tx_interleaver_in_valid_neg_pls == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">			rd_rom_fifo_en &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------cnt_fifo_rd------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_fifo_rd &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (rd_rom_fifo_en == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_fifo_rd == data_len-<span class="number">1</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_fifo_rd &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(rd_rom_fifo_en) <span class="keyword">begin</span></span><br><span class="line">			cnt_fifo_rd &lt;= cnt_fifo_rd + <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------rom_addr------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			rom_addr &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(tx_interleaver_in_valid_neg_pls)<span class="keyword">begin</span></span><br><span class="line">			rom_addr &lt;= multi_rate_rom_start_addr;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> ((rom_addr == multi_rate_rom_end_addr) &amp;&amp; (rd_rom_fifo_en == <span class="number">1&#x27;b1</span>)) <span class="keyword">begin</span></span><br><span class="line">			rom_addr &lt;= multi_rate_rom_start_addr;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(rd_rom_fifo_en == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">			rom_addr &lt;= rom_addr + <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------wr_ram_addr_base------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			wr_ram_addr_base &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(rd_rom_fifo_en == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">			<span class="keyword">if</span>(rom_addr == multi_rate_rom_length-<span class="number">1</span>)<span class="keyword">begin</span></span><br><span class="line">				wr_ram_addr_base &lt;= wr_ram_addr_base + multi_rate_rom_length;</span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			wr_ram_addr_base &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">assign</span> wr_ram_addr = wr_ram_addr_base + rom_dout;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		wr_ram_en &lt;= rd_rom_fifo_en;</span><br><span class="line">		wr_ram_en_dly &lt;= wr_ram_en;</span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">assign</span> wr_ram_en_neg_pls = (~wr_ram_en) &amp; wr_ram_en_dly;</span><br><span class="line"></span><br><span class="line">	blk_mem_gen_tx_interleaver u_blk_mem_gen_tx_interleaver (</span><br><span class="line">		<span class="variable">.clka</span>(clk_Modulation),    <span class="comment">// input wire clka</span></span><br><span class="line">		<span class="variable">.wea</span>(wr_ram_en),      <span class="comment">// input wire [0 : 0] wea</span></span><br><span class="line">		<span class="variable">.addra</span>(wr_ram_addr),  <span class="comment">// input wire [13 : 0] addra</span></span><br><span class="line">		<span class="variable">.dina</span>(fifo_dout),    <span class="comment">// input wire [0 : 0] dina</span></span><br><span class="line">		<span class="variable">.clkb</span>(clk_Modulation),    <span class="comment">// input wire clkb</span></span><br><span class="line">		<span class="variable">.enb</span>(rd_ram_en),      <span class="comment">// input wire enb</span></span><br><span class="line">		<span class="variable">.addrb</span>(rd_ram_addr),  <span class="comment">// input wire [13 : 0] addrb</span></span><br><span class="line">		<span class="variable">.doutb</span>(ram_dout)  <span class="comment">// output wire [0 : 0] doutb</span></span><br><span class="line">	);</span><br><span class="line">			</span><br><span class="line">	<span class="comment">//----------------rd_ram_en------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">			rd_ram_en &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(rd_ram_en == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_ram_rd == data_len-<span class="number">1</span>)<span class="keyword">begin</span></span><br><span class="line">			rd_ram_en &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(wr_ram_en_neg_pls)<span class="keyword">begin</span></span><br><span class="line">			rd_ram_en &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------cnt_ram_rd------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_ram_rd &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(rd_ram_en == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_ram_rd == data_len-<span class="number">1</span>)<span class="keyword">begin</span></span><br><span class="line">			cnt_ram_rd &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(rd_ram_en == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">			cnt_ram_rd &lt;= cnt_ram_rd + <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span>	</span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">assign</span> rd_ram_addr = cnt_ram_rd;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------rd_ram_valid------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		ram_dout_valid &lt;= rd_ram_en;</span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">assign</span> interleaved_bit_valid = ram_dout_valid;</span><br><span class="line">	<span class="keyword">assign</span> interleaved_bit = ram_dout;</span><br><span class="line">	</span><br><span class="line"><span class="keyword">endmodule</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/SDR/" rel="tag"># SDR</a>
+              <a href="/tags/FPGA/" rel="tag"># FPGA</a>
+              <a href="/tags/ZYNQ/" rel="tag"># ZYNQ</a>
+              <a href="/tags/OFDM/" rel="tag"># OFDM</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/05/01/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E5%8D%B7%E7%A7%AF%E7%BC%96%E7%A0%81/" rel="prev" title="OFDM_802.11a学习----卷积编码">
+      <i class="fa fa-chevron-left"></i> OFDM_802.11a学习----卷积编码
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/" rel="next" title="OFDM_802.11a学习----星座图映射与循环前缀">
+      OFDM_802.11a学习----星座图映射与循环前缀 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">1. 前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-%E5%88%86%E7%BB%84%E4%BA%A4%E7%BB%87%E5%99%A8"><span class="nav-number">2.</span> <span class="nav-text">2. 分组交织器</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-802-11a%E5%BD%93%E4%B8%AD%E7%9A%84%E4%BA%A4%E7%BB%87"><span class="nav-number">3.</span> <span class="nav-text">3. 802.11a当中的交织</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#3-1-matlab%E7%94%9F%E6%88%90%E4%BA%A4%E7%BB%87%E8%A1%A8"><span class="nav-number">3.1.</span> <span class="nav-text">3.1 matlab生成交织表</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-%E4%BA%A4%E7%BB%87%E6%A8%A1%E5%9D%97%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="nav-number">3.2.</span> <span class="nav-text">4. 交织模块的实现</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

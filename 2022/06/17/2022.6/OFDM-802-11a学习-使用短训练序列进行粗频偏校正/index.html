@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. 前言在之前的博客当中记录了如何来检测短训练序列，在检测短训练序列的时候，实现了一系列的模块，这些模块在无线通信的算法里面是比较常用的，在之后的学习当中也将会经常使用到。检测到短训练序列之后，可以使用短训练序列对接收到的信号进行粗频偏校正，在这篇博客当中，我会记录学习这一部分的内容。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OFDM_802.11a学习----使用短训练序列进行粗频偏校正">
+<meta property="og:url" content="https://black-pigeon.github.io/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="1. 前言在之前的博客当中记录了如何来检测短训练序列，在检测短训练序列的时候，实现了一系列的模块，这些模块在无线通信的算法里面是比较常用的，在之后的学习当中也将会经常使用到。检测到短训练序列之后，可以使用短训练序列对接收到的信号进行粗频偏校正，在这篇博客当中，我会记录学习这一部分的内容。">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/信号接受过程的频偏.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/短训练序列校正原理.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/FPGA设计模块.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/fixed-point-atan2.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/FAST_ARCTAN.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/fast_arctan_timing.svg">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/FPGA设计模块.png">
+<meta property="article:published_time" content="2022-06-17T03:09:26.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.809Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="SDR">
+<meta property="article:tag" content="FPGA">
+<meta property="article:tag" content="ZYNQ">
+<meta property="article:tag" content="OFDM">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/信号接受过程的频偏.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>OFDM_802.11a学习----使用短训练序列进行粗频偏校正 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          OFDM_802.11a学习----使用短训练序列进行粗频偏校正
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-06-17 11:09:26" itemprop="dateCreated datePublished" datetime="2022-06-17T11:09:26+08:00">2022-06-17</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/OFDM/" itemprop="url" rel="index"><span itemprop="name">OFDM</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/" class="post-meta-item leancloud_visitors" data-flag-title="OFDM_802.11a学习----使用短训练序列进行粗频偏校正" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>在之前的博客当中记录了如何来检测短训练序列，在检测短训练序列的时候，实现了一系列的模块，这些模块在无线通信的算法里面是比较常用的，在之后的学习当中也将会经常使用到。<br>检测到短训练序列之后，可以使用短训练序列对接收到的信号进行粗频偏校正，在这篇博客当中，我会记录学习这一部分的内容。</p>
+<span id="more"></span>
+<h1 id="2-802-11a粗频偏校正原理"><a href="#2-802-11a粗频偏校正原理" class="headerlink" title="2. 802.11a粗频偏校正原理"></a>2. 802.11a粗频偏校正原理</h1><p><img src="/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/信号接受过程的频偏.png" alt="信号频偏"><br>在接收机接收信号的过程如上图所示，在信号传递的过程当中需要经过无线信道，在接收机当中，由于本地载波和采样时钟与数据源端地不一致，从而引入了频偏到信号当中。由于频偏的引入，会对基带信号的处理带来影响，为了需要消除频偏带来的影响。<br>假设要接接收的信号的中心频率为 $f_c$ , 本地接受到的信号由于频偏可以看做本地使用了一个 $(1+e)f_c $ 的载波去接收信号，根据混频的原理，在接收信号时候将会得到 $(((1+e)f_c)-f_c)$ 和 $ (((1+e)f_c)+f_c) $ ，也即是差频项和倍频项。倍频项可以通过低通滤波器滤除。<br>这样我们在基带得到的信号就有一个 $ef_c$ 的频偏。频偏校正的目的就是尽量消除 $ef_c$ 所带来的影响。</p>
+<p>根据角频率公式 $w = 2\pi f_s$ ;<br>那么在信号的每个采样周期下得到的弧度变化量是 $\alpha = wT_s = 2\pi f_sT_s $ ;<br>因此如果我们能够估计出每个采样周期弧度的变化量，那么我们就能够计算出基带信号的频偏。</p>
+<p>下图是文献当中关于使用短训练序列进行校正的时候所采取的估计信号的弧度变化量的方法。<br><img src="/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/短训练序列校正原理.png" alt="短训练序列校正原理"><br>可以看到公式当中对当前采样点的共轭和延时16个采样点之后的数据进行相乘之后进行累加，并求取累加之后的复数的相位，最后将这个相位除以16，得到最终估计的相位。<br>因为采用的是对当前采样点进行取共轭，因此这个估计出来的相位与实际的方向正好是相反的。<br>估计出这个相位之后，就可以得到估计出来的频率，将这个频偏叠加到输入的信号上，从而达到校正频偏的作用。<br>$f<em>e = \alpha</em>{ST}/(2\pi T_s)$ ;</p>
+<p>假设输入的信号为 $ S(n)= e^{2\pi f<em>i nT_s}$ ，那么产生的频偏校正信号为 $ S(cfo) = e^{-2\pi f_e nT_S} =  e^{-n\alpha</em>{st}}$ </p>
+<h1 id="3-matlab-验证"><a href="#3-matlab-验证" class="headerlink" title="3. matlab 验证"></a>3. matlab 验证</h1><figure class="highlight matlab"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span></span><br><span class="line"><span class="comment">% coarse frequency correction</span></span><br><span class="line"><span class="comment">% α_st = sum(s[m].*conj(s[m+16]))</span></span><br><span class="line"><span class="comment">% α_st = 2*pi*16*fc/Fs</span></span><br><span class="line"><span class="comment">% fc = α_st*Fs/(2*pi*16)</span></span><br><span class="line"><span class="comment">%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%</span></span><br><span class="line">clc;</span><br><span class="line">clear all;</span><br><span class="line">close all;</span><br><span class="line"></span><br><span class="line">load(<span class="string">&#x27;RxIQ.mat&#x27;</span>);</span><br><span class="line">rx_sample = double(RxSave);</span><br><span class="line">Fs = <span class="number">20e6</span>;</span><br><span class="line">freq_offset = <span class="number">-16e3</span>;    <span class="comment">% freq offset of rx 120K</span></span><br><span class="line"></span><br><span class="line"><span class="comment">% the length of the input sequence</span></span><br><span class="line">time_squence = [<span class="number">0</span>:<span class="built_in">length</span>(rx_sample)<span class="number">-1</span>].&#x27;;</span><br><span class="line"></span><br><span class="line"><span class="comment">% radian per samples</span></span><br><span class="line">radian_per_sample = (<span class="number">2</span>*<span class="built_in">pi</span>*freq_offset/Fs); <span class="comment">% 2*pi*f*T</span></span><br><span class="line"></span><br><span class="line"><span class="comment">% freq offset data</span></span><br><span class="line">freq_offset_data = <span class="built_in">exp</span>(<span class="number">1</span><span class="built_in">i</span>*(time_squence*radian_per_sample)); <span class="comment">%exp(jwt)</span></span><br><span class="line"></span><br><span class="line"><span class="comment">% data with freq offset</span></span><br><span class="line">rx_sample = rx_sample.*freq_offset_data; <span class="comment">% add freq offset to original data</span></span><br><span class="line"></span><br><span class="line">corr = <span class="built_in">zeros</span>(<span class="number">1</span>,<span class="number">1000</span>);</span><br><span class="line">est_angle = <span class="built_in">zeros</span>(<span class="number">1</span>,<span class="number">1000</span>);</span><br><span class="line"><span class="keyword">for</span> <span class="built_in">i</span>=<span class="number">1</span>:<span class="number">1000</span></span><br><span class="line">    <span class="keyword">if</span>(sum(<span class="built_in">abs</span>(rx_sample(<span class="built_in">i</span>:<span class="built_in">i</span>+<span class="number">15</span>).^<span class="number">2</span>)) == <span class="number">0</span>)</span><br><span class="line">        corr(<span class="built_in">i</span>) = <span class="number">0</span>;</span><br><span class="line">        est_angle(<span class="built_in">i</span>)=<span class="number">0</span>;</span><br><span class="line">    <span class="keyword">else</span></span><br><span class="line">        est_angle(<span class="built_in">i</span>) = sum(<span class="built_in">conj</span>(rx_sample(<span class="built_in">i</span>:<span class="built_in">i</span>+<span class="number">15</span>)).*rx_sample(<span class="built_in">i</span>+<span class="number">16</span>:<span class="built_in">i</span>+<span class="number">16</span>+<span class="number">15</span>));     <span class="comment">% for the purpose of using angle</span></span><br><span class="line">        <span class="comment">% est_angle(i) = sum(conj(rx_sample(i:i+15)).*rx_sample(i+16:i+16+15));       % for the purpose of using fix_actan</span></span><br><span class="line">        corr(<span class="built_in">i</span>) = (<span class="built_in">abs</span>(sum(rx_sample(<span class="built_in">i</span>:<span class="built_in">i</span>+<span class="number">15</span>).*<span class="built_in">conj</span>(rx_sample(<span class="built_in">i</span>+<span class="number">16</span>:<span class="built_in">i</span>+<span class="number">16</span>+<span class="number">15</span>))))/<span class="built_in">abs</span>(sum(rx_sample(<span class="built_in">i</span>:<span class="built_in">i</span>+<span class="number">15</span>).*<span class="built_in">conj</span>(rx_sample(<span class="built_in">i</span>:<span class="built_in">i</span>+<span class="number">15</span>)))));</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">short_sync_index = <span class="built_in">find</span>((corr&gt;<span class="number">0.75</span>) &amp; (corr &lt;<span class="number">1.25</span>)==<span class="number">1</span>);</span><br><span class="line">freq_est=(<span class="built_in">angle</span>(est_angle(short_sync_index(<span class="number">100</span>)))/(<span class="number">2</span>*<span class="built_in">pi</span>*<span class="number">16</span>))*Fs;</span><br><span class="line">display(freq_est);</span><br><span class="line">est_freq_data = <span class="built_in">exp</span>(<span class="number">-1</span><span class="built_in">i</span>*(time_squence*(<span class="number">2</span>*<span class="built_in">pi</span>*freq_est/Fs)));</span><br><span class="line"></span><br><span class="line"><span class="comment">% freq_est=(fix_atan2(imag(est_angle(short_sync_index(100))),real(est_angle(short_sync_index(100))))/(2*pi*16))*Fs;</span></span><br><span class="line"><span class="comment">% Q = imag(est_angle(short_sync_index(100)));</span></span><br><span class="line"><span class="comment">% I = real(est_angle(short_sync_index(100)));</span></span><br><span class="line"><span class="comment">% fix_angle = fix_atan2(Q,I);</span></span><br><span class="line"><span class="comment">% display(Q);</span></span><br><span class="line"><span class="comment">% display(I);</span></span><br><span class="line"><span class="comment">% display(fix_angle);</span></span><br><span class="line"></span><br><span class="line"><span class="comment">% n=0:2047;</span></span><br><span class="line"><span class="comment">% s_rom = sin(2*pi*n/2048);</span></span><br><span class="line"><span class="comment">% c_rom = cos(2*pi*n/2048);</span></span><br><span class="line"><span class="comment">% freq_ctrl_word = fix(((freq_est/Fs)*2^32));</span></span><br><span class="line"><span class="comment">% display(freq_ctrl_word);</span></span><br><span class="line"></span><br><span class="line"><span class="comment">% phase_acc = 0;</span></span><br><span class="line"><span class="comment">% for i=1:length(rx_sample)</span></span><br><span class="line"><span class="comment">%     phase_acc = phase_acc - freq_ctrl_word;</span></span><br><span class="line"><span class="comment">%     if phase_acc &gt; 2^32</span></span><br><span class="line"><span class="comment">%         phase_acc = phase_acc - 2^32;</span></span><br><span class="line"><span class="comment">%     elseif phase_acc &lt; 0</span></span><br><span class="line"><span class="comment">%         phase_acc = phase_acc + 2^32;</span></span><br><span class="line"><span class="comment">%     end</span></span><br><span class="line"><span class="comment">%     rom_addr = bitshift(uint32(phase_acc),-21)+1;</span></span><br><span class="line"><span class="comment">%     est_freq_data(i,1) = complex(c_rom(rom_addr), s_rom(rom_addr));</span></span><br><span class="line"><span class="comment">% end</span></span><br><span class="line"></span><br><span class="line">rx_correct_sample = rx_sample .* est_freq_data;</span><br><span class="line"></span><br><span class="line"><span class="built_in">figure</span>(<span class="number">1</span>)</span><br><span class="line"><span class="built_in">plot</span>(corr);</span><br><span class="line"><span class="built_in">hold</span> on;</span><br><span class="line"><span class="built_in">plot</span>(<span class="built_in">real</span>(rx_sample(<span class="number">1</span>:<span class="number">1000</span>))/(<span class="built_in">max</span>(<span class="built_in">real</span>(rx_sample(<span class="number">1</span>:<span class="number">1000</span>)))*<span class="number">0.5</span>));</span><br><span class="line"><span class="built_in">figure</span>(<span class="number">2</span>)</span><br><span class="line"><span class="built_in">plot</span>(<span class="built_in">real</span>(rx_sample(<span class="number">1</span>:<span class="number">1000</span>)));</span><br><span class="line"><span class="built_in">hold</span> on;</span><br><span class="line"><span class="built_in">plot</span>(<span class="built_in">real</span>(rx_correct_sample(<span class="number">1</span>:<span class="number">1000</span>)),<span class="string">&#x27;r&#x27;</span>,<span class="string">&#x27;linewidth&#x27;</span>,<span class="number">0.8</span>);</span><br><span class="line"><span class="built_in">hold</span> on;</span><br><span class="line"><span class="built_in">plot</span>(<span class="built_in">real</span>(RxSave(<span class="number">1</span>:<span class="number">1000</span>)),<span class="string">&#x27;--g&#x27;</span>,<span class="string">&#x27;linewidth&#x27;</span>,<span class="number">0.6</span>);</span><br><span class="line">title(<span class="string">&quot;blue: data with freq offset, red: data with coarse cfo, green original data without freq offset&quot;</span>)</span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h1 id="4-FPGA设计"><a href="#4-FPGA设计" class="headerlink" title="4. FPGA设计"></a>4. FPGA设计</h1><p>了解了算法原理之后，就可以进行FPGA的设计了，在上一篇博客当中介绍过，上一篇博客当中实现的那些模块，许多都是能够共用的，因此能够帮助加快设计流程。<br><img src="/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/FPGA设计模块.png" alt="FPGA算法模块"><br>首先进来的采样点先延时16个采样点，然后对延时之后的采样点进行取共轭，然后将延时后的采样点和当前的采样点复数乘法，复数乘法的结果进行16点累加。累加得到的输出经过arctan或者cordic算法实现相位的求取之后。根据所求取的估算的相位，产生一个频率控制字用于驱动DDS粗频偏校正信号。最后将输入的采样点和粗频偏校正信号进行复数乘法之后，得到经过粗频偏校正之后的结果。</p>
+<h2 id="4-1-fast-arctan算法"><a href="#4-1-fast-arctan算法" class="headerlink" title="4.1 fast arctan算法"></a>4.1 fast arctan算法</h2><p>在FPGA当中实现三角函数比如反正切arctan这一类的函数是比较困难的，常用的方法是使用cordic算法来进行反正切的计算。当然也有一些常见的用于快速近似计算的方法，在这里推荐两个网站上面介绍了如何使用近似的方法来计算arctan，这对使用FPGA来实现很有意义。</p>
+<hr>
+<p><a target="_blank" rel="noopener" href="https://dspguru.com/dsp/tricks/fixed-point-atan2-with-self-normalization/">fixed-point-atan2</a><br><img src="/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/fixed-point-atan2.png" alt="fixed-point-atan2"></p>
+<hr>
+<p><a target="_blank" rel="noopener" href="http://nghiaho.com/?p=997">M_PI_4<em>x - x</em>(fabs(x) - 1)<em>(0.2447 + 0.0663</em>fabs(x))</a></p>
+<p><img src="/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/FAST_ARCTAN.png" alt="FAST_ARCTAN"></p>
+<hr>
+<p>在本篇博客当中，主要实现第二个算法模块，用于实现快速的反正切计算。<br>也就是 <strong>est_alpha = M_PI_4<em>x - x</em>(fabs(x) - 1)<em>(0.2447 + 0.0663</em>fabs(x))； (x=q/i)</strong><br>该模块的设计思路以及时序如下:<br><img src="/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/fast_arctan_timing.svg" alt="FAST_ARCTAN_timing"></p>
+<p>上游模块检测到短训练序列之后，给出检测到短训练序列的的信号的IQ路数据，本模块将会对IQ路数据进行求取相位。<br>按照上面的公式，首先需要求的IQ信号的结果作为主要公式当中的x的值，然后一次进行多次乘法运算，最终将结果进行一个累加，最终得到输出的相位的值。<br>上面的时序图中将各个步骤进行了展示，为了减少DSP资源的消耗，在FPGA当中采用对不同的状态进行控制，从而实现只需要一个触发器，一个乘法器就能能够完成上面的算法，为此需要控制计算的状态，在不同的状态下完成不同的计算。<br>这里的计算过程是计算定点数。<br>具体的verilog代码如下 ：<br><strong>fix_arctan.v</strong><br><figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br><span class="line">278</span><br><span class="line">279</span><br><span class="line">280</span><br><span class="line">281</span><br><span class="line">282</span><br><span class="line">283</span><br><span class="line">284</span><br><span class="line">285</span><br><span class="line">286</span><br><span class="line">287</span><br><span class="line">288</span><br><span class="line">289</span><br><span class="line">290</span><br><span class="line">291</span><br><span class="line">292</span><br><span class="line">293</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">module</span> fix_arctan (</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            clk                         ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            rst                         ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            enable                      ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>    [<span class="number">31</span>:<span class="number">0</span>]  y_in                        , <span class="comment">// input q </span></span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>    [<span class="number">31</span>:<span class="number">0</span>]  x_in                        , <span class="comment">// input I</span></span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            xy_in_valid                 ,</span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">reg</span>     [<span class="number">31</span>:<span class="number">0</span>]  angle_out                   , <span class="comment">// angle out of current </span></span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">reg</span>             angle_out_valid             ,</span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">reg</span>     [<span class="number">31</span>:<span class="number">0</span>]  angle_out_div16x2pi         , <span class="comment">// fix point angle out </span></span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">reg</span>             angle_out_div16x2pi_valid</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="comment">// parameter define</span></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="keyword">localparam</span> IDLE     = <span class="number">3&#x27;d0</span>;</span><br><span class="line">    <span class="keyword">localparam</span> DIV      = <span class="number">3&#x27;d1</span>;</span><br><span class="line">    <span class="keyword">localparam</span> XABS     = <span class="number">3&#x27;d2</span>;</span><br><span class="line">    <span class="keyword">localparam</span> ABS663   = <span class="number">3&#x27;d3</span>;</span><br><span class="line">    <span class="keyword">localparam</span> XMABS    = <span class="number">3&#x27;d4</span>;</span><br><span class="line">    <span class="keyword">localparam</span> XMABS2   = <span class="number">3&#x27;d5</span>;</span><br><span class="line">    <span class="keyword">localparam</span> M_PI_4   = <span class="number">3&#x27;d6</span>;</span><br><span class="line">    <span class="keyword">localparam</span> MULT_LAST= <span class="number">3&#x27;d7</span>;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">localparam</span> FIX_ONE      = <span class="number">32&#x27;d268435456</span>;</span><br><span class="line">    <span class="keyword">localparam</span> FIX_QUART_PI = <span class="number">32&#x27;d210828714</span>;</span><br><span class="line">    <span class="keyword">localparam</span> FIX_P2447    = <span class="number">32&#x27;d65686156</span>;</span><br><span class="line">    <span class="keyword">localparam</span> FIX_P0663    = <span class="number">32&#x27;d17797270</span>;</span><br><span class="line">    <span class="keyword">localparam</span> FIX_DIV2PIX16= <span class="number">32&#x27;d2670176</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="comment">// internalsignals and registers</span></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="keyword">reg</span>  [<span class="number">2</span>:<span class="number">0</span>]      state               ;</span><br><span class="line">    <span class="keyword">reg</span>             xy_in_valid_r       ;</span><br><span class="line">    <span class="keyword">reg</span>  [<span class="number">31</span>:<span class="number">0</span>]     x_in_r              ;</span><br><span class="line">    <span class="keyword">reg</span>  [<span class="number">31</span>:<span class="number">0</span>]     y_in_r              ;</span><br><span class="line">    <span class="keyword">wire</span>            div_out_valid       ;</span><br><span class="line">    <span class="keyword">wire</span> [<span class="number">63</span>:<span class="number">0</span>]     div_out             ;</span><br><span class="line">    <span class="keyword">reg</span>  [<span class="number">31</span>:<span class="number">0</span>]     fix_div_out         ; <span class="comment">// 1 bit sign, 3 bit quotient, 28 bit fractional</span></span><br><span class="line">    <span class="keyword">reg</span>             fix_div_out_valid   ;</span><br><span class="line">    <span class="keyword">reg</span>  [<span class="number">31</span>:<span class="number">0</span>]     abs_div             ;</span><br><span class="line">    <span class="keyword">reg</span>  [<span class="number">31</span>:<span class="number">0</span>]     abs_div_minus_1     ;</span><br><span class="line">    <span class="keyword">reg</span>             abs_div_valid       ;</span><br><span class="line">    <span class="keyword">reg</span>  [<span class="number">31</span>:<span class="number">0</span>]     mult_in_a           ;</span><br><span class="line">    <span class="keyword">reg</span>  [<span class="number">31</span>:<span class="number">0</span>]     mult_in_b           ;</span><br><span class="line">    <span class="keyword">reg</span>             mult_in_valid       ;</span><br><span class="line">    <span class="keyword">wire</span> [<span class="number">63</span>:<span class="number">0</span>]     mult_out            ;</span><br><span class="line">    <span class="keyword">reg</span>  [<span class="number">2</span>:<span class="number">0</span>]      mult_in_valid_dly   ;</span><br><span class="line">    <span class="keyword">wire</span>            mult_out_valid      ;</span><br><span class="line">    <span class="keyword">reg</span>             abs663_valid        ;</span><br><span class="line">    <span class="keyword">reg</span>  [<span class="number">31</span>:<span class="number">0</span>]     abs663_plus_p2447   ;</span><br><span class="line">    <span class="keyword">reg</span>             xmabs_valid         ;</span><br><span class="line">    <span class="keyword">reg</span>  [<span class="number">31</span>:<span class="number">0</span>]     xmabs_data          ;</span><br><span class="line">    <span class="keyword">reg</span>             xmabs2_valid        ;</span><br><span class="line">    <span class="keyword">reg</span>  [<span class="number">31</span>:<span class="number">0</span>]     xmabs2_data         ;</span><br><span class="line">    <span class="keyword">reg</span>             xmquart_pi_valid    ;</span><br><span class="line">    <span class="keyword">reg</span>  [<span class="number">31</span>:<span class="number">0</span>]     xmquart_pi_data     ;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            x_in_r &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            y_in_r &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(xy_in_valid == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            x_in_r &lt;= (x_in==<span class="number">0</span>)? <span class="number">1</span>: x_in;</span><br><span class="line">            y_in_r &lt;= y_in;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            xy_in_valid_r &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span>  <span class="keyword">begin</span></span><br><span class="line">            xy_in_valid_r &lt;= xy_in_valid;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">      </span><br><span class="line">    <span class="comment">//----------------state------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            state &lt;= IDLE;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">case</span>(state)</span><br><span class="line">                IDLE : <span class="keyword">begin</span></span><br><span class="line">                    <span class="keyword">if</span>(enable == <span class="number">1&#x27;b1</span> &amp;&amp; xy_in_valid == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">                        state &lt;= DIV;</span><br><span class="line">                    <span class="keyword">end</span></span><br><span class="line">                <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">                DIV : <span class="keyword">begin</span></span><br><span class="line">                    <span class="keyword">if</span>(fix_div_out_valid == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">                        state &lt;= XABS;</span><br><span class="line">                    <span class="keyword">end</span></span><br><span class="line">                <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">                XABS : <span class="keyword">begin</span></span><br><span class="line">                    <span class="keyword">if</span>(abs_div_valid == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">                        state &lt;= ABS663;</span><br><span class="line">                    <span class="keyword">end</span></span><br><span class="line">                <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">                ABS663 : <span class="keyword">begin</span></span><br><span class="line">                    <span class="keyword">if</span> (abs663_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">                        state &lt;= XMABS;</span><br><span class="line">                    <span class="keyword">end</span></span><br><span class="line">                <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">                XMABS : <span class="keyword">begin</span></span><br><span class="line">                    <span class="keyword">if</span> (xmabs_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">                        state &lt;= XMABS2;</span><br><span class="line">                    <span class="keyword">end</span></span><br><span class="line">                <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">                XMABS2 : <span class="keyword">begin</span></span><br><span class="line">                    <span class="keyword">if</span> (xmabs2_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">                        state &lt;= M_PI_4;</span><br><span class="line">                    <span class="keyword">end</span></span><br><span class="line">                <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">                M_PI_4 : <span class="keyword">begin</span></span><br><span class="line">                    <span class="keyword">if</span> (xmquart_pi_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">                        state &lt;= MULT_LAST;</span><br><span class="line">                    <span class="keyword">end</span></span><br><span class="line">                <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">                MULT_LAST: <span class="keyword">begin</span></span><br><span class="line">                    <span class="keyword">if</span>(angle_out_div16x2pi_valid)<span class="keyword">begin</span></span><br><span class="line">                        state &lt;= IDLE;</span><br><span class="line">                    <span class="keyword">end</span></span><br><span class="line">                <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">                <span class="keyword">default</span> : state &lt;= IDLE;</span><br><span class="line">            <span class="keyword">endcase</span></span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    div_gen_tb u_div_gen_tb (</span><br><span class="line">        <span class="variable">.aclk</span>(clk),                             <span class="comment">// input wire aclk</span></span><br><span class="line">        <span class="variable">.s_axis_divisor_tvalid</span>(xy_in_valid_r),    <span class="comment">// input wire s_axis_divisor_tvalid</span></span><br><span class="line">        <span class="variable">.s_axis_divisor_tdata</span>(x_in_r),            <span class="comment">// input wire [31 : 0] s_axis_divisor_tdata</span></span><br><span class="line">        <span class="variable">.s_axis_dividend_tvalid</span>(xy_in_valid_r),   <span class="comment">// input wire s_axis_dividend_tvalid</span></span><br><span class="line">        <span class="variable">.s_axis_dividend_tdata</span>(y_in_r),           <span class="comment">// input wire [31 : 0] s_axis_dividend_tdata</span></span><br><span class="line">        <span class="variable">.m_axis_dout_tvalid</span>(div_out_valid),          <span class="comment">// output wire m_axis_dout_tvalid</span></span><br><span class="line">        <span class="variable">.m_axis_dout_tdata</span>(div_out)            <span class="comment">// output wire [47 : 0] m_axis_dout_tdata</span></span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------fix_div_out------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            fix_div_out &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (enable == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            <span class="comment">// 1 bit sign, 3 bit quotient, 28 bit fractional</span></span><br><span class="line">            fix_div_out &lt;= &#123;div_out[<span class="number">63</span>], div_out[<span class="number">34</span>:<span class="number">32</span>], <span class="number">28&#x27;d0</span>&#125; + &#123;&#123;<span class="number">4</span>&#123;div_out[<span class="number">31</span>]&#125;&#125;,div_out[<span class="number">30</span>:<span class="number">3</span>]&#125;;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------fix_div_out_valid------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        fix_div_out_valid &lt;= div_out_valid;</span><br><span class="line">        abs_div_valid &lt;= fix_div_out_valid;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------abs_div------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            abs_div &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            abs_div_minus_1 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (fix_div_out_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            abs_div &lt;= fix_div_out[<span class="number">31</span>] ? (~fix_div_out)+<span class="number">1</span>: fix_div_out ;</span><br><span class="line">            abs_div_minus_1 &lt;= fix_div_out[<span class="number">31</span>] ? (~fix_div_out)+<span class="number">1</span> - FIX_ONE: fix_div_out - FIX_ONE;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------mult_in_valid------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            mult_in_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">            mult_in_a &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            mult_in_b &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (state == XABS &amp;&amp;  abs_div_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            mult_in_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">            mult_in_a &lt;= abs_div;</span><br><span class="line">            mult_in_b &lt;= FIX_P0663;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (state == ABS663 &amp;&amp; abs663_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            mult_in_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">            mult_in_a &lt;= abs_div_minus_1;</span><br><span class="line">            mult_in_b &lt;= fix_div_out;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (state == XMABS &amp;&amp; xmabs_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            mult_in_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">            mult_in_a &lt;= xmabs_data;</span><br><span class="line">            mult_in_b &lt;= abs663_plus_p2447;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (state == XMABS2 &amp;&amp; xmabs2_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            mult_in_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">            mult_in_a &lt;= fix_div_out;</span><br><span class="line">            mult_in_b &lt;= FIX_QUART_PI;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (state == MULT_LAST &amp;&amp; angle_out_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            mult_in_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">            mult_in_a &lt;= FIX_DIV2PIX16;</span><br><span class="line">            mult_in_b &lt;= angle_out;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span>  <span class="keyword">begin</span></span><br><span class="line">            mult_in_valid &lt;=  <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk) <span class="keyword">begin</span></span><br><span class="line">        mult_in_valid_dly &lt;= &#123;mult_in_valid_dly[<span class="number">1</span>:<span class="number">0</span>], mult_in_valid&#125;;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">assign</span> mult_out_valid = mult_in_valid_dly[<span class="number">2</span>];</span><br><span class="line"></span><br><span class="line">    mult_fix_arctan u_mult_fix_arctan (</span><br><span class="line">        <span class="variable">.CLK</span>(clk),  <span class="comment">// input wire CLK</span></span><br><span class="line">        <span class="variable">.A</span>(mult_in_a),      <span class="comment">// input wire [31 : 0] A</span></span><br><span class="line">        <span class="variable">.B</span>(mult_in_b),      <span class="comment">// input wire [31 : 0] B</span></span><br><span class="line">        <span class="variable">.P</span>(mult_out)      <span class="comment">// output wire [63 : 0] P</span></span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------abs663_plus_p2447------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            abs663_plus_p2447 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            abs663_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">            xmabs_data &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            xmabs_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">            xmabs2_data &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            xmabs2_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">            xmquart_pi_data &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            xmquart_pi_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">            angle_out_div16x2pi &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            angle_out_div16x2pi_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (state == ABS663 &amp;&amp; mult_out_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            abs663_plus_p2447 &lt;= &#123;mult_out[<span class="number">63</span>], mult_out[<span class="number">58</span>:<span class="number">56</span>], mult_out[<span class="number">55</span>:<span class="number">28</span>]&#125; + FIX_P2447;</span><br><span class="line">            abs663_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (state == XMABS &amp;&amp; mult_out_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            xmabs_data &lt;= &#123;mult_out[<span class="number">63</span>], mult_out[<span class="number">58</span>:<span class="number">56</span>], mult_out[<span class="number">55</span>:<span class="number">28</span>]&#125;;</span><br><span class="line">            xmabs_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (state == XMABS2 &amp;&amp; mult_out_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            xmabs2_data &lt;= &#123;mult_out[<span class="number">63</span>], mult_out[<span class="number">58</span>:<span class="number">56</span>], mult_out[<span class="number">55</span>:<span class="number">28</span>]&#125;;</span><br><span class="line">            xmabs2_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (state == M_PI_4 &amp;&amp; mult_out_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            xmquart_pi_data &lt;= &#123;mult_out[<span class="number">63</span>], mult_out[<span class="number">58</span>:<span class="number">56</span>], mult_out[<span class="number">55</span>:<span class="number">28</span>]&#125;;</span><br><span class="line">            xmquart_pi_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (state == MULT_LAST &amp;&amp; mult_out_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            angle_out_div16x2pi &lt;= &#123;mult_out[<span class="number">63</span>], mult_out[<span class="number">58</span>:<span class="number">56</span>], mult_out[<span class="number">55</span>:<span class="number">28</span>]&#125;;</span><br><span class="line">            angle_out_div16x2pi_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            abs663_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">            xmabs_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">            xmabs2_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">            xmquart_pi_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">            angle_out_div16x2pi_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            angle_out &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            angle_out_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (xmquart_pi_valid ==<span class="number">1&#x27;b1</span> ) <span class="keyword">begin</span></span><br><span class="line">            angle_out &lt;= xmquart_pi_data - xmabs2_data;</span><br><span class="line">            angle_out_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            angle_out_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">endmodule</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="4-2-粗频偏校正"><a href="#4-2-粗频偏校正" class="headerlink" title="4.2 粗频偏校正"></a>4.2 粗频偏校正</h2><p>在上一步计算出估计的相位之后，就可以根据这个计算出来的相位产生一个频率控制字，从而实现输出一个校正的信号，叠加到原始信号上，从而实现粗频偏校正。<br><img src="/2022/06/17/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E4%BD%BF%E7%94%A8%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/FPGA设计模块.png" alt="FPGA算法模块"><br>具体的步骤，就如上面的图中所示：<br><figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">module</span> rx_coarse_sync_with_st (</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            clk                         ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            rst                         ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            enable                      ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>    [<span class="number">15</span>:<span class="number">0</span>]  sample_in_i                 ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>    [<span class="number">15</span>:<span class="number">0</span>]  sample_in_q                 ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            sample_in_valid             ,</span><br><span class="line"></span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>    [<span class="number">31</span>:<span class="number">0</span>]  sts_coarse_freq_offset_i    ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>    [<span class="number">31</span>:<span class="number">0</span>]  sts_coarse_freq_offset_q    ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            sts_coarse_freq_offset_valid,   </span><br><span class="line"></span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">reg</span>     [<span class="number">15</span>:<span class="number">0</span>]  sample_cfoc_i               ,<span class="comment">// data after coarse freq offset</span></span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">reg</span>     [<span class="number">15</span>:<span class="number">0</span>]  sample_cfoc_q               ,</span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">reg</span>             sample_cfoc_valid                   </span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="comment">// internal signals and registers</span></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="keyword">wire</span>            sample_delay_out_valid      ;</span><br><span class="line">    <span class="keyword">wire</span>  [<span class="number">15</span>:<span class="number">0</span>]    sample_delay_out_i, sample_delay_out_q; </span><br><span class="line">    <span class="keyword">reg</span>   [<span class="number">15</span>:<span class="number">0</span>]    sample_delay_out_i_dly, sample_delay_out_q_dly;</span><br><span class="line"></span><br><span class="line">    <span class="comment">// fix point data 1bit sign, 3bit quotient, 28bit fractional</span></span><br><span class="line">    <span class="keyword">wire</span>  [<span class="number">31</span>:<span class="number">0</span>]    angle_out                   ; <span class="comment">// actual estimate angle data</span></span><br><span class="line">    <span class="keyword">wire</span>            angle_out_valid             ;</span><br><span class="line">    <span class="keyword">wire</span>  [<span class="number">31</span>:<span class="number">0</span>]    angle_out_div16x2pi         ; <span class="comment">// estimate angle data for drive dds</span></span><br><span class="line">    <span class="keyword">wire</span>            angle_out_div16x2pi_valid   ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">reg</span>   [<span class="number">31</span>:<span class="number">0</span>]    freq_control_word           ;</span><br><span class="line">    <span class="keyword">reg</span>   [<span class="number">31</span>:<span class="number">0</span>]    phase_accumulator           ;</span><br><span class="line">    <span class="keyword">reg</span>             phase_acc_valid             ;</span><br><span class="line">    <span class="keyword">wire</span>  [<span class="number">15</span>:<span class="number">0</span>]    dds_cfoc_i, dds_cfoc_q      ;</span><br><span class="line">    <span class="keyword">wire</span>            dds_cfoc_valid              ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">wire</span>            cmpy_cfoc_out_valid         ;</span><br><span class="line">    <span class="keyword">wire</span>  [<span class="number">31</span>:<span class="number">0</span>]    cmpy_cfoc_out_i, cmpy_cfoc_out_q;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">// delay input samples, after coarse freq offset is calculated out, </span></span><br><span class="line">    <span class="comment">// correction freq could add to these samples</span></span><br><span class="line">    sample_delay#(</span><br><span class="line">        <span class="variable">.DATA_WIDTH</span>              ( <span class="number">32</span> ),</span><br><span class="line">        <span class="variable">.DELAY_DEEPTH</span>            ( <span class="number">256</span> )</span><br><span class="line">    )u_sample_delay(</span><br><span class="line">        <span class="variable">.clk</span>                     ( clk                     ),</span><br><span class="line">        <span class="variable">.rst</span>                     ( rst                     ),</span><br><span class="line">        <span class="variable">.enable</span>                  ( enable                  ),</span><br><span class="line">        <span class="variable">.sample_in_valid</span>         ( sample_in_valid         ),</span><br><span class="line">        <span class="variable">.sample_in</span>               ( &#123;sample_in_q, sample_in_i&#125; ),</span><br><span class="line">        <span class="variable">.sample_delay_out_valid</span>  ( sample_delay_out_valid  ),</span><br><span class="line">        <span class="variable">.sample_delay_out</span>        ( &#123;sample_delay_out_q, sample_delay_out_i&#125;)</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    fix_arctan u_fix_arctan(</span><br><span class="line">        <span class="variable">.clk</span>                        ( clk                       ),</span><br><span class="line">        <span class="variable">.rst</span>                        ( rst                       ),</span><br><span class="line">        <span class="variable">.enable</span>                     ( enable                    ),</span><br><span class="line">        <span class="variable">.y_in</span>                       ( sts_coarse_freq_offset_q  ),</span><br><span class="line">        <span class="variable">.x_in</span>                       ( sts_coarse_freq_offset_i  ),</span><br><span class="line">        <span class="variable">.xy_in_valid</span>                ( sts_coarse_freq_offset_valid),</span><br><span class="line">        <span class="variable">.angle_out</span>                  ( angle_out                 ),</span><br><span class="line">        <span class="variable">.angle_out_valid</span>            ( angle_out_valid           ),</span><br><span class="line">        <span class="variable">.angle_out_div16x2pi</span>        ( angle_out_div16x2pi       ),</span><br><span class="line">        <span class="variable">.angle_out_div16x2pi_valid</span>  ( angle_out_div16x2pi_valid  )</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            freq_control_word &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (enable == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            freq_control_word &lt;= &#123;angle_out_div16x2pi, <span class="number">4&#x27;d0</span>&#125;;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span>  <span class="keyword">begin</span></span><br><span class="line">            freq_control_word &lt;=  <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line">    </span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            phase_accumulator &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (enable == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">if</span> (sample_delay_out_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">                phase_accumulator &lt;= phase_accumulator - freq_control_word;</span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span>  <span class="keyword">begin</span></span><br><span class="line">            phase_accumulator &lt;=  <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------phase_acc_valid------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            phase_acc_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (enable == <span class="number">1&#x27;b1</span> &amp;&amp; sample_delay_out_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            phase_acc_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span>  <span class="keyword">begin</span></span><br><span class="line">            phase_acc_valid &lt;=  <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk) <span class="keyword">begin</span></span><br><span class="line">        &#123;sample_delay_out_i_dly, sample_delay_out_q_dly&#125; &lt;= &#123;sample_delay_out_i, sample_delay_out_q&#125;;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">// 1 beat latency</span></span><br><span class="line">    dds_cfoc u_dds_cfoc (</span><br><span class="line">        <span class="variable">.aclk</span>(clk),                                <span class="comment">// input wire aclk</span></span><br><span class="line">        <span class="variable">.s_axis_phase_tvalid</span>(phase_acc_valid),  <span class="comment">// input wire s_axis_phase_tvalid</span></span><br><span class="line">        <span class="variable">.s_axis_phase_tdata</span>(&#123; &#123;<span class="number">4</span>&#123;phase_accumulator[<span class="number">31</span>]&#125;&#125;,phase_accumulator[<span class="number">31</span>:<span class="number">20</span>]&#125;),    <span class="comment">// input wire [15 : 0] s_axis_phase_tdata</span></span><br><span class="line">        <span class="variable">.m_axis_data_tvalid</span>(dds_cfoc_valid),    <span class="comment">// output wire m_axis_data_tvalid</span></span><br><span class="line">        <span class="variable">.m_axis_data_tdata</span>(&#123;dds_cfoc_q, dds_cfoc_i&#125;)      <span class="comment">// output wire [31 : 0] m_axis_data_tdata</span></span><br><span class="line">    );</span><br><span class="line">    </span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    cmpy_cfoc u_cmpy_cfoc (</span><br><span class="line">        <span class="variable">.aclk</span>(clk),                              <span class="comment">// input wire aclk</span></span><br><span class="line">        <span class="variable">.s_axis_a_tvalid</span>(dds_cfoc_valid),        <span class="comment">// input wire s_axis_a_tvalid</span></span><br><span class="line">        <span class="variable">.s_axis_a_tdata</span>(&#123;dds_cfoc_q, dds_cfoc_i&#125;),          <span class="comment">// input wire [31 : 0] s_axis_a_tdata</span></span><br><span class="line">        <span class="variable">.s_axis_b_tvalid</span>(dds_cfoc_valid),        <span class="comment">// input wire s_axis_b_tvalid</span></span><br><span class="line">        <span class="variable">.s_axis_b_tdata</span>(&#123;sample_delay_out_q_dly, sample_delay_out_i_dly&#125;),          <span class="comment">// input wire [31 : 0] s_axis_b_tdata</span></span><br><span class="line">        <span class="variable">.m_axis_dout_tvalid</span>(cmpy_cfoc_out_valid),  <span class="comment">// output wire m_axis_dout_tvalid</span></span><br><span class="line">        <span class="variable">.m_axis_dout_tdata</span>(&#123;cmpy_cfoc_out_q, cmpy_cfoc_out_i&#125;)    <span class="comment">// output wire [63 : 0] m_axis_dout_tdata</span></span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------sample_cfoc_valid------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            sample_cfoc_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (enable == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            sample_cfoc_valid &lt;= cmpy_cfoc_out_valid;</span><br><span class="line">            <span class="comment">// sample_cfoc_valid &lt;= sample_delay_out_valid;</span></span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span>  <span class="keyword">begin</span></span><br><span class="line">            sample_cfoc_valid &lt;=  <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------sample_cfoc_i/q------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            sample_cfoc_i &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            sample_cfoc_q &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (enable == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            sample_cfoc_i &lt;= &#123;cmpy_cfoc_out_i[<span class="number">31</span>],cmpy_cfoc_out_i[<span class="number">26</span>:<span class="number">12</span>]&#125;;</span><br><span class="line">            sample_cfoc_q &lt;= &#123;cmpy_cfoc_out_q[<span class="number">31</span>],cmpy_cfoc_out_q[<span class="number">26</span>:<span class="number">12</span>]&#125;;</span><br><span class="line">            <span class="comment">// sample_cfoc_i &lt;= sample_delay_out_i;</span></span><br><span class="line">            <span class="comment">// sample_cfoc_q &lt;= sample_delay_out_q;</span></span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span>  <span class="keyword">begin</span></span><br><span class="line">            sample_cfoc_i &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            sample_cfoc_q &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">endmodule</span></span><br><span class="line"></span><br></pre></td></tr></table></figure></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/SDR/" rel="tag"># SDR</a>
+              <a href="/tags/FPGA/" rel="tag"># FPGA</a>
+              <a href="/tags/ZYNQ/" rel="tag"># ZYNQ</a>
+              <a href="/tags/OFDM/" rel="tag"># OFDM</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/06/09/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E6%A3%80%E6%B5%8B/" rel="prev" title="OFDM_802.11a学习----短训练序列检测">
+      <i class="fa fa-chevron-left"></i> OFDM_802.11a学习----短训练序列检测
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/06/20/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E9%95%BF%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E6%A3%80%E6%B5%8B%E4%B8%8E%E7%AC%A6%E5%8F%B7%E5%AF%B9%E9%BD%90/" rel="next" title="OFDM_802.11a学习----长训练序列检测与符号对齐">
+      OFDM_802.11a学习----长训练序列检测与符号对齐 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">1. 前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-802-11a%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3%E5%8E%9F%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">2. 802.11a粗频偏校正原理</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-matlab-%E9%AA%8C%E8%AF%81"><span class="nav-number">3.</span> <span class="nav-text">3. matlab 验证</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4-FPGA%E8%AE%BE%E8%AE%A1"><span class="nav-number">4.</span> <span class="nav-text">4. FPGA设计</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#4-1-fast-arctan%E7%AE%97%E6%B3%95"><span class="nav-number">4.1.</span> <span class="nav-text">4.1 fast arctan算法</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-2-%E7%B2%97%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3"><span class="nav-number">4.2.</span> <span class="nav-text">4.2 粗频偏校正</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

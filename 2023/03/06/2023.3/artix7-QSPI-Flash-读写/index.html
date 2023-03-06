@@ -1,0 +1,1002 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="在这个文档当中，我们将会尝试使用SPI接口来读写A7-Lite上的QSPI Flash。在之前的SD卡读写部分，我们已经介绍了SPI协议，并且使用SPI协议完成了对SD卡的读写，因此在这一部分，将不会花太多内容在如何实现一个SPI协议上，更多的精力将放在对Flash芯片的访问之上。 在A7-Lite上板载了一个ISSI的Flash芯片，IS25LP128，我们首先了解一下这芯片，可以从ISSI的网">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Artix7 QSPI Flash 读写">
+<meta property="og:url" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="在这个文档当中，我们将会尝试使用SPI接口来读写A7-Lite上的QSPI Flash。在之前的SD卡读写部分，我们已经介绍了SPI协议，并且使用SPI协议完成了对SD卡的读写，因此在这一部分，将不会花太多内容在如何实现一个SPI协议上，更多的精力将放在对Flash芯片的访问之上。 在A7-Lite上板载了一个ISSI的Flash芯片，IS25LP128，我们首先了解一下这芯片，可以从ISSI的网">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306133451176.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228195914179.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306134018093.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228200251996.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228200534437.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228200547136.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228201126588.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228201555549.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228202313093.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228202321583.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228203010449.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228203019596.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228203033333.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228203103522.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228203210414.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306134620482.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301092906271.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301094037431.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301100449753.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301100621822.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301100645527.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301100754074.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301100905987.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301100938619.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301101027174.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301101202700.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301101241970.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301101413390.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230303203437820.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301101547694.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306094122060.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/spi_wr_rd.svg">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/spi_wr_rd-1678083041887-2.svg">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/flash_ctrl.svg">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/flash_controller-1678086466921-9.svg">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306173852156.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306174708765.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306175612454.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306175638273.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306175940407.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306175954355.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306180224229.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306180233396.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230303203437820.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306185832926.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306190033047.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306190314973.png">
+<meta property="article:published_time" content="2023-03-06T11:11:21.000Z">
+<meta property="article:modified_time" content="2023-03-06T11:14:54.790Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="FPGA">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306133451176.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>Artix7 QSPI Flash 读写 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Artix7 QSPI Flash 读写
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2023-03-06 19:11:21 / Modified: 19:14:54" itemprop="dateCreated datePublished" datetime="2023-03-06T19:11:21+08:00">2023-03-06</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/FPGA/" itemprop="url" rel="index"><span itemprop="name">FPGA</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/" class="post-meta-item leancloud_visitors" data-flag-title="Artix7 QSPI Flash 读写" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>在这个文档当中，我们将会尝试使用SPI接口来读写A7-Lite上的QSPI Flash。在之前的SD卡读写部分，我们已经介绍了SPI协议，并且使用SPI协议完成了对SD卡的读写，因此在这一部分，将不会花太多内容在如何实现一个SPI协议上，更多的精力将放在对Flash芯片的访问之上。</p>
+<p>在A7-Lite上板载了一个ISSI的Flash芯片，IS25LP128，我们首先了解一下这芯片，可以从ISSI的网站上下载这个芯片的数据手册: <a target="_blank" rel="noopener" href="https://www.issi.com/WW/pdf/IS25LP128.pdf">IS25LP128</a></p>
+<h2 id="1-IS25LP128芯片手册"><a href="#1-IS25LP128芯片手册" class="headerlink" title="1. IS25LP128芯片手册"></a>1. IS25LP128芯片手册</h2><h3 id="1-1-SPI模式"><a href="#1-1-SPI模式" class="headerlink" title="1.1 SPI模式"></a>1.1 SPI模式</h3><p>IS25LP128支持两种接口模式，一种是SPI模式，一种是QSPI模式，在这篇文档当中我们主要关注SPI模式。</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306133451176.png" alt="image-20230306133451176"></p>
+<p>在SPI模式下：CE#为片选信号，SCK为时钟信号，SI(IO0)是MOSI信号，SO(IO1)是MISO信号。</p>
+<p>在QSPI模式下：数据信号由IO0~IO3组成，这些信号都是双向的。某种意义上来说使用QPSI模式，相对于SPI模式会更简单一点。</p>
+<p>SPI的工作模式，不论在什么模式下，数据在上升沿写入，在下降沿读出。CS信号拉低的时候，开始进行操作。</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228195914179.png" alt="image-20230228195914179"></p>
+<p>QPI模式下的传输过程</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306134018093.png" alt="image-20230306134018093"></p>
+<h3 id="1-2-芯片容量分配"><a href="#1-2-芯片容量分配" class="headerlink" title="1.2 芯片容量分配"></a>1.2 芯片容量分配</h3><p>一个扇区是4KB，一个32K block由相邻的8个扇区组成， 一个64K block由相邻的16个扇区组成。</p>
+<p>IS25LP128一共有256个64Kblock，512个32Kblock，4096个扇区。</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228200251996.png" alt="image-20230228200251996"></p>
+<h3 id="1-3-寄存器"><a href="#1-3-寄存器" class="headerlink" title="1.3  寄存器"></a>1.3  寄存器</h3><p>IS25LP256具有三组寄存器：状态、功能和读取。 当连续读取寄存器时，重复输出相同的字节，直到 CE# 变为高电平。</p>
+<h4 id="1-3-1-状态寄存器"><a href="#1-3-1-状态寄存器" class="headerlink" title="1.3.1 状态寄存器"></a>1.3.1 状态寄存器</h4><p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228200534437.png" alt="image-20230228200534437"></p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228200547136.png" alt="image-20230228200547136"></p>
+<ul>
+<li><p>WIP：指示芯片的状态，当为1的时候，表示芯片正处于写入的状态，不能进行写入。</p>
+</li>
+<li><p>WEL：当这个bit为0的时候，芯片处于不可写入的状态，只有当这一位为1的时候，芯片才处于可以写入的装药，可以通过WREN命令置位。</p>
+</li>
+</ul>
+<p>​        除设置易失性读取寄存器之外，每个写入寄存器、编程(PP命令，写入数据)和擦除指令之前必须有一个 WREN 指令。</p>
+<p>​        需要设置WREN指令的命令如下：</p>
+<p>​        <img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228201126588.png" alt="image-20230228201126588"></p>
+<ul>
+<li>BP3~BP0：用来设置保护区域的，保护区域的对应关系如下，当对应的区域被保护的时候，无法进行擦除和写入操作。</li>
+</ul>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228201555549.png" alt="image-20230228201555549"></p>
+<ul>
+<li>SRWD: 状态寄存器写禁止 (SRWD) 位与写保护 (WP#) 信号一起运行以提供硬件保护模式。  当 SRWD 设置为“0”时，状态寄存器不受写保护。  当 SRWD 设置为“1”且 WP# 被拉低（VIL）时，状态寄存器的位（SRWD、QE、BP3、BP2、BP1、BP0）变为只读，WRSR 指令将被忽略.  如果 SRWD 设置为“1”且 WP# 被拉高 (VIH)，则可以通过 WRSR 指令更改状态寄存器</li>
+<li>QE: 四线使能 (QE) 是状态寄存器中允许四线操作的非易失性位。  当 QE 位设置为“0”时，引脚 WP# 和 HOLD# 被启用。  当 QE 位设置为“1”时，IO2 和 IO3 引脚被启用。</li>
+</ul>
+<h4 id="1-3-2-功能寄存器"><a href="#1-3-2-功能寄存器" class="headerlink" title="1.3.2 功能寄存器"></a>1.3.2 功能寄存器</h4><p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228202313093.png" alt="image-20230228202313093"></p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228202321583.png" alt="image-20230228202321583"></p>
+<ul>
+<li>Top/Bottom Selection:  保护区域选择，可以选择顶部或者底部，只能更改一次。</li>
+<li>PSUS ：程序暂停状态位指示程序操作何时暂停。  在程序运行期间发出暂停命令后，PSUS 变为“1”。  一旦挂起的程序恢复，PSUS 位将重置为“0”</li>
+<li>ESUS： 擦除暂停状态指示擦除操作何时暂停。  在擦除操作期间发出挂起命令后，ESUS 位为“1”。  一旦挂起的擦除恢复，ESUS 位将重置为“0</li>
+<li>IRLOCK 0~3：信息行锁定位是可编程的。  如果位设置为“1”，信息行 无法编程。</li>
+</ul>
+<h4 id="1-3-3-读寄存器"><a href="#1-3-3-读寄存器" class="headerlink" title="1.3.3 读寄存器"></a>1.3.3 读寄存器</h4><p>读寄存器主要和QPI模式相关，在这里不做过多介绍。</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228203010449.png" alt="image-20230228203010449"></p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228203019596.png" alt="image-20230228203019596"></p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228203033333.png" alt="image-20230228203033333"></p>
+<p>Read Dummy Cycles vs Max Frequency</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228203103522.png" alt="image-20230228203103522"></p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230228203210414.png" alt="image-20230228203210414"></p>
+<h3 id="1-4-保护机制"><a href="#1-4-保护机制" class="headerlink" title="1.4 保护机制"></a>1.4 保护机制</h3><p>Flash支持硬件和软件写保护机制。如果用户希望Flash 的某些区域不能被更改，则可以启用这些保护机制。</p>
+<p>硬件保护机制可以用来保护状态寄存器，可以使得状态寄存器不能被用户写入数据，从而保证被保护的区域不能更改。</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306134620482.png" alt="image-20230306134620482"></p>
+<p>软件的保护机制在前面介绍状态寄存器的时候，已经提及过，通过对BP0~BP3的设置，可以来选择呢些block是不能被修改的。</p>
+<h3 id="1-5-设备操作"><a href="#1-5-设备操作" class="headerlink" title="1.5 设备操作"></a>1.5 设备操作</h3><p>该设备使用一个 8 位指令寄存器。在串行数据输入 (SI) 或串行数据 IO（IO0、IO1、IO2、IO3）上，所有指令、地址和数据均以最高有效位 (MSB) 在前移入。  在芯片使能 (CE#) 被驱动为低电平 (VIL) 之后，SI 或 IO 上的输入数据在正常模式下在串行时钟 (SCK) 的上升沿锁存，在 DTR 模式下在上升沿和下降沿锁存。   每个指令序列都以一个字节的指令代码开始，然后是地址字节、数据字节，或者地址字节和数据字节，具体取决于指令的类型。  CE#必须  在指令序列的最后一位移入以结束操作后被驱动为高电平（VIH）。</p>
+<p>在这里只记录几个通过SPI来读写寄存器时用到的命令。</p>
+<h4 id="1-5-1-Normal-Read-0x03"><a href="#1-5-1-Normal-Read-0x03" class="headerlink" title="1.5.1 Normal Read 0x03"></a>1.5.1 Normal Read 0x03</h4><p>NORMAL READ (NORD) 指令用于以最大频率 50MHz的读取设备的内存内容。</p>
+<p>NORD的指令的顺序如下，首先CE#拉低，然后在SI上传输NORD Command，然后是三字节的地址。然后数据从SO线上传出，Flash当中的所有存储地址都可以在一次NORD命令当中被读出。</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301092906271.png" alt="image-20230301092906271"></p>
+<h4 id="1-5-2-Page-Program-PP-0x02"><a href="#1-5-2-Page-Program-PP-0x02" class="headerlink" title="1.5.2 Page Program (PP 0x02)"></a>1.5.2 Page Program (PP 0x02)</h4><p>页编程 (PP) 指令允许在一次操作中将最多 256 字节的数据编程到内存中。   要编程的存储器目标必须在块保护（BP3、BP2、BP1、BP0）位设置的受保护存储器区域之外。  试图编程到写保护页面的 PP 指令将被忽略。  在执行 PP 指令之前，必须通过 Write Enable (WREN) 指令启用 Write Enable Latch (WEL)。</p>
+<p>PP 指令代码、三个地址字节和程序数据（1 到 256 字节）通过 SI 线输入。  CE#拉高后程序会立即开始运行，否则PP指令不会被执行。  内部控制逻辑自动处理编程电压和时序。  程序操作的进度或完成可以通过 RDSR 指令读取状态寄存器中的 WIP 位来确定。  如果 WIP  位为“1”，则程序操作仍在进行中。  如果 WIP 位为“0”，则程序操作已完成。</p>
+<p>如果超过 256 字节的数据被发送到设备，地址计数器在同一页内翻转，先前锁存的数据被丢弃，最后 256 字节被保留以编程到页面中。   起始字节可以位于页面内的任何位置。  当到达页面末尾时，地址将环绕到同一页的开头。   如果要烧录的数据少于整页，则同一页上所有其他字节的数据将保持不变。</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301094037431.png" alt="image-20230301094037431"></p>
+<h4 id="1-5-3-Erase"><a href="#1-5-3-Erase" class="headerlink" title="1.5.3 Erase"></a>1.5.3 Erase</h4><p>擦除命令将寻址扇区或块中的所有位设置为“1”，该设备的内存阵列被组织成统一的 4 KB 扇区或 32/64 KB 统一块（一个块分别由八个/十六个相邻扇区组成）。</p>
+<p><strong>在重新编程一个字节之前，必须擦除包含该字节的扇区或块（擦除将位设置为“1”）</strong>。  为了擦除器件，提供了三种擦除指令：扇区擦除 (SER)、块擦除 (BER) 和芯片擦除 (CER)。  扇区擦除操作允许擦除任何单个扇区而不影响 其他部门的数据。  块擦除操作擦除任何单独的块。  芯片擦除操作擦除设备的整个存储器阵列。  可以在任何编程操作之前执行扇区擦除、块擦除或芯片擦除操作。</p>
+<h5 id="1-5-3-1-Sector-Erase-SER-0xD7-0x20"><a href="#1-5-3-1-Sector-Erase-SER-0xD7-0x20" class="headerlink" title="1.5.3.1 Sector Erase (SER 0xD7/0x20)"></a>1.5.3.1 Sector Erase (SER 0xD7/0x20)</h5><p>扇区擦除 (SER) 指令擦除 4 KB 扇区，在执行 SER 指令之前必须通过写使能 (WREN) 指令设置写使能锁存器 (WEL)。  WEL 位在扇区擦除操作完成后自动复位</p>
+<p>擦除操作的进度或完成可以通过使用 RDSR 指令读取状态寄存器中的 WIP 位来确定。 如果 WIP 位为“1”，擦除操作仍在进行中。  如果 WIP 位为“0”，擦除操作已经完成</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301100449753.png" alt="image-20230301100449753"></p>
+<h5 id="1-5-3-2-Block-Erase-BER32K-0x52-BER64K-0xD8"><a href="#1-5-3-2-Block-Erase-BER32K-0x52-BER64K-0xD8" class="headerlink" title="1.5.3.2 Block Erase(BER32K 0x52, BER64K 0xD8)"></a>1.5.3.2 Block Erase(BER32K 0x52, BER64K 0xD8)</h5><p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301100621822.png" alt="image-20230301100621822"></p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301100645527.png" alt="image-20230301100645527"></p>
+<h5 id="1-5-3-3-Chip-Erase-CER-0xC7-0x60"><a href="#1-5-3-3-Chip-Erase-CER-0xC7-0x60" class="headerlink" title="1.5.3.3 Chip Erase(CER 0xC7/0x60)"></a>1.5.3.3 Chip Erase(CER 0xC7/0x60)</h5><p>芯片擦除 (CER) 指令擦除整个存储器阵列。  在执行 CER 指令之前，必须通过写使能 (WREN) 指令设置写使能锁存器 (WEL)。  WEL 在芯片擦除操作完成后自动复位</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301100754074.png" alt="image-20230301100754074"></p>
+<h4 id="1-5-4-Write-Enable-WREN-0x06"><a href="#1-5-4-Write-Enable-WREN-0x06" class="headerlink" title="1.5.4 Write Enable(WREN 0x06)"></a>1.5.4 Write Enable(WREN 0x06)</h4><p>写使能 (WREN) 指令用于设置写使能锁存器 (WEL) 位。  WEL 位在上电后复位为写保护状态。  WEL  位必须在任何写操作之前启用写操作，包括扇区擦除、块擦除、芯片擦除、页面编程、编程信息行、写状态寄存器和写功能寄存器操作。  写操作完成后，WEL 位将自动复位为写保护状态。  在执行上述任何操作之前都需要 WREN 指令</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301100905987.png" alt="image-20230301100905987"></p>
+<h4 id="1-5-5-Write-Disable-WRDI-0x04"><a href="#1-5-5-Write-Disable-WRDI-0x04" class="headerlink" title="1.5.5 Write Disable(WRDI 0x04"></a>1.5.5 Write Disable(WRDI 0x04</h4><p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301100938619.png" alt="image-20230301100938619"></p>
+<h4 id="1-5-6-Read-Status-Register-RDSR-0x05"><a href="#1-5-6-Read-Status-Register-RDSR-0x05" class="headerlink" title="1.5.6 Read Status Register(RDSR 0x05)"></a>1.5.6 Read Status Register(RDSR 0x05)</h4><p>读取状态寄存器 (RDSR) 指令提供对状态寄存器的访问。  在执行写、擦除或写入状态寄存器操作期间，可以使用 RDSR 指令通过读取状态寄存器的 WIP 位来检查操作的进度或完成情况。</p>
+<p>​        </p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301101027174.png" alt="image-20230301101027174"></p>
+<h4 id="1-5-7-Write-Status-Register-WRSR-0x01"><a href="#1-5-7-Write-Status-Register-WRSR-0x01" class="headerlink" title="1.5.7 Write Status Register(WRSR ,0x01)"></a>1.5.7 Write Status Register(WRSR ,0x01)</h4><p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301101202700.png" alt="image-20230301101202700"></p>
+<h4 id="1-5-8-Read-Function-Register-RDFR-0x48"><a href="#1-5-8-Read-Function-Register-RDFR-0x48" class="headerlink" title="1.5.8 Read Function Register(RDFR 0x48)"></a>1.5.8 Read Function Register(RDFR 0x48)</h4><p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301101241970.png" alt="image-20230301101241970"></p>
+<h4 id="1-5-9-Write-Function-Register-WRFR-0x42"><a href="#1-5-9-Write-Function-Register-WRFR-0x42" class="headerlink" title="1.5.9 Write Function Register(WRFR 0x42)"></a>1.5.9 Write Function Register(WRFR 0x42)</h4><p>写功能寄存器 (WRFR) 指令允许用户通过将 TBS 位设置为“1”来从顶部块区域（默认）更改为底部块区域。 信息行锁定位 (IRL3~IRL0) 也可以通过 WRFR 指令单独设置为“1”以锁定信息行。  由于TBS 位和IRL 位是OTP，一旦设置为“1”，就不能再设置回“0”。</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301101413390.png" alt="image-20230301101413390"></p>
+<h4 id="1-5-10-Read-Product-ID-RDID-0xAB"><a href="#1-5-10-Read-Product-ID-RDID-0xAB" class="headerlink" title="1.5.10 Read Product ID(RDID 0xAB)"></a>1.5.10 Read Product ID(RDID 0xAB)</h4><p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230303203437820.png" alt="image-20230303203437820"></p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230301101547694.png" alt="image-20230301101547694"></p>
+<h4 id="1-5-10-Read-Product-JDID-RDID-0x9F"><a href="#1-5-10-Read-Product-JDID-RDID-0x9F" class="headerlink" title="1.5.10 Read Product JDID(RDID 0x9F)"></a>1.5.10 Read Product JDID(RDID 0x9F)</h4><p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306094122060.png" alt="image-20230306094122060"></p>
+<h2 id="2-Flash读写的具体设计"><a href="#2-Flash读写的具体设计" class="headerlink" title="2. Flash读写的具体设计"></a>2. Flash读写的具体设计</h2><h3 id="2-1-SPI读写模块"><a href="#2-1-SPI读写模块" class="headerlink" title="2.1 SPI读写模块"></a>2.1 SPI读写模块</h3><p>在了解了上面的Flash芯片相关的内容之后，我们可以得出一个结论，对Flash的操作都是以命令+地址+数据的这种形式来进行传输的，其中地址和数据是可选的。比如：如果想要使设备处于可以写入的状态，我们只需要向设备发出命令，而不需要额外的地址和写入的数据。又比如，如果我们想要读取Flash的寄存器的数据，我们只需要向Flash发出命令然后在接收返回的数据即可。</p>
+<p>因此，我们可以首先抽象出一个对Flash操作的最基本的模块，该模块接收来自上一级的命令地址和数据，根据不同地情况完成对Flash的访问。首先，我们需要确定在这个模块当中支持的命令。</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>命令</th>
+<th>描述</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CMD_WREN</td>
+<td>写使能，进行擦除和写入Flash的时候，先要由此命令，不需要地址和数据</td>
+</tr>
+<tr>
+<td>CMD_ERASE</td>
+<td>擦除指令，需要给定起始地址</td>
+</tr>
+<tr>
+<td>CMD_PP</td>
+<td>写操作，需要给出起始地址和要写入的数据</td>
+</tr>
+<tr>
+<td>CMD_RDSR</td>
+<td>读取状态寄存器，不需要地址，从Flash读出状态寄存器的数据</td>
+</tr>
+<tr>
+<td>CMD_NORD</td>
+<td>读取Flash数据，需要地址，从Flash读出存储空间的数据</td>
+</tr>
+<tr>
+<td>CMD_RDID</td>
+<td>读取设备的ID，不需要地址，从Flash读出数据</td>
+</tr>
+<tr>
+<td>CMD_RDJDID</td>
+<td>读取设备的JDID，作用与CMD_RDID类似，读出三字节的数据</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/spi_wr_rd.svg" alt="spi_wr_rd"></p>
+<h2 id><a href="#" class="headerlink" title=" "></a> </h2><div class="table-container">
+<table>
+<thead>
+<tr>
+<th>Port name</th>
+<th>Direction</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>clk</td>
+<td>input</td>
+<td></td>
+</tr>
+<tr>
+<td>rst</td>
+<td>input</td>
+<td></td>
+</tr>
+<tr>
+<td>cmd_start</td>
+<td>input</td>
+<td>一次命令起始信号，拉高1 beat</td>
+</tr>
+<tr>
+<td>cmd</td>
+<td>input</td>
+<td>具体的命令类型，比如：WREN, PP, NORD,RDSR等等</td>
+</tr>
+<tr>
+<td>cmd_addr</td>
+<td>input</td>
+<td>需要读取的地址，只有访问存储空间的时候才有效，访问寄存器时无效</td>
+</tr>
+<tr>
+<td>addr_len</td>
+<td>input</td>
+<td>如果需要访问存储空间时，该值为3，如果访问寄存器或者其他命令为0</td>
+</tr>
+<tr>
+<td>wr_data</td>
+<td>input</td>
+<td>要写入Flash存储空间的数据</td>
+</tr>
+<tr>
+<td>wr_len</td>
+<td>input</td>
+<td>要写入Flash存储空间数据的长度，一般为256字节，一个Page</td>
+</tr>
+<tr>
+<td>wr_data_pop</td>
+<td>output</td>
+<td>向上游模块取数据信号，该信号有效的时候，上游模块将会给出一个数据</td>
+</tr>
+<tr>
+<td>wr_done</td>
+<td>output</td>
+<td>一次写入操作完成</td>
+</tr>
+<tr>
+<td>rd_data</td>
+<td>output</td>
+<td>从Flash读出的数据</td>
+</tr>
+<tr>
+<td>rd_len</td>
+<td>input</td>
+<td>一次读操作的长度</td>
+</tr>
+<tr>
+<td>rd_data_valid</td>
+<td>output</td>
+<td>读出的数据有效信号</td>
+</tr>
+<tr>
+<td>rd_done</td>
+<td>output</td>
+<td>一次读取操作完成</td>
+</tr>
+<tr>
+<td>busy</td>
+<td>output</td>
+<td>该模块处于忙碌状态</td>
+</tr>
+<tr>
+<td>spi_clk</td>
+<td>output</td>
+<td></td>
+</tr>
+<tr>
+<td>spi_cs_n</td>
+<td>output</td>
+<td></td>
+</tr>
+<tr>
+<td>spi_mosi</td>
+<td>output</td>
+<td></td>
+</tr>
+<tr>
+<td>spi_miso</td>
+<td>input</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>在这个模块当中，我们设计一个状态机来完成对各种不同情况的判断与跳转：</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/spi_wr_rd-1678083041887-2.svg" alt="spi_wr_rd"></p>
+<p>IDLE：复位所处的状态，复位结束，进入ARBIT状态</p>
+<p>ARBIT状态：在ARBIT状态下，如果检测到一次命令开始cmd_start有效，判断当前的命令，如果是写这一类的则跳转进入WR_START状态。如果是读一类命令则跳转进入RD_START状态。</p>
+<p>WR_START：直接跳转到写WR_COMMAND状态。</p>
+<p>WR_COMMAND：在该状态下，需要注意这个命令是否包含地址和数据，如果是WREN命令，则在高状态结束的时候，直接跳转到WR_STOP状态，如果该命令是对寄存器的写操作，那么跳转到WR_DATA状态。如果该命令是对内存空间的操作，比如写Flash或者擦除Flash则进入WR_ADDR状态。</p>
+<p>WR_ADDR：当3字节的地址写入完成之后，如果是擦除操作，那就直接进入到WR_STOP状态，如果是写入数据，那么将会进入到WR_DATA状态。</p>
+<p>WR_DATA： 当所有数据都写入到寄存器或者存储空间之后，跳转到WR_STOP状态，结束本次操作。</p>
+<p>WR_STOP：直接跳转到ARBIT状态。</p>
+<p>RD_START：标志一次读开始，直接进入RD_COMMAND状态。</p>
+<p>RD_COMMAND： 需要检测是否是对存储空间的读取，如果是读寄存器在状态结束的时候，跳转到接收读取的数据状态，如果是读取Flash的数据，呢么需要进入到给出要读取的Flash 的地址的状态。</p>
+<p>RD_DATA：接收读取到的数据，所有数据接收完成之后，跳转到RD_STOP状态</p>
+<p>RD_STOP：直接跳转到ARBIT状态。</p>
+<p>有了这个状态机的描述，剩下的就是取根据这个状态机完成具体的代码，具体代码不在文档中进行记录，用户可以查阅源码。</p>
+<h3 id="2-2-封装SPI读写模块"><a href="#2-2-封装SPI读写模块" class="headerlink" title="2.2 封装SPI读写模块"></a>2.2 封装SPI读写模块</h3><p>在前面我们实现了一个最基础的操作Flash的模块。然而在实际操作Flash的时候，可能需要遇到一些比较复杂的情况，比如在写入Flash之前，我们需要检查Flash的状态，通过读取状态寄存器，判断当前Flash是否处于忙碌的状态，知道Flash处于空闲，我们才可以进行写入。</p>
+<p>因此这样就需要多个操作进行组合才能成功地将数据写入到Flash 当中。再回想我们最终的目的，最终的目的是能够对Flash进行写入，擦除和读取，因此我们可以对前面的模块进行一个封装，从而提供给用户一个向上的接口，用户只需要简单地执行写入，擦除，读取命令即可，而不必取关心Flash所处的状态。</p>
+<p>经过简化之后，上游模块只需要处理三类命令即可，分别是读取，写入和擦除操作。</p>
+<p>其中在读取数据的时候，增加可对芯片ID的读取，在实际使用的时候，可以不需要这两种操作。</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/flash_ctrl.svg" alt="flash_ctrl"></p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th>Port name</th>
+<th>Direction</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>clk</td>
+<td>input</td>
+<td></td>
+</tr>
+<tr>
+<td>rst</td>
+<td>input</td>
+<td></td>
+</tr>
+<tr>
+<td>cmd_type</td>
+<td>input</td>
+<td>用户的命令</td>
+</tr>
+<tr>
+<td>cmd_req</td>
+<td>input</td>
+<td>用户命令请求</td>
+</tr>
+<tr>
+<td>cmd_ack</td>
+<td>output</td>
+<td>用户命令响应</td>
+</tr>
+<tr>
+<td>total_bytes_to_pp</td>
+<td>input</td>
+<td>一共需要写入的数据长度</td>
+</tr>
+<tr>
+<td>wr_data</td>
+<td>input</td>
+<td>写入Flash的数据</td>
+</tr>
+<tr>
+<td>wr_data_pop</td>
+<td>output</td>
+<td>下游模块从用户取出要写入Flash的数据</td>
+</tr>
+<tr>
+<td>wr_flash_done</td>
+<td>output</td>
+<td>所有数据写入完毕</td>
+</tr>
+<tr>
+<td>total_bytes_to_erase</td>
+<td>input</td>
+<td>一共要擦除的数据长度</td>
+</tr>
+<tr>
+<td>erase_flash_done</td>
+<td>output</td>
+<td>所有出数据擦除结束</td>
+</tr>
+<tr>
+<td>total_bytes_to_rd</td>
+<td>input</td>
+<td>一共需要读取的数据长度</td>
+</tr>
+<tr>
+<td>rd_data</td>
+<td>output</td>
+<td>读出出来的数据</td>
+</tr>
+<tr>
+<td>rd_data_valid</td>
+<td>output</td>
+<td>读取数据有效</td>
+</tr>
+<tr>
+<td>rd_flash_done</td>
+<td>output</td>
+<td>所有数据读取完成</td>
+</tr>
+<tr>
+<td>flash_is_busy</td>
+<td>output</td>
+<td>flash处于忙碌状态</td>
+</tr>
+<tr>
+<td>spi_clk</td>
+<td>output</td>
+<td></td>
+</tr>
+<tr>
+<td>spi_cs_n</td>
+<td>output</td>
+<td></td>
+</tr>
+<tr>
+<td>spi_mosi</td>
+<td>output</td>
+<td></td>
+</tr>
+<tr>
+<td>spi_miso</td>
+<td>input</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/flash_controller-1678086466921-9.svg" alt="flash_controller"></p>
+<p>该模块的状态机如上图所示：</p>
+<p>IDLE： 复位状态，复位结束之后进入ARBIT状态</p>
+<p>ARBIT： 在该状态下，如果用户发起了请求，则进入到RDSR状态，读取状态寄存器，判断当前是否处于空闲。</p>
+<p>RDSR： 读取状态寄存器，如果设备空闲则进入DEVICE_READY状态，否则返回到ARBIT状态。</p>
+<p>DEVICE_READY:在该状态下，判断用户是需要进行的操作，如果是写入寄存器或者擦除操作，则进入到WREN状态，如果是读取Flash则进入到读取状态。</p>
+<p>WREN：WREN命令结束，需要跳转到WREN_CHECK状态，进一步判断当前是否可以进行写入或者擦除操作。</p>
+<p>WREN_CHECJK： 如果设备处于可以进行写入或者擦除操作，状态寄存器的WELbit为1，则进入写入或者擦除状态。如果当前设备不可写入，那么需要再起发起读取状态寄存器，知道WEL bit为1。</p>
+<p>PP: 写入数据，一次写入的数据长度是256字节，也就是一个PAGE，写入完成之后需要进入PP_CHECK状态。</p>
+<p>PP_CHECK： 判断是否所有数据都已经写入到Flash，如果还有数据没有写入到Flash，那么跳转到WR_RDSR状态，获取当前Flash的状态，为下一次写入做准备，如果所有数据都写入，则跳转到ARBIT状态。</p>
+<p>WR_RDSR：写入数据时读取Flash 状态寄存器，如果设备空闲，则进入WREN状态，开始下一次写入。否则，继续向Flash发送读取状态寄存器的命令，直到Flash 空闲。</p>
+<p>ERASE：一次擦除一个扇区，一次擦除结束之后，进入到ERASE_CHECK状态。</p>
+<p>ERASE_CHECK：如果需要擦除的扇区都被擦除，进入到ARBIT状态，如果还有扇区没有被擦除，那么跳转到ERASE_RDSR状态，获取当前Flash的状态，为下一次擦除做准备</p>
+<p>ERASE_RDSR： 擦除时读取Flash 状态寄存器，如果设备空闲，则进入WREN状态，开始下一次擦除。否则，继续向Flash发送读取状态寄存器的命令，直到Flash 空闲。</p>
+<p> READ： 数据全部从Flash读取之后，跳转到ARBIT状态。</p>
+<h3 id="2-3-顶层测试模块"><a href="#2-3-顶层测试模块" class="headerlink" title="2.3 顶层测试模块"></a>2.3 顶层测试模块</h3><p>有了前面封装好之后的模块，我们就可以来完成一个模块实现对上面封装好的模块的测试。</p>
+<p>在这个模块当中，我们会使用一个VIO来产生测试命令和用户请求，并观察读取到的DEVICE ID和JDID。</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306173852156.png" alt="image-20230306173852156"></p>
+<p>在这个模块当中，将实现如下的状态跳转：</p>
+<p>IDLE： 复位状态</p>
+<p>ARBIT： 判断来自VIO产生的用户请求和命令。在这个状态下，检测VIO产生的cmd_trigger信号的上升沿，如果检测到上升沿，我们就可以开始产生一次用户请求。然后分别进入到5个不同的状态，分别是ERASE，WRITE，READID，READ_JDID，READ_DATA这几个状态。</p>
+<p>ERASE，WRITE，READID，READ_JDID，READ_DATA： 一次操作结束时回到ARBIT状态。</p>
+<p>在写入数据状态，我们会向Flash的地址0~0x20000的地址空间写入0~255的递增数，在擦除状态，我们会将0~0x20000的空间的说有数据擦除。</p>
+<p>为了验证我们的设计，在开始之前，我们可以先启动一次读Flash操作，查看当前从Flash当中读出的数据， 一般情况下，为对Flash进行任何操作的时候，读出的将是随机数。</p>
+<p>然后我们可以启动一次擦除操作，擦除之后，对应地址里的值应该为0xFF，然后我们可以再一次启动读操作，查看当前是否所有数据都为0xFF.</p>
+<p>接下来我们可以进行一次写操作，将递增数写入到flash当中，然后在启动读操作，查看当前读出的数据是否是递增数。由此判断我们Flash控制器是否有效。</p>
+<p>在这个模块当中我们需要使用一个 STARTUPE2模块，在A7-Lite的QPSI CLK这个引脚上，我们使用的是复用的引脚，因此直接在约束文件当中约束这个SPI的时钟引脚是无效的。为此我们需要将SPI的CLK信号连接到STARTUPE2的时钟引脚上，这样FPGA就能产生到QPSI Flash的时钟信号了。</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306174708765.png" alt="image-20230306174708765"></p>
+<figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line">STARTUPE2 #( </span><br><span class="line">        <span class="variable">.PROG_USR</span>           (<span class="string">&quot;FALSE&quot;</span> ),<span class="comment">//Activate program event security feature. Requires encrypted bitstreams.</span></span><br><span class="line">        <span class="variable">.SIM_CCLK_FREQ</span>      (<span class="number">0</span><span class="variable">.0</span>     ) <span class="comment">//Set the Configuration Clock Frequency(ns) for simulation</span></span><br><span class="line">    )</span><br><span class="line">    STARTUPE2_inst(     </span><br><span class="line">        <span class="variable">.CFGCLK</span>             (        ),<span class="comment">//1-bit output: Configuration main clock output</span></span><br><span class="line">        <span class="variable">.CFGMCLK</span>            (        ),<span class="comment">//1-bit output: Configuration internal oscillator clock output</span></span><br><span class="line">        <span class="variable">.EOS</span>                (        ),<span class="comment">//1-bit output: Active high output signal indicating the End Of Startup.</span></span><br><span class="line">        <span class="variable">.PREQ</span>               (        ),<span class="comment">//1-bit output: PROGRAM request to fabric output</span></span><br><span class="line">        <span class="variable">.CLK</span>                (<span class="number">0</span>       ),<span class="comment">//1-bit input: User start-up clock input</span></span><br><span class="line">        <span class="variable">.GSR</span>                (<span class="number">0</span>       ),<span class="comment">//1-bit input: Global Set/Reset input(GSR cannot be used for the port name)</span></span><br><span class="line">        <span class="variable">.GTS</span>                (<span class="number">0</span>       ),<span class="comment">//1-bit input: Global 3-state input(GTS cannot be used for the port name)</span></span><br><span class="line">        <span class="variable">.KEYCLEARB</span>          (<span class="number">1</span>      ),<span class="comment">//1-bit input: Clear AES Decrypter Key input from Battery-Backed RAM(BBRAM)</span></span><br><span class="line">        <span class="variable">.PACK</span>               (<span class="number">1</span>      ),<span class="comment">//1-bit input: PROGRAM acknowledge input</span></span><br><span class="line">        <span class="variable">.USRCCLKO</span>           (spi_clk         ),<span class="comment">//1-bit input: User CCLK input</span></span><br><span class="line">        <span class="variable">.USRCCLKTS</span>          (<span class="number">0</span>      ),<span class="comment">//1-bit input: User CCLK 3-state enable input</span></span><br><span class="line">        <span class="variable">.USRDONEO</span>           (<span class="number">1</span>      ),<span class="comment">//1-bit input: User DONE pin output control</span></span><br><span class="line">        <span class="variable">.USRDONETS</span>          (<span class="number">1</span>      ) <span class="comment">//1-bit input: User DONE 3-state enable output</span></span><br><span class="line">    );</span><br></pre></td></tr></table></figure>
+<h2 id="3-下载验证"><a href="#3-下载验证" class="headerlink" title="3. 下载验证"></a>3. 下载验证</h2><p>将bit文件下载到FPGA之后，会出现一个ILA窗口和一个VIO窗口</p>
+<h3 id="3-1-读取设备ID，厂商号，设备类型容量"><a href="#3-1-读取设备ID，厂商号，设备类型容量" class="headerlink" title="3.1 读取设备ID，厂商号，设备类型容量"></a>3.1 读取设备ID，厂商号，设备类型容量</h3><p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306175612454.png" alt="image-20230306175612454"></p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306175638273.png" alt="image-20230306175638273"></p>
+<p>在ILA窗口当中，我们可以设置触发类型为rd_data_valid的上升沿触发。</p>
+<p>在VIO窗口当中，我们首先将cmd_type的值设置为1,这个命令是读取设备ID的操作，然后我们将cnd_trigger由0调整到1。</p>
+<p>此时ILA会触发，并且VIO上将会显示读出的设备ID值。</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306175940407.png" alt="image-20230306175940407"></p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306175954355.png" alt="image-20230306175954355"></p>
+<p>然后我们再次点击ILA触发，是ILA进入到等待触发模式。</p>
+<p>接下来调整vio的cmd_type=2，这个命令实现读取JDID，然后我们调整cmd_trigger由0变为1，产生一个上升沿。</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306180224229.png" alt="image-20230306180224229"></p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306180233396.png" alt="image-20230306180233396"></p>
+<p>可以看到ILA触发，并且读出了JDID的值，回顾前面的设备ID我们可以看到device ID是0x17,厂商号是0x9D,存储类型和容量是0x6018</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230303203437820.png" alt="image-20230303203437820"></p>
+<p>这个和我们从VIO上看到的读取到的数据都是能够吻合上的。</p>
+<h3 id="3-2-数据写入测试"><a href="#3-2-数据写入测试" class="headerlink" title="3.2 数据写入测试"></a>3.2 数据写入测试</h3><p>首先，对Flash进行擦除操作，在VIO窗口当中，将cmd_type设置为4，然后再将cmd_trigger由0变到1。</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306185832926.png" alt="image-20230306185832926"></p>
+<p>等待一段时间，擦除结束，我们可以准备读取擦除之后的数据。在ILA窗口当中，点击触发，等待rd_data_valid的上升沿出现。</p>
+<p>然后回到VIO窗口党总，将cmd_type设置为5，然后再将cmd_trigger由0变到1。 可以看到ILA触发之后，所有读出的数据都为0xFF。</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306190033047.png" alt="image-20230306190033047"></p>
+<p>然后我们再对Flash进行写入操作，首先在VIO当中，将cmd_type设置为3，然后再将cmd_trigger由0变到1。</p>
+<p>等待一段时间，写入结束，我们可以准备读取写入之后的数据。在ILA窗口当中，点击触发，等待rd_data_valid的上升沿出现。</p>
+<p>然后回到VIO窗口党总，将cmd_type设置为5，然后再将cmd_trigger由0变到1。 可以看到ILA触发之后，读出的数据为递增数。</p>
+<p><img src="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/image-20230306190314973.png" alt="image-20230306190314973"></p>
+<p>从这里可以看到数据能够被正常写入和读出。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/FPGA/" rel="tag"># FPGA</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/02/07/2022.3/DMA%E4%BC%A0%E8%BE%93%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A8%A1%E5%9E%8B/" rel="prev" title="DMA传输的基本模型">
+      <i class="fa fa-chevron-left"></i> DMA传输的基本模型
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-IS25LP128%E8%8A%AF%E7%89%87%E6%89%8B%E5%86%8C"><span class="nav-number">1.</span> <span class="nav-text">1. IS25LP128芯片手册</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-SPI%E6%A8%A1%E5%BC%8F"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 SPI模式</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E8%8A%AF%E7%89%87%E5%AE%B9%E9%87%8F%E5%88%86%E9%85%8D"><span class="nav-number">1.2.</span> <span class="nav-text">1.2 芯片容量分配</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-3-%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-number">1.3.</span> <span class="nav-text">1.3  寄存器</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-3-1-%E7%8A%B6%E6%80%81%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-number">1.3.1.</span> <span class="nav-text">1.3.1 状态寄存器</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-3-2-%E5%8A%9F%E8%83%BD%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-number">1.3.2.</span> <span class="nav-text">1.3.2 功能寄存器</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-3-3-%E8%AF%BB%E5%AF%84%E5%AD%98%E5%99%A8"><span class="nav-number">1.3.3.</span> <span class="nav-text">1.3.3 读寄存器</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-4-%E4%BF%9D%E6%8A%A4%E6%9C%BA%E5%88%B6"><span class="nav-number">1.4.</span> <span class="nav-text">1.4 保护机制</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-5-%E8%AE%BE%E5%A4%87%E6%93%8D%E4%BD%9C"><span class="nav-number">1.5.</span> <span class="nav-text">1.5 设备操作</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#1-5-1-Normal-Read-0x03"><span class="nav-number">1.5.1.</span> <span class="nav-text">1.5.1 Normal Read 0x03</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-5-2-Page-Program-PP-0x02"><span class="nav-number">1.5.2.</span> <span class="nav-text">1.5.2 Page Program (PP 0x02)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-5-3-Erase"><span class="nav-number">1.5.3.</span> <span class="nav-text">1.5.3 Erase</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#1-5-3-1-Sector-Erase-SER-0xD7-0x20"><span class="nav-number">1.5.3.1.</span> <span class="nav-text">1.5.3.1 Sector Erase (SER 0xD7&#x2F;0x20)</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#1-5-3-2-Block-Erase-BER32K-0x52-BER64K-0xD8"><span class="nav-number">1.5.3.2.</span> <span class="nav-text">1.5.3.2 Block Erase(BER32K 0x52, BER64K 0xD8)</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#1-5-3-3-Chip-Erase-CER-0xC7-0x60"><span class="nav-number">1.5.3.3.</span> <span class="nav-text">1.5.3.3 Chip Erase(CER 0xC7&#x2F;0x60)</span></a></li></ol></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-5-4-Write-Enable-WREN-0x06"><span class="nav-number">1.5.4.</span> <span class="nav-text">1.5.4 Write Enable(WREN 0x06)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-5-5-Write-Disable-WRDI-0x04"><span class="nav-number">1.5.5.</span> <span class="nav-text">1.5.5 Write Disable(WRDI 0x04</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-5-6-Read-Status-Register-RDSR-0x05"><span class="nav-number">1.5.6.</span> <span class="nav-text">1.5.6 Read Status Register(RDSR 0x05)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-5-7-Write-Status-Register-WRSR-0x01"><span class="nav-number">1.5.7.</span> <span class="nav-text">1.5.7 Write Status Register(WRSR ,0x01)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-5-8-Read-Function-Register-RDFR-0x48"><span class="nav-number">1.5.8.</span> <span class="nav-text">1.5.8 Read Function Register(RDFR 0x48)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-5-9-Write-Function-Register-WRFR-0x42"><span class="nav-number">1.5.9.</span> <span class="nav-text">1.5.9 Write Function Register(WRFR 0x42)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-5-10-Read-Product-ID-RDID-0xAB"><span class="nav-number">1.5.10.</span> <span class="nav-text">1.5.10 Read Product ID(RDID 0xAB)</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#1-5-10-Read-Product-JDID-RDID-0x9F"><span class="nav-number">1.5.11.</span> <span class="nav-text">1.5.10 Read Product JDID(RDID 0x9F)</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-Flash%E8%AF%BB%E5%86%99%E7%9A%84%E5%85%B7%E4%BD%93%E8%AE%BE%E8%AE%A1"><span class="nav-number">2.</span> <span class="nav-text">2. Flash读写的具体设计</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-SPI%E8%AF%BB%E5%86%99%E6%A8%A1%E5%9D%97"><span class="nav-number">2.1.</span> <span class="nav-text">2.1 SPI读写模块</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link"><span class="nav-number">3.</span> <span class="nav-text"> </span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E5%B0%81%E8%A3%85SPI%E8%AF%BB%E5%86%99%E6%A8%A1%E5%9D%97"><span class="nav-number">3.1.</span> <span class="nav-text">2.2 封装SPI读写模块</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E9%A1%B6%E5%B1%82%E6%B5%8B%E8%AF%95%E6%A8%A1%E5%9D%97"><span class="nav-number">3.2.</span> <span class="nav-text">2.3 顶层测试模块</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E4%B8%8B%E8%BD%BD%E9%AA%8C%E8%AF%81"><span class="nav-number">4.</span> <span class="nav-text">3. 下载验证</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#3-1-%E8%AF%BB%E5%8F%96%E8%AE%BE%E5%A4%87ID%EF%BC%8C%E5%8E%82%E5%95%86%E5%8F%B7%EF%BC%8C%E8%AE%BE%E5%A4%87%E7%B1%BB%E5%9E%8B%E5%AE%B9%E9%87%8F"><span class="nav-number">4.1.</span> <span class="nav-text">3.1 读取设备ID，厂商号，设备类型容量</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#3-2-%E6%95%B0%E6%8D%AE%E5%86%99%E5%85%A5%E6%B5%8B%E8%AF%95"><span class="nav-number">4.2.</span> <span class="nav-text">3.2 数据写入测试</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

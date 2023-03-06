@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. 前言在上一篇博客当中，已经实现了星座图的映射，得到了在频域上的点。在经过64QAM调制之后，接下来要做的就是将频域的信号，转换到时域，因为最终在信道中传输的信号都是实际存在的信号。为了能够消除传输过程当中的符号间干扰，在IFFT处理完毕之后还要加上循环前缀。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OFDM_802.11a学习----IFFT和添加循环前缀">
+<meta property="og:url" content="https://black-pigeon.github.io/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="1. 前言在上一篇博客当中，已经实现了星座图的映射，得到了在频域上的点。在经过64QAM调制之后，接下来要做的就是将频域的信号，转换到时域，因为最终在信道中传输的信号都是实际存在的信号。为了能够消除传输过程当中的符号间干扰，在IFFT处理完毕之后还要加上循环前缀。">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/802.11a时序参数1.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/802.11a时序参数2.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/IFFT_IP.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/IFFT与OFDM映射.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/模块设计.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/ifft_add_cyclic_prefix.svg">
+<meta property="article:published_time" content="2022-05-06T03:08:17.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.801Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="SDR">
+<meta property="article:tag" content="FPGA">
+<meta property="article:tag" content="ZYNQ">
+<meta property="article:tag" content="OFDM">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/802.11a时序参数1.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>OFDM_802.11a学习----IFFT和添加循环前缀 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          OFDM_802.11a学习----IFFT和添加循环前缀
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-05-06 11:08:17" itemprop="dateCreated datePublished" datetime="2022-05-06T11:08:17+08:00">2022-05-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/OFDM/" itemprop="url" rel="index"><span itemprop="name">OFDM</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/" class="post-meta-item leancloud_visitors" data-flag-title="OFDM_802.11a学习----IFFT和添加循环前缀" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>在上一篇博客当中，已经实现了星座图的映射，得到了在频域上的点。在经过64QAM调制之后，接下来要做的就是将频域的信号，转换到时域，因为最终在信道中传输的信号都是实际存在的信号。<br>为了能够消除传输过程当中的符号间干扰，在IFFT处理完毕之后还要加上循环前缀。</p>
+<span id="more"></span>
+<h1 id="2-IFFT"><a href="#2-IFFT" class="headerlink" title="2. IFFT"></a>2. IFFT</h1><p>因为在一开始选择调制模式的时候，OFDM的调制模式为64QAM，速率为54Mb/s，带宽为20MHz，因此可以得到相关的时序参数如下：<br><img src="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/802.11a时序参数1.png" alt="时序参数"><br><img src="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/802.11a时序参数2.png" alt="时序参数"><br>可以看到一个OFDM的符号的有效数据周期是3.2us，一个OFDM的符号周期是4us。假设采样率是20M，那么该采样率下的采样周期是50ns，因此一个OFDM符号的有效周期需要64个采样点。假设采样率是40M，那么在之后可以通过抽取的方式来进行下采样到20M，因此在采样率为40M的时候，需要IFFT的长度为128点，这样一个符号的长度才能满足3.2us的要求。</p>
+<p>在实际使用的时候IFFT的处理是使用xilinx的IP来实现的，因此需要知道这个IP的工作方式，对于该IP，以一个128点的IFFT IP来举例。其IP的第一个输入是0频的值，1~64是正频率，65~127是负频率。以OFDM的子载波为例子，来使用IFFT的话，其零频对应IFFT的第一个输入，而子载波1~26，分别对应IFFT的1~26，子载波-26~-1对应102~127端口。<br>IFFT IP的其他位置补零即可。</p>
+<p><img src="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/IFFT_IP.png" alt="IFFT_IP"></p>
+<p><img src="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/IFFT与OFDM映射.png" alt="IFFT与OFDM映射"></p>
+<h1 id="3-添加循环前缀"><a href="#3-添加循环前缀" class="headerlink" title="3. 添加循环前缀"></a>3. 添加循环前缀</h1><p>在经过IFFT处理之后，我们能够得到时域采样点，为了能够消除符号间的干扰，需要对数据进行循环前缀的添加。在实际的处理过程当中，只需要将一个OFDM符号的末尾的时域波形进行复制然后添加到符号的有效数据之前即可。<br>由OFDM的符号长度可以知道，一个OFDM的保护间隔为0.8us，因此只需要将一个OFDM符号有效数据的末尾的1/4进行复制即可完成循环前缀的添加。</p>
+<h1 id="4-模块的实现"><a href="#4-模块的实现" class="headerlink" title="4. 模块的实现"></a>4. 模块的实现</h1><p>在了解了基本的原理之后，就可以着手进行该模块的设计了，在前面一个模块当中，我们可以直到，映射完成之后的结果是按照通道-26到26依次传输出来，并且不包含零频。而传入到IFFT的模块的信号需要按照先传输正频率部分的频点，然后传输负频率的频点。因此需要对-26到-1的子载波的频点进行缓存。<br>当IIFT处理到第102~127，再依次将数据负频率的频点依次从FIFO中取出来。<br>当IFFT处理完128点之后，会将时域采样点输出，为了能够将OFDM符号末尾的时域点进行复制作为循环前缀，因此需要将处理完成之后的数据进行缓存，当循环前缀输出完毕之后，再从FIFO当中把OFDM符号的时域点依次取出。</p>
+<p><img src="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/模块设计.png" alt="模块设计"></p>
+<p>该模块的时需设计如下：<br><img src="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-IFFT%E5%92%8C%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80/ifft_add_cyclic_prefix.svg" alt="模块设计"></p>
+<p>该部分代码如下：<br><figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br><span class="line">278</span><br><span class="line">279</span><br><span class="line">280</span><br><span class="line">281</span><br><span class="line">282</span><br><span class="line">283</span><br><span class="line">284</span><br><span class="line">285</span><br><span class="line">286</span><br><span class="line">287</span><br><span class="line">288</span><br><span class="line">289</span><br><span class="line">290</span><br><span class="line">291</span><br><span class="line">292</span><br><span class="line">293</span><br><span class="line">294</span><br><span class="line">295</span><br><span class="line">296</span><br><span class="line">297</span><br><span class="line">298</span><br><span class="line">299</span><br><span class="line">300</span><br><span class="line">301</span><br><span class="line">302</span><br><span class="line">303</span><br><span class="line">304</span><br><span class="line">305</span><br><span class="line">306</span><br><span class="line">307</span><br><span class="line">308</span><br><span class="line">309</span><br><span class="line">310</span><br><span class="line">311</span><br><span class="line">312</span><br><span class="line">313</span><br><span class="line">314</span><br><span class="line">315</span><br><span class="line">316</span><br><span class="line">317</span><br><span class="line">318</span><br><span class="line">319</span><br><span class="line">320</span><br><span class="line">321</span><br><span class="line">322</span><br><span class="line">323</span><br><span class="line">324</span><br><span class="line">325</span><br><span class="line">326</span><br><span class="line">327</span><br><span class="line">328</span><br><span class="line">329</span><br><span class="line">330</span><br><span class="line">331</span><br><span class="line">332</span><br><span class="line">333</span><br><span class="line">334</span><br><span class="line">335</span><br><span class="line">336</span><br><span class="line">337</span><br><span class="line">338</span><br><span class="line">339</span><br><span class="line">340</span><br><span class="line">341</span><br><span class="line">342</span><br><span class="line">343</span><br><span class="line">344</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">`<span class="meta-keyword">timescale</span> 1ns / 1ps</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">module</span> tx_freqd_to_timed(</span><br><span class="line">	<span class="keyword">input</span>	<span class="keyword">wire</span> 			clk_Modulation					,</span><br><span class="line">	<span class="keyword">input</span>	<span class="keyword">wire</span> 			reset							,</span><br><span class="line">	<span class="keyword">input</span>	<span class="keyword">wire</span> 	[<span class="number">15</span>:<span class="number">0</span>]	n_ofdm_syms						,</span><br><span class="line">	<span class="keyword">input</span>	<span class="keyword">wire</span> 			tx_freqd_to_timed_valid			,</span><br><span class="line">	<span class="keyword">input</span>	<span class="keyword">wire</span> 	[<span class="number">31</span>:<span class="number">0</span>]	tx_freqd_to_timed_re			,</span><br><span class="line">	<span class="keyword">input</span>	<span class="keyword">wire</span> 	[<span class="number">31</span>:<span class="number">0</span>]	tx_freqd_to_timed_im			,</span><br><span class="line">	<span class="keyword">output</span> 	<span class="keyword">reg</span> 			tx_freq_to_timed_cycle_flag		,</span><br><span class="line">	<span class="keyword">output</span> 	<span class="keyword">reg</span> 			tx_add_cyclic_prefix_valid		,</span><br><span class="line">	<span class="keyword">output</span> 	<span class="keyword">reg</span> 			tx_add_cyclic_prefix_end		,</span><br><span class="line">	<span class="keyword">output</span> 	<span class="keyword">reg</span> 	[<span class="number">15</span>:<span class="number">0</span>]	tx_add_cyclic_prefix_re			,</span><br><span class="line">	<span class="keyword">output</span> 	<span class="keyword">reg</span> 	[<span class="number">15</span>:<span class="number">0</span>]	tx_add_cyclic_prefix_im</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">	<span class="keyword">reg</span>  [<span class="number">7</span>:<span class="number">0</span>]	cnt_data_in 		; <span class="comment">// counter for how many datas go into this module</span></span><br><span class="line">	<span class="keyword">reg</span>  		ifft_in_tvalid		; <span class="comment">// data go into ifft valid </span></span><br><span class="line">	<span class="keyword">reg</span>  [<span class="number">7</span>:<span class="number">0</span>]	cnt_ifft_in_data 	; <span class="comment">// counter for how many datas send to ifft</span></span><br><span class="line">	<span class="keyword">reg</span>  [<span class="number">7</span>:<span class="number">0</span>]	cnt_ifft_out_data 	; <span class="comment">// counter for how many datas from ifft output</span></span><br><span class="line">	<span class="keyword">reg</span>  [<span class="number">7</span>:<span class="number">0</span>]	cnt_cp_data  		; <span class="comment">// counter for add cyclic prefix</span></span><br><span class="line">	<span class="keyword">reg</span>  [<span class="number">15</span>:<span class="number">0</span>]	cnt_ofdm_symbol 	; <span class="comment">// counter for ofdm symbol</span></span><br><span class="line">	<span class="keyword">wire</span>  		ifft_in_tlast 		; <span class="comment">// last beat of ifft input data</span></span><br><span class="line">	<span class="keyword">reg</span> [<span class="number">63</span>:<span class="number">0</span>]	ifft_in_tdata 		; <span class="comment">// bit [63:32] the imaginary part, bit [31:0] real part</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">wire</span> [<span class="number">79</span>:<span class="number">0</span>] ifft_out_tdata		; <span class="comment">// ifft output data bit[79:40] imaginary part, bit[39:0] real part</span></span><br><span class="line">	<span class="keyword">wire</span> [<span class="number">7</span>:<span class="number">0</span>] 	ifft_out_tuser		; <span class="comment">// indicate the index of the ifft output</span></span><br><span class="line">	<span class="keyword">wire</span> 		ifft_out_tvalid 	; <span class="comment">// ifft output data valid</span></span><br><span class="line">	<span class="keyword">wire</span>  		ifft_out_tlast 		; <span class="comment">// last beat of ifft output</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">reg</span> [<span class="number">15</span>:<span class="number">0</span>] ifft_out_re  		; <span class="comment">// ifft real part after truncation</span></span><br><span class="line">	<span class="keyword">reg</span> [<span class="number">15</span>:<span class="number">0</span>] ifft_out_im  		; <span class="comment">// ifft imaginary part after truncation</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">wire</span> [<span class="number">63</span>:<span class="number">0</span>] wr_data_fifo_din	; <span class="comment">// bit [63:32] the imaginary part, bit [31:0] real part</span></span><br><span class="line">	<span class="keyword">reg</span> 		wr_data_fifo_en		;</span><br><span class="line">	<span class="keyword">reg</span> 		rd_data_fifo_en		;</span><br><span class="line">	<span class="keyword">wire</span> [<span class="number">63</span>:<span class="number">0</span>] rd_data_fifo_dout	; <span class="comment">// bit [63:32] the imaginary part, bit [31:0] real part</span></span><br><span class="line">	<span class="keyword">wire</span>   		data_fifo_full		;</span><br><span class="line">	<span class="keyword">wire</span>   		data_fifo_empty		;</span><br><span class="line"></span><br><span class="line">	<span class="keyword">wire</span> [<span class="number">31</span>:<span class="number">0</span>] wr_cp_fifo_din		; <span class="comment">// after truncation data, bit[31:16] imaginary part, bit [15:0] real part</span></span><br><span class="line">	<span class="keyword">wire</span>  		wr_cp_fifo_en		;</span><br><span class="line">	<span class="keyword">reg</span>  		rd_cp_fifo_en		;</span><br><span class="line">	<span class="keyword">wire</span> [<span class="number">31</span>:<span class="number">0</span>] rd_cp_fifo_dout		;</span><br><span class="line">	<span class="keyword">wire</span>  		cp_fifo_full		;</span><br><span class="line">	<span class="keyword">wire</span>  		cp_fifo_empty		;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------wr_data_fifo_en------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(*) <span class="keyword">begin</span></span><br><span class="line">		<span class="comment">// buffer the -26 ~ -1 channel data for ofdm symbol</span></span><br><span class="line">		<span class="keyword">if</span>(tx_freqd_to_timed_valid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_data_in &lt; <span class="number">26</span>)<span class="keyword">begin</span></span><br><span class="line">			wr_data_fifo_en = <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			wr_data_fifo_en = <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">assign</span> wr_data_fifo_din = &#123;tx_freqd_to_timed_im, tx_freqd_to_timed_re&#125;;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------cnt_data_in------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_data_in &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (tx_freqd_to_timed_valid) <span class="keyword">begin</span></span><br><span class="line">			cnt_data_in &lt;= cnt_data_in + <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			cnt_data_in &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------ifft_in_valid------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			ifft_in_tvalid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (ifft_in_tvalid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_ifft_in_data == <span class="number">&#x27;d127</span>) <span class="keyword">begin</span></span><br><span class="line">			ifft_in_tvalid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (tx_freqd_to_timed_valid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_data_in == <span class="number">&#x27;d25</span>) <span class="keyword">begin</span></span><br><span class="line">			ifft_in_tvalid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------cnt_ifft_in_data------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_ifft_in_data &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (ifft_in_tvalid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_ifft_in_data == <span class="number">&#x27;d127</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_ifft_in_data &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (ifft_in_tvalid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_ifft_in_data &lt;= cnt_ifft_in_data + <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------rd_data_fifo_en------------------</span></span><br><span class="line">	<span class="comment">// read out the buffered channel -26 ~ -1 ofdm data,</span></span><br><span class="line">	<span class="comment">// put it into the ifft 101 ~ 127 point </span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			rd_data_fifo_en &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (ifft_in_tvalid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_ifft_in_data == <span class="number">&#x27;d126</span>) <span class="keyword">begin</span></span><br><span class="line">			rd_data_fifo_en &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (ifft_in_tvalid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_ifft_in_data == <span class="number">&#x27;d100</span>) <span class="keyword">begin</span></span><br><span class="line">			rd_data_fifo_en &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------ifft_in_tdata------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			ifft_in_tdata &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="comment">//channel 1~26</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (ifft_in_tvalid == <span class="number">1&#x27;b1</span> &amp;&amp; tx_freqd_to_timed_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			ifft_in_tdata &lt;= &#123;tx_freqd_to_timed_im, tx_freqd_to_timed_re&#125;;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="comment">// channel -26 ~ -1</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (ifft_in_tvalid == <span class="number">1&#x27;b1</span> &amp;&amp; rd_data_fifo_en == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			ifft_in_tdata &lt;= rd_data_fifo_dout;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="comment">//channel 0 is DC, other unused channel set to zero</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			ifft_in_tdata &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------ifft_in_tlast------------------</span></span><br><span class="line">	<span class="keyword">assign</span> ifft_in_tlast = cnt_ifft_in_data == <span class="number">&#x27;d127</span>;</span><br><span class="line"></span><br><span class="line">	fifo_generator_tx_freqd_to_timed u_fifo_generator_tx_freqd_to_timed (</span><br><span class="line">		<span class="variable">.clk</span>(clk_Modulation),      <span class="comment">// input wire clk</span></span><br><span class="line">		<span class="variable">.srst</span>(reset),    <span class="comment">// input wire srst</span></span><br><span class="line">		<span class="variable">.din</span>(wr_data_fifo_din),      <span class="comment">// input wire [63 : 0] din</span></span><br><span class="line">		<span class="variable">.wr_en</span>(wr_data_fifo_en),  <span class="comment">// input wire wr_en</span></span><br><span class="line">		<span class="variable">.rd_en</span>(rd_data_fifo_en),  <span class="comment">// input wire rd_en</span></span><br><span class="line">		<span class="variable">.dout</span>(rd_data_fifo_dout),    <span class="comment">// output wire [63 : 0] dout</span></span><br><span class="line">		<span class="variable">.full</span>(data_fifo_full),    <span class="comment">// output wire full</span></span><br><span class="line">		<span class="variable">.empty</span>(data_fifo_empty)  <span class="comment">// output wire empty</span></span><br><span class="line">	);</span><br><span class="line"></span><br><span class="line">	xfft_tx_freqd_to_timed u_xfft_tx_freqd_to_timed (</span><br><span class="line">		<span class="variable">.aclk</span>(clk_Modulation),                                                <span class="comment">// input wire aclk</span></span><br><span class="line">		<span class="variable">.s_axis_config_tdata</span>(<span class="number">8&#x27;d0</span>),                  <span class="comment">// input wire [7 : 0] s_axis_config_tdata</span></span><br><span class="line">		<span class="variable">.s_axis_config_tvalid</span>(<span class="number">1&#x27;b1</span>),                <span class="comment">// input wire s_axis_config_tvalid</span></span><br><span class="line">		<span class="variable">.s_axis_config_tready</span>(),                <span class="comment">// output wire s_axis_config_tready</span></span><br><span class="line">		<span class="variable">.s_axis_data_tdata</span>(ifft_in_tdata),                      <span class="comment">// input wire [63 : 0] s_axis_data_tdata</span></span><br><span class="line">		<span class="variable">.s_axis_data_tvalid</span>(ifft_in_tvalid),                    <span class="comment">// input wire s_axis_data_tvalid</span></span><br><span class="line">		<span class="variable">.s_axis_data_tready</span>(),                    <span class="comment">// output wire s_axis_data_tready</span></span><br><span class="line">		<span class="variable">.s_axis_data_tlast</span>(ifft_in_tlast),                      <span class="comment">// input wire s_axis_data_tlast</span></span><br><span class="line">		<span class="variable">.m_axis_data_tdata</span>(ifft_out_tdata),                      <span class="comment">// output wire [79 : 0] m_axis_data_tdata</span></span><br><span class="line">		<span class="variable">.m_axis_data_tuser</span>(ifft_out_tuser),                      <span class="comment">// output wire [7 : 0] m_axis_data_tuser</span></span><br><span class="line">		<span class="variable">.m_axis_data_tvalid</span>(ifft_out_tvalid),                    <span class="comment">// output wire m_axis_data_tvalid</span></span><br><span class="line">		<span class="variable">.m_axis_data_tready</span>(<span class="number">1&#x27;b1</span>),                    <span class="comment">// input wire m_axis_data_tready</span></span><br><span class="line">		<span class="variable">.m_axis_data_tlast</span>(ifft_out_tlast),                      <span class="comment">// output wire m_axis_data_tlast</span></span><br><span class="line">		<span class="variable">.event_frame_started</span>(),                 <span class="comment">// output wire event_frame_started</span></span><br><span class="line">		<span class="variable">.event_tlast_unexpected</span>(),            	<span class="comment">// output wire event_tlast_unexpected</span></span><br><span class="line">		<span class="variable">.event_tlast_missing</span>(),                 <span class="comment">// output wire event_tlast_missing</span></span><br><span class="line">		<span class="variable">.event_status_channel_halt</span>(),      		<span class="comment">// output wire event_status_channel_halt</span></span><br><span class="line">		<span class="variable">.event_data_in_channel_halt</span>(),    		<span class="comment">// output wire event_data_in_channel_halt</span></span><br><span class="line">		<span class="variable">.event_data_out_channel_halt</span>()  		<span class="comment">// output wire event_data_out_channel_halt</span></span><br><span class="line">	);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">	fifo_generator_tx_add_cyclic_prefix u_fifo_generator_tx_add_cyclic_prefix (</span><br><span class="line">		<span class="variable">.clk</span>(clk_Modulation),      <span class="comment">// input wire clk</span></span><br><span class="line">		<span class="variable">.srst</span>(reset),    <span class="comment">// input wire srst</span></span><br><span class="line">		<span class="variable">.din</span>(wr_cp_fifo_din),      <span class="comment">// input wire [31 : 0] din</span></span><br><span class="line">		<span class="variable">.wr_en</span>(wr_cp_fifo_en),  <span class="comment">// input wire wr_en</span></span><br><span class="line">		<span class="variable">.rd_en</span>(rd_cp_fifo_en),  <span class="comment">// input wire rd_en</span></span><br><span class="line">		<span class="variable">.dout</span>(rd_cp_fifo_dout),    <span class="comment">// output wire [31 : 0] dout</span></span><br><span class="line">		<span class="variable">.full</span>(cp_fifo_full),    <span class="comment">// output wire full</span></span><br><span class="line">		<span class="variable">.empty</span>(cp_fifo_empty)  <span class="comment">// output wire empty</span></span><br><span class="line">	);</span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------ifft_out_re/im------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(*) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span>(ifft_out_tvalid == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">			<span class="comment">// the highest 3 bits is the same, there is no overflow</span></span><br><span class="line">			<span class="keyword">if</span> (ifft_out_tdata[<span class="number">79</span>:<span class="number">77</span>] == <span class="number">3&#x27;b111</span> || ifft_out_tdata[<span class="number">79</span>:<span class="number">77</span>] == <span class="number">3&#x27;b000</span>) <span class="keyword">begin</span></span><br><span class="line">				ifft_out_im &lt;= ifft_out_tdata[<span class="number">77</span>:<span class="number">62</span>];</span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">			<span class="comment">// the highest 3bits is not the same and the data is negative</span></span><br><span class="line">			<span class="keyword">else</span> <span class="keyword">if</span> (ifft_out_tdata[<span class="number">79</span>] == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">				ifft_out_im &lt;= <span class="number">16&#x27;h8000</span>;</span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">			<span class="comment">// the highest 3 bits is not the same and the data is positive</span></span><br><span class="line">			<span class="keyword">else</span> <span class="keyword">if</span> (ifft_out_tdata[<span class="number">79</span>] == <span class="number">1&#x27;b0</span>) <span class="keyword">begin</span></span><br><span class="line">				ifft_out_im &lt;= <span class="number">16&#x27;h7FFF</span>;</span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">			<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">				ifft_out_im &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			ifft_out_im &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">always</span> @(*) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span>(ifft_out_tvalid == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">			<span class="comment">// the highest 3 bits is the same, there is no overflow</span></span><br><span class="line">			<span class="keyword">if</span> (ifft_out_tdata[<span class="number">39</span>:<span class="number">37</span>] == <span class="number">3&#x27;b111</span> || ifft_out_tdata[<span class="number">39</span>:<span class="number">37</span>] == <span class="number">3&#x27;b000</span>) <span class="keyword">begin</span></span><br><span class="line">				ifft_out_re &lt;= ifft_out_tdata[<span class="number">37</span>:<span class="number">22</span>];</span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">			<span class="comment">// the highest 3bits is not the same and the data is negative</span></span><br><span class="line">			<span class="keyword">else</span> <span class="keyword">if</span> (ifft_out_tdata[<span class="number">39</span>] == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">				ifft_out_re &lt;= <span class="number">16&#x27;h8000</span>;</span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">			<span class="comment">// the highest 3 bits is not the same and the data is positive</span></span><br><span class="line">			<span class="keyword">else</span> <span class="keyword">if</span> (ifft_out_tdata[<span class="number">39</span>] == <span class="number">1&#x27;b0</span>) <span class="keyword">begin</span></span><br><span class="line">				ifft_out_re &lt;= <span class="number">16&#x27;h7FFF</span>;</span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">			<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">				ifft_out_re &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			ifft_out_re &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">assign</span> wr_cp_fifo_din = &#123;ifft_out_im, ifft_out_re&#125;;</span><br><span class="line">	<span class="keyword">assign</span> wr_cp_fifo_en = ifft_out_tvalid;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------cnt_ifft_out_data------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_ifft_out_data &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (ifft_out_tvalid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_ifft_out_data == <span class="number">&#x27;d127</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_ifft_out_data &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (ifft_out_tvalid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_ifft_out_data &lt;= cnt_ifft_out_data + <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------tx_freq_to_timed_cycle_flag------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			tx_freq_to_timed_cycle_flag &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(ifft_out_tvalid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_ifft_out_data == <span class="number">&#x27;d127</span>)<span class="keyword">begin</span></span><br><span class="line">			tx_freq_to_timed_cycle_flag &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			tx_freq_to_timed_cycle_flag &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------tx_add_cyclic_prefix_valid------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			tx_add_cyclic_prefix_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (tx_add_cyclic_prefix_valid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_cp_data == <span class="number">&#x27;d159</span>) <span class="keyword">begin</span></span><br><span class="line">			tx_add_cyclic_prefix_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (cnt_ifft_out_data == <span class="number">&#x27;d95</span>) <span class="keyword">begin</span></span><br><span class="line">			tx_add_cyclic_prefix_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------cnt_cp_data------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_cp_data &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (tx_add_cyclic_prefix_valid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_cp_data == <span class="number">&#x27;d159</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_cp_data &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (tx_add_cyclic_prefix_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_cp_data &lt;= cnt_cp_data + <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------rd_cp_fifo_en------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			rd_cp_fifo_en &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (tx_add_cyclic_prefix_valid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_cp_data == <span class="number">&#x27;d159</span>) <span class="keyword">begin</span></span><br><span class="line">			rd_cp_fifo_en &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (tx_add_cyclic_prefix_valid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_cp_data == <span class="number">&#x27;d31</span>) <span class="keyword">begin</span></span><br><span class="line">			rd_cp_fifo_en &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="keyword">always</span> @(*) <span class="keyword">begin</span></span><br><span class="line">		<span class="comment">// add the tail part of one symbol</span></span><br><span class="line">		<span class="keyword">if</span> (tx_add_cyclic_prefix_valid == <span class="number">1&#x27;b1</span> &amp;&amp; ifft_out_tvalid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			tx_add_cyclic_prefix_re &lt;= ifft_out_re;</span><br><span class="line">			tx_add_cyclic_prefix_im &lt;= ifft_out_im;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (rd_cp_fifo_en == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			tx_add_cyclic_prefix_re &lt;= rd_cp_fifo_dout[<span class="number">15</span>:<span class="number">0</span>];</span><br><span class="line">			tx_add_cyclic_prefix_im &lt;= rd_cp_fifo_dout[<span class="number">31</span>:<span class="number">16</span>];</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			tx_add_cyclic_prefix_re &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">			tx_add_cyclic_prefix_im &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------cnt_ofdm_symbol------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_ofdm_symbol &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (tx_add_cyclic_prefix_valid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_cp_data == <span class="number">&#x27;d159</span> &amp;&amp; cnt_ofdm_symbol == n_ofdm_syms-<span class="number">1</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_ofdm_symbol &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (tx_add_cyclic_prefix_valid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_cp_data == <span class="number">&#x27;d159</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_ofdm_symbol &lt;= cnt_ofdm_symbol + <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line">	<span class="comment">//----------------tx_add_cyclic_prefix_end------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			tx_add_cyclic_prefix_end &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (tx_add_cyclic_prefix_valid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_cp_data == <span class="number">&#x27;d159</span> &amp;&amp; cnt_ofdm_symbol == n_ofdm_syms-<span class="number">1</span>) <span class="keyword">begin</span></span><br><span class="line">			tx_add_cyclic_prefix_end &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			tx_add_cyclic_prefix_end &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">endmodule</span></span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/SDR/" rel="tag"># SDR</a>
+              <a href="/tags/FPGA/" rel="tag"># FPGA</a>
+              <a href="/tags/ZYNQ/" rel="tag"># ZYNQ</a>
+              <a href="/tags/OFDM/" rel="tag"># OFDM</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/05/05/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%98%9F%E5%BA%A7%E5%9B%BE%E6%98%A0%E5%B0%84/" rel="prev" title="OFDM_802.11a学习----星座图映射与循环前缀">
+      <i class="fa fa-chevron-left"></i> OFDM_802.11a学习----星座图映射与循环前缀
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-Signal%E5%9F%9F%E6%95%B0%E6%8D%AE%E5%B8%A7/" rel="next" title="OFDM_802.11a学习----Signal域数据帧">
+      OFDM_802.11a学习----Signal域数据帧 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">1. 前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-IFFT"><span class="nav-number">2.</span> <span class="nav-text">2. IFFT</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-%E6%B7%BB%E5%8A%A0%E5%BE%AA%E7%8E%AF%E5%89%8D%E7%BC%80"><span class="nav-number">3.</span> <span class="nav-text">3. 添加循环前缀</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4-%E6%A8%A1%E5%9D%97%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="nav-number">4.</span> <span class="nav-text">4. 模块的实现</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

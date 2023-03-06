@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. 内核模块的基本概念在前面的博客当中记录了如何在ZYNQ上移植Linux，移植好Linux之后，就可以来学一学怎么进行嵌入式的开发了。这种比较传统的linux的学习方式的通用性应该比使用petalinux要好多了。  宏内核：关键功能和服务功能均在内核空间提供 运行效率高 扩展性较差   微内核：内核空间只提供关键功能，服务功能在用户空间提供 运行效率较低 安全性、扩展性较高">
+<meta property="og:type" content="article">
+<meta property="og:title" content="ZYNQ Linux(1)--内核模块">
+<meta property="og:url" content="https://black-pigeon.github.io/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="1. 内核模块的基本概念在前面的博客当中记录了如何在ZYNQ上移植Linux，移植好Linux之后，就可以来学一学怎么进行嵌入式的开发了。这种比较传统的linux的学习方式的通用性应该比使用petalinux要好多了。  宏内核：关键功能和服务功能均在内核空间提供 运行效率高 扩展性较差   微内核：内核空间只提供关键功能，服务功能在用户空间提供 运行效率较低 安全性、扩展性较高">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/kernel_module.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/module.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/编译内核模块.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/内核模块的加载和卸载.png">
+<meta property="article:published_time" content="2021-06-29T13:46:51.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.781Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="Linux">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/kernel_module.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>ZYNQ Linux(1)--内核模块 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          ZYNQ Linux(1)--内核模块
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-06-29 21:46:51" itemprop="dateCreated datePublished" datetime="2021-06-29T21:46:51+08:00">2021-06-29</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/" class="post-meta-item leancloud_visitors" data-flag-title="ZYNQ Linux(1)--内核模块" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="1-内核模块的基本概念"><a href="#1-内核模块的基本概念" class="headerlink" title="1. 内核模块的基本概念"></a>1. 内核模块的基本概念</h2><p>在前面的博客当中记录了如何在ZYNQ上移植Linux，移植好Linux之后，就可以来学一学怎么进行嵌入式的开发了。这种比较传统的linux的学习方式的通用性应该比使用petalinux要好多了。</p>
+<ul>
+<li>宏内核：关键功能和服务功能均在内核空间提供<ul>
+<li>运行效率高</li>
+<li>扩展性较差</li>
+</ul>
+</li>
+<li>微内核：内核空间只提供关键功能，服务功能在用户空间提供<ul>
+<li>运行效率较低</li>
+<li>安全性、扩展性较高</li>
+</ul>
+</li>
+</ul>
+<p><img src="/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/kernel_module.png" alt="内核模块"><br><span id="more"></span><br>内核模块编译完成之后将会得到一个后缀名为.ko的文件，该文件能够在linux系统上被加载，从而扩展内核的功能。</p>
+<h3 id="1-1-内核模块加载-卸载"><a href="#1-1-内核模块加载-卸载" class="headerlink" title="1.1 内核模块加载/卸载"></a>1.1 内核模块加载/卸载</h3><ul>
+<li>使用insmod命令加载</li>
+<li>使用rmmod命令卸载<br>在linux系统上使用这两个命令就能够完成内核模块的加载和卸载了。<h3 id="1-2-内核模块源码的基本结构"><a href="#1-2-内核模块源码的基本结构" class="headerlink" title="1.2 内核模块源码的基本结构"></a>1.2 内核模块源码的基本结构</h3><h4 id="内核模块入口-出口"><a href="#内核模块入口-出口" class="headerlink" title="内核模块入口/出口"></a>内核模块入口/出口</h4>在设计内核模块的时候，在内核模块当中会有一个入口函数和一个推出函数，这两个函数分别为：</li>
+<li>module_init()：加载模块式该函数自动执行，进行初始化操作</li>
+<li>module_exit()：卸载模块时函数自动执行，进行清理操作<br>在加载和卸载内核模块的时候，会通过这个内核模块的入口和出口自动地进行初始化和推出清理操作。<h4 id="内核模块信息声明"><a href="#内核模块信息声明" class="headerlink" title="内核模块信息声明"></a>内核模块信息声明</h4>一个内核模块的源文件除了函数的入口和出口外，还有一些模块的声明信息。</li>
+<li>MODULE_LICENSE()：表示模块代码接受的软件许可协议，Linux内核遵循GPL V2开源协议，内核模块与linux内核保持一致即可。</li>
+<li>MODULE_AUTHOR()：描述模块的作者信息</li>
+<li>MODULE_DESCRIPTION()：对模块的简单介绍</li>
+<li>MODULE_ALIAS()：给模块设置一个别名</li>
+</ul>
+<h2 id="2-基础的内核模块”Hello-world”"><a href="#2-基础的内核模块”Hello-world”" class="headerlink" title="2. 基础的内核模块”Hello world”"></a>2. 基础的内核模块”Hello world”</h2><p>在学习内核模块之前，先从一个最基础的内核模块开始。遵循前面的内核模块的基本的概念，可以设计一个基础的内核模块，其源码如下：<br><figure class="highlight c"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/module.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/init.h&gt;</span></span></span><br><span class="line"><span class="meta">#<span class="meta-keyword">include</span> <span class="meta-string">&lt;linux/kernel.h&gt;</span></span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">int</span> __init <span class="title">hello_init</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"> </span>&#123;</span><br><span class="line">    printk(KERN_EMERG <span class="string">&quot;[ KERN_EMERG ]  Hello  Module Init\n&quot;</span>);</span><br><span class="line">    printk(KERN_EMERG <span class="string">&quot;[ KERN_EMERG ]  Hello  Module Init\n&quot;</span>);</span><br><span class="line">    <span class="keyword">return</span> <span class="number">0</span>;</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">static</span> <span class="keyword">void</span> __exit <span class="title">hello_exit</span><span class="params">(<span class="keyword">void</span>)</span></span></span><br><span class="line"><span class="function"></span>&#123;</span><br><span class="line">    printk(KERN_EMERG <span class="string">&quot;[ KERN_EMERG ]   Hello  Module Exit\n&quot;</span>);</span><br><span class="line">&#125;</span><br><span class="line"></span><br><span class="line">module_init(hello_init);</span><br><span class="line">module_exit(hello_exit);</span><br><span class="line"></span><br><span class="line">MODULE_LICENSE(<span class="string">&quot;GPL2&quot;</span>);</span><br><span class="line">MODULE_AUTHOR(<span class="string">&quot;wcc &quot;</span>);</span><br><span class="line">MODULE_DESCRIPTION(<span class="string">&quot;hello world module&quot;</span>);</span><br><span class="line">MODULE_ALIAS(<span class="string">&quot;test_module&quot;</span>);</span><br></pre></td></tr></table></figure><br>可以看到这个内核模块的源码还是比较简单的，首先从内核模块的入口开始，可以看到在module_init()和module_exit()函数当中有一个初始化函数和推出函数，在内核模块进行初始化和退出的时候将会执行这两个函数。</p>
+<p>在函数<code>hello_init()</code>和函数<code>hello_exit()</code>当中使用了<code>printk()</code>函数，该函数实现的功能和<code>printf()</code>类似，但是这是内核空间当中能够用来提供打印信息的的函数，<code>printf()</code>不能作用于内核空间。<br>使用<code>printk()</code>函数的时候，需要指定打印信息的等级。数字越低，打印的优先级也就越高。</p>
+<pre><code>#define KERN_EMERG     &quot;&lt;0&gt;&quot; 通常是系统崩溃前的信息
+#define KERN_ALERT          &quot;&lt;1&gt;&quot; 需要立即处理的消息
+#define KERN_CRIT             &quot;&lt;2&gt;&quot; 严重情况
+#define KERN_ERR              &quot;&lt;3&gt;&quot; 错误情况
+#define KERN_WARNING   &quot;&lt;4&gt;&quot; 有问题的情况
+#define KERN_NOTICE       &quot;&lt;5&gt;&quot; 注意信息
+#define KERN_INFO            &quot;&lt;6&gt;&quot; 普通消息
+#define KERN_DEBUG        &quot;&lt;7&gt;&quot; 调试信息
+</code></pre><p>可以使用<code>cat /proc/sys/kernel/printk</code>来查看当前终端当中的控制台的打印等级。消息级别低于当前控制台打印等级的将不会被打印。</p>
+<h2 id="3-编译内核模块"><a href="#3-编译内核模块" class="headerlink" title="3. 编译内核模块"></a>3. 编译内核模块</h2><p>有了内核模块的源码了，接下来就可以编译内核模块了。可以使用一个Makefile来编译这个内核模块，Makefile的内容如下：<br><figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line">KERNEL_DIR=/home/wcc/Desktop/zynq_linux/linux-xlnx</span><br><span class="line"></span><br><span class="line">ARCH=arm</span><br><span class="line">CROSS_COMPILE=arm-linux-gnueabihf-</span><br><span class="line"><span class="keyword">export</span>  ARCH  CROSS_COMPILE</span><br><span class="line"></span><br><span class="line">obj-m := hellomodule.o</span><br><span class="line"><span class="section">all:</span></span><br><span class="line">	<span class="variable">$(MAKE)</span> -C <span class="variable">$(KERNEL_DIR)</span> M=<span class="variable">$(CURDIR)</span> modules</span><br><span class="line"></span><br><span class="line"><span class="section">.PHONE:clean copy</span></span><br><span class="line"></span><br><span class="line"><span class="section">clean:</span></span><br><span class="line">	<span class="variable">$(MAKE)</span> -C <span class="variable">$(KERNEL_DIR)</span> M=<span class="variable">$(CURDIR)</span> clean	</span><br><span class="line"></span><br><span class="line"><span class="section">copy:</span></span><br><span class="line">	sudo  cp  *.ko  /home/wcc/Desktop/nfs</span><br></pre></td></tr></table></figure><br>首先KERNEL_DIR指定内核源码所在的目录，之所以指定这个目录是因为在编译内核模块的时候，需要使用到内核源码下的Makefile工具。<br><img src="/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/module.png" alt="内核模块"><br>然后制定了目标期间的架构和交叉编译工具，这个就是ZYNQ使用的就行了，在移植Linux的时候也使用的这两个。<br>在目标文件当中，使用系统的Make工具来进行编译。<br>选项”-C”：让make工具跳转到linux内核目录下读取顶层Makefile。<br>M=：表示内核模块源码目录。<br>然后在内核模块的源码所在的Makefile目录下执行<code>make</code>命令就能够编译出内核模块了。<br><img src="/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/编译内核模块.png" alt="编译内核模块"></p>
+<h2 id="4-ZYNQ上加载和卸载内核模块"><a href="#4-ZYNQ上加载和卸载内核模块" class="headerlink" title="4. ZYNQ上加载和卸载内核模块"></a>4. ZYNQ上加载和卸载内核模块</h2><p>编译好内核模块之后，就可以将内核模块拷贝到zynq上运行着的linux系统上了。然后使用insmod和rmmod就能够执行内核模块的加载和卸载了。<br><img src="/2021/06/29/2021.6/ZYNQ-Linux-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97/内核模块的加载和卸载.png" alt="编译内核模块"><br>可以看到使用<code>insmod</code>加载内核模块的时候在终端上打印出了全面在内核模块源码当中设置的信息。<br>加载完内核模块之后，可以使用<code>lsmod</code>命令查看当前的系统中的模块，可以看到当前有一个hellomodule。<br>然后可以使用<code>rmmod</code>卸载模块，在卸载模块的时候，也答应除了设置的信息。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Linux/" rel="tag"># Linux</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/06/24/2021.6/Git%E7%9A%84%E5%9F%BA%E6%9C%AC%E4%BD%BF%E7%94%A8%E6%96%B9%E6%B3%95/" rel="prev" title="Git的基本使用方法">
+      <i class="fa fa-chevron-left"></i> Git的基本使用方法
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/07/02/2021.7/ZYNQ-Linux-2-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E5%8F%82%E6%95%B0/" rel="next" title="ZYNQ Linux(2)--内核模块参数和符号共享">
+      ZYNQ Linux(2)--内核模块参数和符号共享 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5"><span class="nav-number">1.</span> <span class="nav-text">1. 内核模块的基本概念</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-1-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E5%8A%A0%E8%BD%BD-%E5%8D%B8%E8%BD%BD"><span class="nav-number">1.1.</span> <span class="nav-text">1.1 内核模块加载&#x2F;卸载</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#1-2-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E6%BA%90%E7%A0%81%E7%9A%84%E5%9F%BA%E6%9C%AC%E7%BB%93%E6%9E%84"><span class="nav-number">1.2.</span> <span class="nav-text">1.2 内核模块源码的基本结构</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E5%85%A5%E5%8F%A3-%E5%87%BA%E5%8F%A3"><span class="nav-number">1.2.1.</span> <span class="nav-text">内核模块入口&#x2F;出口</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E4%BF%A1%E6%81%AF%E5%A3%B0%E6%98%8E"><span class="nav-number">1.2.2.</span> <span class="nav-text">内核模块信息声明</span></a></li></ol></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E5%9F%BA%E7%A1%80%E7%9A%84%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E2%80%9DHello-world%E2%80%9D"><span class="nav-number">2.</span> <span class="nav-text">2. 基础的内核模块”Hello world”</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E7%BC%96%E8%AF%91%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97"><span class="nav-number">3.</span> <span class="nav-text">3. 编译内核模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-ZYNQ%E4%B8%8A%E5%8A%A0%E8%BD%BD%E5%92%8C%E5%8D%B8%E8%BD%BD%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97"><span class="nav-number">4.</span> <span class="nav-text">4. ZYNQ上加载和卸载内核模块</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

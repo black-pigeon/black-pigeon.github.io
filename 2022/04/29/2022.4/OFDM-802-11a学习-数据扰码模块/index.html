@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. 前言在上一篇博客当中，介绍了用户数据是如何产生的，并且给出了crc32的校验方式，对于数据域的数据来说，接下来要涉及到的就是OFDM的相关的编码，调制等操作了。在这篇博客当中，将记录对数据域的数据进行加扰。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="OFDM_802.11a学习----PPDU数据域数据生成与加扰">
+<meta property="og:url" content="https://black-pigeon.github.io/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="1. 前言在上一篇博客当中，介绍了用户数据是如何产生的，并且给出了crc32的校验方式，对于数据域的数据来说，接下来要涉及到的就是OFDM的相关的编码，调制等操作了。在这篇博客当中，将记录对数据域的数据进行加扰。">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/PPDU帧结构.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/pad比特计算.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/不同调制方式的速率.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/用户bit流生成模块.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/pad比特时序.svg">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/data_bit输出时序.svg">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/加扰的目的.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/scramble.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/scramble_module.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/scramble_timing.svg">
+<meta property="article:published_time" content="2022-04-29T02:41:35.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.789Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="SDR">
+<meta property="article:tag" content="FPGA">
+<meta property="article:tag" content="ZYNQ">
+<meta property="article:tag" content="OFDM">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/PPDU帧结构.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>OFDM_802.11a学习----PPDU数据域数据生成与加扰 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          OFDM_802.11a学习----PPDU数据域数据生成与加扰
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-04-29 10:41:35" itemprop="dateCreated datePublished" datetime="2022-04-29T10:41:35+08:00">2022-04-29</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/OFDM/" itemprop="url" rel="index"><span itemprop="name">OFDM</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/" class="post-meta-item leancloud_visitors" data-flag-title="OFDM_802.11a学习----PPDU数据域数据生成与加扰" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>在上一篇博客当中，介绍了用户数据是如何产生的，并且给出了crc32的校验方式，对于数据域的数据来说，接下来要涉及到的就是OFDM的相关的编码，调制等操作了。在这篇博客当中，将记录对数据域的数据进行加扰。</p>
+<span id="more"></span>
+<h2 id="2-生成Data域的用户数据bit流"><a href="#2-生成Data域的用户数据bit流" class="headerlink" title="2. 生成Data域的用户数据bit流"></a>2. 生成Data域的用户数据bit流</h2><h3 id="Data域构成与-pad-计算"><a href="#Data域构成与-pad-计算" class="headerlink" title="Data域构成与 pad 计算"></a>Data域构成与 pad 计算</h3><p>首先回顾一下Data域的数据的组成：<br><img src="/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/PPDU帧结构.png" alt="PPDU帧结构"><br>可以看到在Data域当中需要包含service域的16bit数据，然后是用户数据PSDU的bit，然后是6bit的tail bit和最终的pad bit。<br>为了能够进行后续的操作，我们首先应该将用户的数据转换成符合要求的bit流数据。在这个过程当中，还需要去计算出具体所需要的填充bit的数量。<br>在这里需要先回顾一下pad bit是如何计算得到的。<br><img src="/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/pad比特计算.png" alt="pad比特计算"><br>在学习的时候是以OFDM QAM64 3/4码率 54Mb/s速率进行设计的，因此在设计的时候需要考虑到这些参数。可以看到NDBPS = 216.<br><img src="/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/不同调制方式的速率.png" alt="不同调制方式的速率"><br>在这里假定用户的数据长度为150，添加CRC之后的数据长度为154。那么可以计算出所需要的OFDM的符号数量为：<br>NSYM= ceiling((16+8x154+6)/216) = 6</p>
+<p>包含pad bit的所有bit长度为：<br>NData = 6*216 = 1296</p>
+<p>由此可以计算出pad bit为:<br>Npad = 1296-(16+8x154+6) = 42</p>
+<p>在实际实现这些操作的时候，也需要在FPGA当中进行这些计算，这里目前是使用IP来完成的，先挖个坑，等到所有的系统搭建完成之后，可以尝试将这些用于计算的IP自己手动来实现一下。</p>
+<h3 id="模块设计域实现"><a href="#模块设计域实现" class="headerlink" title="模块设计域实现"></a>模块设计域实现</h3><p>设计一个用户bit流生成的模块，该模块的作用是将输入的用户数据按照PLCP规定的data域的格式进行转化。<br><img src="/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/用户bit流生成模块.png" alt="用户bit流生成模块"><br>其中输入的信号tx_rate表示当前802.11a的传输速率，在当前的设计为54Mb/s，通过这个变量，根据前面的不同速率域调制方式的表格是可以得到每个OFDM符号所包含的数据bit数量的。<br>packelength是由前面的用户数据产生模块所提供的，该信号的作用就是指示用户数据的长度，方便后续进行pad bit的计算。<br>最终的转换结果是串行的bit序列。<br>该模块有两个始终域，因此在这个里面需要进行一个时钟域的切换，在这里使用到FIFO进行时钟域的切换，并且FIFO还将完成一个将并行的8bit数据转换为穿行的bit流序列。<br>在clk_user时钟域下，算出填充的pad的数量。<br>该部分的时序设计如下图所示：<br><img src="/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/pad比特时序.svg" alt="pad比特时序"></p>
+<p>从时序设计图上可以看出，写入到FIFO的数据，在用户数据的前面添加了两个字节的数据，从PPDU的帧结构上看，这两个字节刚好对应16bit的service域。<br>于是在这里就将service域的数据添加到了用户数据之前。</p>
+<p>在数据写入到FIFO之后，就可以开始将数据从FIFO当中弄取出。在这里设计的时候，写入FIFO的时钟也就是clk_user是100MHz，从FIFO中取数据的的时钟，也就是用于之后调制用的时钟的频率是40MHz，并且FIFO实现了一个8bit转1bit的转换，因此读取的速率远低于写入的速率。<br>在这里当FIFO不为空的时候，就将数据从FIFO当中读取出来，当FIFO当中的数全部读空的时候，再在数据的末尾添加上tail bit和pad bit。<br>这部分的时序设计如下图所示：<br><img src="/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/data_bit输出时序.svg" alt="data_bit输出时序"><br>当FIFO当中有数据的时候，就将FIFO当中的数据全部读取出来，知道所有的数据读取完毕之后，再添加6bit的尾bit，然后再添加pad bit。<br>该模块的代码如下：</p>
+<figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">module</span> tx_generate_data (</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>        clk_User        ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>        reset           ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span> [<span class="number">5</span>:<span class="number">0</span>]  tx_Rate         , <span class="comment">// data rate default 54Mb/s(20MHz width)</span></span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>        send_data_valid ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span> [<span class="number">7</span>:<span class="number">0</span>]  send_data       ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span> [<span class="number">15</span>:<span class="number">0</span>] packetlength    ,</span><br><span class="line"></span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>        clk_Modulation  ,</span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">reg</span>         data_bit_valid  ,</span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">reg</span>         data_bit </span><br><span class="line">);</span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">1</span>:<span class="number">0</span>]   send_data_valid_dly ;</span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">15</span>:<span class="number">0</span>]  send_data_dly       ;</span><br><span class="line">    <span class="keyword">wire</span>            send_data_valid_pos_pls;</span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">7</span>:<span class="number">0</span>]   bits_per_symbol     ;</span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">23</span>:<span class="number">0</span>]  num_of_data_bits    ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">wire</span>    [<span class="number">31</span>:<span class="number">0</span>]  divider_out         ;</span><br><span class="line">    <span class="keyword">wire</span>            divider_out_valid   ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">23</span>:<span class="number">0</span>]  num_of_symbol       ;</span><br><span class="line">    <span class="keyword">reg</span>             num_of_symbol_valid ;</span><br><span class="line">    <span class="keyword">wire</span>    [<span class="number">31</span>:<span class="number">0</span>]  num_of_total_bits   ;</span><br><span class="line">    <span class="keyword">reg</span>             num_of_toyal_bit_valid;</span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">31</span>:<span class="number">0</span>]  num_of_pad_bits     ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">wire</span>            wr_fifo_en          ;</span><br><span class="line">    <span class="keyword">wire</span>    [<span class="number">7</span>:<span class="number">0</span>]   wr_fifo_din         ;</span><br><span class="line">    <span class="keyword">wire</span>            rd_fifo_en          ;</span><br><span class="line">    <span class="keyword">wire</span>            rd_fifo_dout        ;</span><br><span class="line">    <span class="keyword">wire</span>            full                ;</span><br><span class="line">    <span class="keyword">wire</span>            empty               ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">reg</span>             rd_fifo_en_dly      ;</span><br><span class="line">    <span class="keyword">wire</span>            rd_fifo_en_neg_pls  ;</span><br><span class="line">    <span class="keyword">reg</span>             pad_flag            ;</span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">31</span>:<span class="number">0</span>]  cnt_pad             ;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------send_data_valid_dly/send_data_dly------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            send_data_dly &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            send_data_valid_dly &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            send_data_dly &lt;= &#123;send_data_dly[<span class="number">7</span>:<span class="number">0</span>], send_data&#125;;</span><br><span class="line">            send_data_valid_dly &lt;= &#123;send_data_valid_dly[<span class="number">0</span>], send_data_valid&#125;;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">// insert 2bytes 0x00 in front of the valid data</span></span><br><span class="line">    <span class="keyword">assign</span> wr_fifo_en = send_data_valid_dly[<span class="number">1</span>] | send_data_valid;</span><br><span class="line">    <span class="keyword">assign</span> wr_fifo_din = send_data_dly[<span class="number">15</span>:<span class="number">8</span>];</span><br><span class="line"></span><br><span class="line">    <span class="comment">// posedge of send_data_vlaid, used as the divider input valid signal</span></span><br><span class="line">    <span class="keyword">assign</span> send_data_valid_pos_pls = (~send_data_valid_dly[<span class="number">0</span>]) &amp; send_data_valid;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------bits_per_symbol------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            bits_per_symbol &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            bits_per_symbol &lt;= tx_Rate &lt;&lt; <span class="number">2</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------num_of_data_bits------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            num_of_data_bits &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            <span class="comment">// data region data bits, 16bit service ID + data bits + 6bit tail bits</span></span><br><span class="line">            num_of_data_bits &lt;= <span class="number">16</span> + (packetlength&lt;&lt;<span class="number">3</span>) + <span class="number">6</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------num_of_symbol------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            num_of_symbol &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(divider_out_valid)<span class="keyword">begin</span></span><br><span class="line">            num_of_symbol &lt;= divider_out[<span class="number">31</span>:<span class="number">8</span>] + (|divider_out[<span class="number">7</span>:<span class="number">0</span>]);</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            num_of_symbol_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">            num_of_toyal_bit_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            num_of_symbol_valid &lt;= divider_out_valid;</span><br><span class="line">            num_of_toyal_bit_valid &lt;= num_of_symbol_valid;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------num_of_pad_bits------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_User) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            num_of_pad_bits &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(num_of_toyal_bit_valid == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            num_of_pad_bits &lt;= num_of_total_bits - num_of_data_bits;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">assign</span> rd_fifo_en = ~empty;</span><br><span class="line"></span><br><span class="line">    fifo_generator_8to1 u_fifo_generator_8to1 (</span><br><span class="line">    <span class="variable">.rst</span>(reset),        <span class="comment">// input wire rst</span></span><br><span class="line">    <span class="variable">.wr_clk</span>(clk_User),  <span class="comment">// input wire wr_clk</span></span><br><span class="line">    <span class="variable">.rd_clk</span>(clk_Modulation),  <span class="comment">// input wire rd_clk</span></span><br><span class="line">    <span class="variable">.din</span>(wr_fifo_din),        <span class="comment">// input wire [7 : 0] din</span></span><br><span class="line">    <span class="variable">.wr_en</span>(wr_fifo_en),    <span class="comment">// input wire wr_en</span></span><br><span class="line">    <span class="variable">.rd_en</span>(rd_fifo_en),    <span class="comment">// input wire rd_en</span></span><br><span class="line">    <span class="variable">.dout</span>(rd_fifo_dout),      <span class="comment">// output wire [0 : 0] dout</span></span><br><span class="line">    <span class="variable">.full</span>(full),      <span class="comment">// output wire full</span></span><br><span class="line">    <span class="variable">.empty</span>(empty)    <span class="comment">// output wire empty</span></span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    ofdm_symbol_divider u_ofdm_symbol_divider (</span><br><span class="line">    <span class="variable">.aclk</span>(clk_User),                                  <span class="comment">// input wire aclk</span></span><br><span class="line">    <span class="variable">.s_axis_divisor_tvalid</span>(send_data_valid_pos_pls),  <span class="comment">// input wire s_axis_divisor_tvalid</span></span><br><span class="line">    <span class="variable">.s_axis_divisor_tdata</span>(bits_per_symbol),           <span class="comment">// input wire [7 : 0] s_axis_divisor_tdata</span></span><br><span class="line">    <span class="variable">.s_axis_dividend_tvalid</span>(send_data_valid_pos_pls), <span class="comment">// input wire s_axis_dividend_tvalid</span></span><br><span class="line">    <span class="variable">.s_axis_dividend_tdata</span>(num_of_data_bits),         <span class="comment">// input wire [23 : 0] s_axis_dividend_tdata</span></span><br><span class="line">    <span class="variable">.m_axis_dout_tvalid</span>(divider_out_valid),           <span class="comment">// output wire m_axis_dout_tvalid</span></span><br><span class="line">    <span class="variable">.m_axis_dout_tdata</span>(divider_out)                   <span class="comment">// output wire [31 : 0] m_axis_dout_tdata</span></span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    ofdm_bits_multiplier u_ofdm_bits_multiplier (</span><br><span class="line">    <span class="variable">.CLK</span>(clk_User),  <span class="comment">// input wire CLK</span></span><br><span class="line">    <span class="variable">.A</span>(num_of_symbol),      <span class="comment">// input wire [23 : 0] A</span></span><br><span class="line">    <span class="variable">.B</span>(bits_per_symbol),      <span class="comment">// input wire [7 : 0] B</span></span><br><span class="line">    <span class="variable">.P</span>(num_of_total_bits)      <span class="comment">// output wire [31 : 0] P</span></span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------rd_fifo_en_dly------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">        rd_fifo_en_dly &lt;= rd_fifo_en;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">assign</span> rd_fifo_en_neg_pls = rd_fifo_en_dly &amp; (~rd_fifo_en);</span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------pad_flag------------------</span></span><br><span class="line">    <span class="keyword">always</span>@(<span class="keyword">posedge</span> clk_Modulation)<span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            pad_flag &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>((cnt_pad == (num_of_pad_bits + <span class="number">6</span> - <span class="number">1</span>)) &amp;&amp; (pad_flag == <span class="number">1&#x27;b1</span>))<span class="keyword">begin</span></span><br><span class="line">            pad_flag &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (rd_fifo_en_neg_pls == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            pad_flag &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------cnt_pad------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            cnt_pad &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>((cnt_pad == (num_of_pad_bits + <span class="number">6</span> - <span class="number">1</span>)) &amp;&amp; (pad_flag == <span class="number">1&#x27;b1</span>))<span class="keyword">begin</span></span><br><span class="line">            cnt_pad &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (rd_fifo_en_neg_pls | pad_flag) <span class="keyword">begin</span></span><br><span class="line">            cnt_pad &lt;= cnt_pad + <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------data_bit------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            data_bit &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(rd_fifo_en)<span class="keyword">begin</span></span><br><span class="line">            data_bit &lt;= rd_fifo_dout;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(rd_fifo_en_neg_pls | pad_flag)<span class="keyword">begin</span></span><br><span class="line">            data_bit &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span>@(<span class="keyword">posedge</span> clk_Modulation)<span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            data_bit_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span>(rd_fifo_en | rd_fifo_en_neg_pls | pad_flag) <span class="keyword">begin</span></span><br><span class="line">            data_bit_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            data_bit_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    </span><br><span class="line"><span class="keyword">endmodule</span></span><br></pre></td></tr></table></figure>
+<h1 id="3-数据加扰模块"><a href="#3-数据加扰模块" class="headerlink" title="3. 数据加扰模块"></a>3. 数据加扰模块</h1><p>数据加扰的目的，书上的描述如下：<br><img src="/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/加扰的目的.png" alt="加扰的目的"><br>scramble 的生成多项式和硬件结构如下图所示：</p>
+<p><img src="/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/scramble.png" alt="scramble"></p>
+<p>加扰模块在实现的时候还是比较简单的，需要找出输入的数据需要和移位寄存器的哪几位的输出值进行异或就可以了。<br>加扰模块在这里没有对tail bit进行加扰，因此输出tailbit对应的位置，需要给这部分置零。</p>
+<p>数据加扰模块的接口如下：<br><img src="/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/scramble_module.png" alt="scramble_module"><br>输入的packelength的作用是为了来定位tail bit的位置，从而将tail bit所处的位置不进行加扰。</p>
+<p>时序设计如下图所示：<br><img src="/2022/04/29/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E6%95%B0%E6%8D%AE%E6%89%B0%E7%A0%81%E6%A8%A1%E5%9D%97/scramble_timing.svg" alt="scramble_timing"></p>
+<figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">module</span> scramble_lc (</span><br><span class="line">	<span class="keyword">input</span>  	<span class="keyword">wire</span>  			clk_Modulation		,</span><br><span class="line">	<span class="keyword">input</span> 	<span class="keyword">wire</span>  			reset 				,</span><br><span class="line">	<span class="keyword">input</span> 	<span class="keyword">wire</span> 	[<span class="number">15</span>:<span class="number">0</span>]	packetlength 		,</span><br><span class="line">	<span class="keyword">input</span> 	<span class="keyword">wire</span>  			data_bit_valid 		,</span><br><span class="line">	<span class="keyword">input</span> 	<span class="keyword">wire</span>  			data_bit 			,</span><br><span class="line">	<span class="keyword">output</span> 	<span class="keyword">reg</span>  			scramble_bit_valid	,</span><br><span class="line">	<span class="keyword">output</span> 	<span class="keyword">reg</span>  			scramble_bit </span><br><span class="line">	);</span><br><span class="line"></span><br><span class="line">	<span class="comment">//====================================================</span></span><br><span class="line">	<span class="comment">// parameter define</span></span><br><span class="line">	<span class="comment">//====================================================</span></span><br><span class="line">	<span class="keyword">localparam</span> SCRAMBLE_REG_INIT = <span class="number">7&#x27;b0001111</span>;</span><br><span class="line">	<span class="keyword">localparam</span> TAIL_BIT_LENGTH = <span class="number">6</span>;</span><br><span class="line"></span><br><span class="line">	<span class="comment">//====================================================</span></span><br><span class="line">	<span class="comment">// internal signals and registers</span></span><br><span class="line">	<span class="comment">//====================================================</span></span><br><span class="line">	<span class="keyword">reg</span> 	[<span class="number">6</span>:<span class="number">0</span>]		h1; <span class="comment">// scramble shift register</span></span><br><span class="line">	<span class="keyword">reg</span>  				h2;	<span class="comment">// output of scramble shift register</span></span><br><span class="line">	<span class="keyword">reg</span>   				h2_valid		; <span class="comment">// valid of scramble shift register output</span></span><br><span class="line">	<span class="keyword">reg</span>  				data_bit_dly	;</span><br><span class="line">	<span class="keyword">reg</span>  				scramble_data 	;</span><br><span class="line">	<span class="keyword">reg</span>  	[<span class="number">19</span>:<span class="number">0</span>]		tail_bit_start	; <span class="comment">// start index of tail bits</span></span><br><span class="line">	<span class="keyword">reg</span>  				tail_bit_flag	; <span class="comment">// tail bit flag</span></span><br><span class="line">	<span class="keyword">reg</span>  	[<span class="number">19</span>:<span class="number">0</span>]		cnt_bit 		;</span><br><span class="line">	<span class="keyword">reg</span>  				scramble_bit_valid_dly 	;</span><br><span class="line">	<span class="keyword">wire</span>  				scramble_bit_valid_neg_pls;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------h1------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			h1 &lt;= SCRAMBLE_REG_INIT;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span> (scramble_bit_valid_neg_pls) <span class="keyword">begin</span></span><br><span class="line">			h1 &lt;= SCRAMBLE_REG_INIT;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(data_bit_valid) <span class="keyword">begin</span></span><br><span class="line">			h1 &lt;= &#123;h1[<span class="number">5</span>:<span class="number">0</span>], h1[<span class="number">6</span>]^h1[<span class="number">3</span>]&#125;;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------h2------------------</span></span><br><span class="line">	<span class="keyword">always</span>@(<span class="keyword">posedge</span> clk_Modulation)<span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			h2 &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(scramble_bit_valid_neg_pls)<span class="keyword">begin</span></span><br><span class="line">			h2 &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(data_bit_valid)<span class="keyword">begin</span></span><br><span class="line">			h2 &lt;= h1[<span class="number">6</span>]^h1[<span class="number">3</span>];</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------data_bit_dly------------------</span></span><br><span class="line">	<span class="keyword">always</span>@(<span class="keyword">posedge</span> clk_Modulation)<span class="keyword">begin</span></span><br><span class="line">		data_bit_dly &lt;= data_bit;</span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------h2_valid------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">			h2_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			h2_valid &lt;= data_bit_valid;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------scramble_bit_valid------------------</span></span><br><span class="line">	<span class="keyword">always</span>@(<span class="keyword">posedge</span> clk_Modulation)<span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			scramble_bit_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			scramble_bit_valid &lt;= h2_valid;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//---------------scramble_data-------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			scramble_data &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(h2_valid == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">			scramble_data &lt;= h2 ^ data_bit_dly;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------tail_bit_start------------------</span></span><br><span class="line">	<span class="keyword">always</span>@(<span class="keyword">posedge</span> clk_Modulation)<span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			tail_bit_start &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			tail_bit_start &lt;= (packetlength&lt;&lt;<span class="number">3</span>) + <span class="number">16</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------cnt_bit------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span> (reset == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">			cnt_bit &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(scramble_bit_valid == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">			cnt_bit &lt;= cnt_bit + <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			cnt_bit &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------tail_bit_flag------------------</span></span><br><span class="line">	<span class="keyword">always</span> @(<span class="keyword">posedge</span> clk_Modulation) <span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span>(reset == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">			tail_bit_flag &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(cnt_bit == (tail_bit_start+TAIL_BIT_LENGTH -<span class="number">1</span>))<span class="keyword">begin</span></span><br><span class="line">			tail_bit_flag &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">if</span>(cnt_bit == (tail_bit_start - <span class="number">1</span>))<span class="keyword">begin</span></span><br><span class="line">			tail_bit_flag &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">	<span class="comment">//----------------scramble_bit_valid_dly------------------</span></span><br><span class="line">	<span class="keyword">always</span>@(<span class="keyword">posedge</span> clk_Modulation)<span class="keyword">begin</span></span><br><span class="line">		scramble_bit_valid_dly &lt;= scramble_bit_valid;</span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">assign</span> scramble_bit_valid_neg_pls = scramble_bit_valid_dly &amp; (~scramble_bit_valid);</span><br><span class="line"></span><br><span class="line">	<span class="keyword">always</span> @(*)<span class="keyword">begin</span></span><br><span class="line">		<span class="keyword">if</span>(scramble_bit_valid)<span class="keyword">begin</span></span><br><span class="line">			<span class="keyword">if</span>(tail_bit_flag)<span class="keyword">begin</span></span><br><span class="line">				scramble_bit = <span class="number">1&#x27;b0</span>;</span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">			<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">				scramble_bit = scramble_data;</span><br><span class="line">			<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">		<span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">			scramble_bit = <span class="number">1&#x27;b0</span>;</span><br><span class="line">		<span class="keyword">end</span></span><br><span class="line">	<span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">endmodule</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/SDR/" rel="tag"># SDR</a>
+              <a href="/tags/FPGA/" rel="tag"># FPGA</a>
+              <a href="/tags/ZYNQ/" rel="tag"># ZYNQ</a>
+              <a href="/tags/OFDM/" rel="tag"># OFDM</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/" rel="prev" title="OFDM-802-11a学习-用户数据与CRC">
+      <i class="fa fa-chevron-left"></i> OFDM-802-11a学习-用户数据与CRC
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2022/05/01/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E5%8D%B7%E7%A7%AF%E7%BC%96%E7%A0%81/" rel="next" title="OFDM_802.11a学习----卷积编码">
+      OFDM_802.11a学习----卷积编码 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">1. 前言</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#2-%E7%94%9F%E6%88%90Data%E5%9F%9F%E7%9A%84%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AEbit%E6%B5%81"><span class="nav-number">1.1.</span> <span class="nav-text">2. 生成Data域的用户数据bit流</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#Data%E5%9F%9F%E6%9E%84%E6%88%90%E4%B8%8E-pad-%E8%AE%A1%E7%AE%97"><span class="nav-number">1.1.1.</span> <span class="nav-text">Data域构成与 pad 计算</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%A8%A1%E5%9D%97%E8%AE%BE%E8%AE%A1%E5%9F%9F%E5%AE%9E%E7%8E%B0"><span class="nav-number">1.1.2.</span> <span class="nav-text">模块设计域实现</span></a></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-%E6%95%B0%E6%8D%AE%E5%8A%A0%E6%89%B0%E6%A8%A1%E5%9D%97"><span class="nav-number">2.</span> <span class="nav-text">3. 数据加扰模块</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="FM 调制的原理FM调制在之前已经实现过了，从原理上来说还是比较简单的，但是之前一直没有时间来记录一下，今天刚好在自己的实验平台上来了基于HDL的FM的调制。关于FM的调制解调的原理在之前的一篇博客当中已经有介绍了，具体可以看FM 调制解调原理。FM已调信号的格式如下：">
+<meta property="og:type" content="article">
+<meta property="og:title" content="FM调制">
+<meta property="og:url" content="https://black-pigeon.github.io/2021/07/08/2021.7/FM%E8%B0%83%E5%88%B6/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="FM 调制的原理FM调制在之前已经实现过了，从原理上来说还是比较简单的，但是之前一直没有时间来记录一下，今天刚好在自己的实验平台上来了基于HDL的FM的调制。关于FM的调制解调的原理在之前的一篇博客当中已经有介绍了，具体可以看FM 调制解调原理。FM已调信号的格式如下：">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2021/07/08/2021.7/FM%E8%B0%83%E5%88%B6/FM已调信号.png">
+<meta property="article:published_time" content="2021-07-08T11:21:54.000Z">
+<meta property="article:modified_time" content="2023-02-07T06:50:37.785Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="SDR">
+<meta property="article:tag" content="FPGA">
+<meta property="article:tag" content="ZYNQ">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2021/07/08/2021.7/FM%E8%B0%83%E5%88%B6/FM已调信号.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2021/07/08/2021.7/FM%E8%B0%83%E5%88%B6/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>FM调制 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">20</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">13</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">49</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/07/08/2021.7/FM%E8%B0%83%E5%88%B6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          FM调制
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-07-08 19:21:54" itemprop="dateCreated datePublished" datetime="2021-07-08T19:21:54+08:00">2021-07-08</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/SDR/" itemprop="url" rel="index"><span itemprop="name">SDR</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/07/08/2021.7/FM%E8%B0%83%E5%88%B6/" class="post-meta-item leancloud_visitors" data-flag-title="FM调制" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2021/07/08/2021.7/FM%E8%B0%83%E5%88%B6/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/07/08/2021.7/FM%E8%B0%83%E5%88%B6/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h2 id="FM-调制的原理"><a href="#FM-调制的原理" class="headerlink" title="FM 调制的原理"></a>FM 调制的原理</h2><p>FM调制在之前已经实现过了，从原理上来说还是比较简单的，但是之前一直没有时间来记录一下，今天刚好在自己的实验平台上来了基于HDL的FM的调制。<br>关于FM的调制解调的原理在之前的一篇博客当中已经有介绍了，具体可以看<br><strong><em><a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_41332806/article/details/111311196">FM 调制解调原理</a>。</em></strong><br>FM已调信号的格式如下：<br><span id="more"></span><br><img src="/2021/07/08/2021.7/FM%E8%B0%83%E5%88%B6/FM已调信号.png" alt="FM已调信号"><br>可以看到对于FM已调信号如果使用三角公式进行展开之后的形式是非常喜人的，因为这种结构刚好是正交信号的形式，分别对应信号的I、Q两路。这个可以使用AD936x的时候能够很方便的实现了。</p>
+<h2 id="FM调制的实现"><a href="#FM调制的实现" class="headerlink" title="FM调制的实现"></a>FM调制的实现</h2><p>从上面的FM的公式上可以看到，在使用AD936x进行这种FM信号的调制的时候，只需要将基带信号和调频灵敏度相乘之后进行求累加和，然后可以注意到这个求出的累加和是作为余弦或者正弦的相位的，因此在FPGA当中可以使用两个ROM分别存储一个周期的正弦波和余弦波，然后再将求得的累加和作为地址去从ROM中读取数据，就能够完成基带信号的生成了，接下来需要做的就是将该信号送给AD936x进行发送就可以了。<br><figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment">// -----------------------------------------------------------------------------</span></span><br><span class="line"><span class="comment">// Copyright (c) 2019-2021 All rights reserved</span></span><br><span class="line"><span class="comment">// -----------------------------------------------------------------------------</span></span><br><span class="line"><span class="comment">// Author 	 : WCC 1530604142@qq.com</span></span><br><span class="line"><span class="comment">// File   	 : fm_mod.v</span></span><br><span class="line"><span class="comment">// Create 	 : 2021-07-07</span></span><br><span class="line"><span class="comment">// Revise 	 : 2021-</span></span><br><span class="line"><span class="comment">// Editor 	 : Vscode, tab size (4)</span></span><br><span class="line"><span class="comment">// Functions : fm modulation module</span></span><br><span class="line"><span class="comment">// 			   </span></span><br><span class="line"><span class="comment">// -----------------------------------------------------------------------------</span></span><br><span class="line"><span class="keyword">module</span> fm_mod(</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            clk         ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            rst_n       ,</span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="comment">// baseband data and valid signal</span></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            src_valid     ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>  [<span class="number">15</span>:<span class="number">0</span>]    bband_data  ,</span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="comment">// data put into ad936x</span></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">wire</span>            dac_valid   ,</span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">wire</span>  [<span class="number">11</span>:<span class="number">0</span>]    dac_data_i  ,</span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">wire</span>  [<span class="number">11</span>:<span class="number">0</span>]    dac_data_q</span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="comment">//====================================================</span></span><br><span class="line"><span class="comment">//parameter define</span></span><br><span class="line"><span class="comment">//====================================================</span></span><br><span class="line"><span class="keyword">parameter</span>   DELAT_FRE = <span class="number">75000</span>;  <span class="comment">// maximum frequency offset</span></span><br><span class="line"><span class="keyword">parameter</span>   AM = (<span class="number">1</span>&lt;&lt;<span class="number">15</span>);       <span class="comment">// maximum amplitude of baseband signals</span></span><br><span class="line"><span class="keyword">parameter</span>   FS = <span class="number">16_000_000</span>;    <span class="comment">// sampling frequency</span></span><br><span class="line"><span class="keyword">parameter</span>   DATAWIDTH   = <span class="number">32</span> ;  <span class="comment">// the data width of the phase </span></span><br><span class="line"><span class="keyword">localparam</span>  KF = <span class="number">16&#x27;d614</span>;       <span class="comment">// FM sensitivity ,(Maxmum angle frequncy offest)/（Maxmum baseband AMP)</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//====================================================</span></span><br><span class="line"><span class="comment">// internal signals and registers</span></span><br><span class="line"><span class="comment">//====================================================</span></span><br><span class="line"><span class="keyword">wire</span>    [<span class="number">31</span>:<span class="number">0</span>]  mult_data   ;</span><br><span class="line"><span class="keyword">reg</span>             mult_valid    ;</span><br><span class="line"></span><br><span class="line"><span class="keyword">reg</span>     [<span class="number">31</span>:<span class="number">0</span>]  sum_data      ;</span><br><span class="line"><span class="keyword">reg</span>             sum_valid     ;</span><br><span class="line"></span><br><span class="line"><span class="keyword">reg</span>     [<span class="number">31</span>:<span class="number">0</span>]  sum_data_r      ;</span><br><span class="line"><span class="keyword">reg</span>             sum_valid_r     ;</span><br><span class="line"></span><br><span class="line"><span class="keyword">reg</span>     [<span class="number">9</span>:<span class="number">0</span>]   rom_addr      ;</span><br><span class="line"><span class="keyword">reg</span>             addr_valid    ;</span><br><span class="line"></span><br><span class="line"><span class="keyword">reg</span>             dac_data_valid ;</span><br><span class="line"></span><br><span class="line"><span class="keyword">assign</span>  dac_valid = dac_data_valid;</span><br><span class="line"></span><br><span class="line"><span class="comment">//----------------valid signal------------------</span></span><br><span class="line"><span class="keyword">always</span> @(<span class="keyword">posedge</span> clk <span class="keyword">or</span> <span class="keyword">negedge</span> rst_n) <span class="keyword">begin</span></span><br><span class="line">    <span class="keyword">if</span> (rst_n == <span class="number">1&#x27;b0</span>) <span class="keyword">begin</span></span><br><span class="line">        mult_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        sum_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        sum_valid_r &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        addr_valid&lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        dac_data_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">else</span>  <span class="keyword">begin</span></span><br><span class="line">        mult_valid &lt;= src_valid;</span><br><span class="line">        sum_valid &lt;= mult_valid;</span><br><span class="line">        sum_valid_r &lt;= sum_valid;</span><br><span class="line">        addr_valid &lt;= sum_valid_r;</span><br><span class="line">        dac_data_valid &lt;= addr_valid;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"><span class="comment">// Kf*m(t)</span></span><br><span class="line">mult_gen u_mult_gen (</span><br><span class="line">  <span class="variable">.CLK</span>(clk),  <span class="comment">// input wire CLK</span></span><br><span class="line">  <span class="variable">.A</span>(KF),      <span class="comment">// input wire [15 : 0] A</span></span><br><span class="line">  <span class="variable">.B</span>(bband_data),      <span class="comment">// input wire [15 : 0] B</span></span><br><span class="line">  <span class="variable">.P</span>(mult_data)      <span class="comment">// output wire [31 : 0] P</span></span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="comment">//----------------sum_data------------------</span></span><br><span class="line"><span class="keyword">always</span> @(<span class="keyword">posedge</span> clk <span class="keyword">or</span> <span class="keyword">negedge</span> rst_n) <span class="keyword">begin</span></span><br><span class="line">    <span class="keyword">if</span> (rst_n == <span class="number">1&#x27;b0</span>) <span class="keyword">begin</span></span><br><span class="line">        sum_data &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (mult_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">        sum_data &lt;= sum_data + mult_data;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">else</span>  <span class="keyword">begin</span></span><br><span class="line">        sum_data &lt;=  sum_data;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">//----------------sum_data_r------------------</span></span><br><span class="line"><span class="keyword">always</span> @(<span class="keyword">posedge</span> clk <span class="keyword">or</span> <span class="keyword">negedge</span> rst_n) <span class="keyword">begin</span></span><br><span class="line">    <span class="keyword">if</span> (rst_n==<span class="number">1&#x27;b0</span>) <span class="keyword">begin</span></span><br><span class="line">        sum_data_r &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (sum_data[<span class="number">31</span>] == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">        sum_data_r &lt;= sum_data + (<span class="number">1</span>&lt;&lt;<span class="number">32</span>);</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">        sum_data_r &lt;= sum_data;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"><span class="comment">//----------------rom_addr------------------</span></span><br><span class="line"><span class="keyword">always</span> @(<span class="keyword">posedge</span> clk <span class="keyword">or</span> <span class="keyword">negedge</span> rst_n) <span class="keyword">begin</span></span><br><span class="line">    <span class="keyword">if</span> (rst_n == <span class="number">1&#x27;b0</span>) <span class="keyword">begin</span></span><br><span class="line">        rom_addr &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (sum_valid_r == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">        rom_addr &lt;= sum_data_r[<span class="number">31</span>:<span class="number">22</span>];</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">else</span>  <span class="keyword">begin</span></span><br><span class="line">        rom_addr &lt;=  rom_addr;</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">rom_cos u_rom_cos (</span><br><span class="line">  <span class="variable">.clka</span>(clk),    <span class="comment">// input wire clka</span></span><br><span class="line">  <span class="variable">.addra</span>(rom_addr),  <span class="comment">// input wire [9 : 0] addra</span></span><br><span class="line">  <span class="variable">.douta</span>(dac_data_i)  <span class="comment">// output wire [11 : 0] douta</span></span><br><span class="line">);</span><br><span class="line"></span><br><span class="line">rom_sin u_rom_sin (</span><br><span class="line">  <span class="variable">.clka</span>(clk),    <span class="comment">// input wire clka</span></span><br><span class="line">  <span class="variable">.addra</span>(rom_addr),  <span class="comment">// input wire [9 : 0] addra</span></span><br><span class="line">  <span class="variable">.douta</span>(dac_data_q)  <span class="comment">// output wire [11 : 0] douta</span></span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="keyword">endmodule</span>       </span><br><span class="line"></span><br></pre></td></tr></table></figure></p>
+<h2 id="3-音频数据源的获取"><a href="#3-音频数据源的获取" class="headerlink" title="3. 音频数据源的获取"></a>3. 音频数据源的获取</h2><p>FM调制需要使用一个音频数据源，在这里就要使用到之前的博客当中写到的东西了<br><a href="https://black-pigeon.github.io/2021/07/06/2021.7/ZYNQ-%E8%AF%BB%E5%8F%96PCM%E6%96%87%E4%BB%B6%E5%B9%B6%E6%92%AD%E6%94%BE/">ZYNQ读取PCM文件</a><br>在AXI读取内存的时候还是按照之前的办法进行读取就可以了，只是需要主要输出的信号的valid信号需要按照AD936x LVDS 1r1t模式所支持的方式来进行变化就好。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/SDR/" rel="tag"># SDR</a>
+              <a href="/tags/FPGA/" rel="tag"># FPGA</a>
+              <a href="/tags/ZYNQ/" rel="tag"># ZYNQ</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2021/07/06/2021.7/ZYNQ-%E8%AF%BB%E5%8F%96PCM%E6%96%87%E4%BB%B6%E5%B9%B6%E6%92%AD%E6%94%BE/" rel="prev" title="ZYNQ 读取PCM文件并播放">
+      <i class="fa fa-chevron-left"></i> ZYNQ 读取PCM文件并播放
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2021/07/14/2021.7/ZYNQ-Linux-3-%E5%AD%97%E7%AC%A6%E8%AE%BE%E5%A4%87%E9%A9%B1%E5%8A%A8/" rel="next" title="ZYNQ-Linux(3)--字符设备驱动">
+      ZYNQ-Linux(3)--字符设备驱动 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#FM-%E8%B0%83%E5%88%B6%E7%9A%84%E5%8E%9F%E7%90%86"><span class="nav-number">1.</span> <span class="nav-text">FM 调制的原理</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#FM%E8%B0%83%E5%88%B6%E7%9A%84%E5%AE%9E%E7%8E%B0"><span class="nav-number">2.</span> <span class="nav-text">FM调制的实现</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-%E9%9F%B3%E9%A2%91%E6%95%B0%E6%8D%AE%E6%BA%90%E7%9A%84%E8%8E%B7%E5%8F%96"><span class="nav-number">3.</span> <span class="nav-text">3. 音频数据源的获取</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">49</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">13</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">20</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>
