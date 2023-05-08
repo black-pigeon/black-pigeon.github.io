@@ -10,6 +10,7 @@ mathjax: true
 在这个文档当中，我们将会尝试使用SPI接口来读写A7-Lite上的QSPI Flash。在之前的SD卡读写部分，我们已经介绍了SPI协议，并且使用SPI协议完成了对SD卡的读写，因此在这一部分，将不会花太多内容在如何实现一个SPI协议上，更多的精力将放在对Flash芯片的访问之上。
 
 在A7-Lite上板载了一个ISSI的Flash芯片，IS25LP128，我们首先了解一下这芯片，可以从ISSI的网站上下载这个芯片的数据手册: [IS25LP128](https://www.issi.com/WW/pdf/IS25LP128.pdf)
+<!--more-->
 
 ## 1. IS25LP128芯片手册
 
