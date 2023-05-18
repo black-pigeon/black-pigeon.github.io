@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="1. 前言FPGA在数字信号处理（DSP）应用方面非常高效，因为它们可以实现定制的、完全并行的算法。 DSP应用使用许多二进制乘法器和累加器，最好在专用的DSP片上实现。 所有7系列FPGA都有许多专用的、完全定制的低功耗DSP片，将高速性与小尺寸相结合，同时保留了系统设计的灵活性。DSP48E1的常见的一个功能就是实现 P&#x3D;(A+D)*B+C 这个功能。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="FPGA DSP48E1使用1----乘法器">
+<meta property="og:url" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="1. 前言FPGA在数字信号处理（DSP）应用方面非常高效，因为它们可以实现定制的、完全并行的算法。 DSP应用使用许多二进制乘法器和累加器，最好在专用的DSP片上实现。 所有7系列FPGA都有许多专用的、完全定制的低功耗DSP片，将高速性与小尺寸相结合，同时保留了系统设计的灵活性。DSP48E1的常见的一个功能就是实现 P&#x3D;(A+D)*B+C 这个功能。">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/dsp48e1整体结构.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/DSP48E1详细结构.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/DSP48E1源语结构.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/SIMD.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/关于寄存器的属性.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/A%20D%20B输入端口.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/INMODE功能.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/AD路径.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/B路径.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/XYZ多路复用器.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/X多路器.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/Y多路器.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/Z多路器.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/ALU控制.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/DSP48E1乘法器仿真.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/DSP乘法计算结果.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/符号不相同.png">
+<meta property="article:published_time" content="2023-05-18T02:46:47.000Z">
+<meta property="article:modified_time" content="2023-05-18T05:50:44.232Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="FPGA">
+<meta property="article:tag" content="dsp">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/dsp48e1整体结构.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>FPGA DSP48E1使用1----乘法器 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">22</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">14</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">51</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          FPGA DSP48E1使用1----乘法器
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2023-05-18 10:46:47 / Modified: 13:50:44" itemprop="dateCreated datePublished" datetime="2023-05-18T10:46:47+08:00">2023-05-18</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/FPGA/" itemprop="url" rel="index"><span itemprop="name">FPGA</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/" class="post-meta-item leancloud_visitors" data-flag-title="FPGA DSP48E1使用1----乘法器" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>FPGA在数字信号处理（DSP）应用方面非常高效，因为它们可以实现定制的、完全并行的算法。 DSP应用使用许多二进制乘法器和累加器，最好在专用的DSP片上实现。 所有7系列FPGA都有许多专用的、完全定制的低功耗DSP片，将高速性与小尺寸相结合，同时保留了系统设计的灵活性。<br><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/dsp48e1整体结构.png" alt><br>DSP48E1的常见的一个功能就是实现 <code>P=(A+D)*B+C</code> 这个功能。<br><span id="more"></span></p>
+<h1 id="2-DSP48E1的结构"><a href="#2-DSP48E1的结构" class="headerlink" title="2. DSP48E1的结构"></a>2. DSP48E1的结构</h1><h3 id="2-1-DSP48E1主要结构"><a href="#2-1-DSP48E1主要结构" class="headerlink" title="2.1 DSP48E1主要结构"></a>2.1 DSP48E1主要结构</h3><p>DSP48E1的具体的结构如下，DSP48E1的功能很多，结构比较复杂，但是在我们实际使用的时候，可能只需要使用到其中的某些功能。在我的这些博客当中，我还是主要以记录DSP48E实现乘法，加法这些简单的操作为主。<br><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/DSP48E1详细结构.png" alt><br>DSP48E1的结构可以看成由以下几个部分构成：</p>
+<ul>
+<li>输入数据选择与寄存部分</li>
+<li>25x18乘法器</li>
+<li>X，Y，Z多路复用选择器</li>
+<li>多功能运算单元</li>
+<li>计算结果输出</li>
+</ul>
+<p>DSP slice 由一个乘法器和一个累加器组成。至少需要三个流水线寄存器，才能使乘法和乘加运算以全速运行。第一阶段中的乘法运算生成两个部分积，在第二阶段中需要将它们加起来。当乘法器设计中只存在一个或两个寄存器时，应始终使用M寄存器来节省功耗并提高性能。加/减和逻辑单元操作需要至少有两个流水线寄存器（输入、输出）才能以全速运行。</p>
+<p>DSP slice的级联功能非常有效，可在基于加法器级联而非加法器树的高速流水线滤波器上实现。多路复用器由动态控制信号（例如OPMODE、ALUMODE和CARRYINSEL）控制，从而具有很大的灵活性。使用寄存器和动态opmodes的设计比组合乘法更能利用DSP片的能力。</p>
+<p>通常，由于动态OPMODE和级联功能，DSP片支持串行和级联操作。快速傅里叶变换（FFT）、浮点计算（乘法、加/减、除法）、计数器和大总线多路复用器是DSP片的一些应用。DSP片的其他功能包括同步复位和时钟使能、双A输入流水线寄存器、模式检测、逻辑单元功能、单指令/多数据（SIMD）功能以及96位的MACC和Add-Acc扩展。DSP片支持收敛舍入和对称舍入、计数器的终端计数检测和自动复位以及顺序累加器的上溢/下溢检测。</p>
+<h2 id="2-2-DSP48E1源语与结构"><a href="#2-2-DSP48E1源语与结构" class="headerlink" title="2.2 DSP48E1源语与结构"></a>2.2 DSP48E1源语与结构</h2><p>DSP48E1的源语如下：<br><figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br></pre></td><td class="code"><pre><span class="line">DSP48E1 #(</span><br><span class="line">      <span class="comment">// Feature Control Attributes: Data Path Selection</span></span><br><span class="line">      <span class="variable">.A_INPUT</span>(<span class="string">&quot;DIRECT&quot;</span>),               <span class="comment">// Selects A input source, &quot;DIRECT&quot; (A port) or &quot;CASCADE&quot; (ACIN port)</span></span><br><span class="line">      <span class="variable">.B_INPUT</span>(<span class="string">&quot;DIRECT&quot;</span>),               <span class="comment">// Selects B input source, &quot;DIRECT&quot; (B port) or &quot;CASCADE&quot; (BCIN port)</span></span><br><span class="line">      <span class="variable">.USE_DPORT</span>(<span class="string">&quot;FALSE&quot;</span>),              <span class="comment">// Select D port usage (TRUE or FALSE)</span></span><br><span class="line">      <span class="variable">.USE_MULT</span>(<span class="string">&quot;MULTIPLY&quot;</span>),            <span class="comment">// Select multiplier usage (&quot;MULTIPLY&quot;, &quot;DYNAMIC&quot;, or &quot;NONE&quot;)</span></span><br><span class="line">      <span class="variable">.USE_SIMD</span>(<span class="string">&quot;ONE48&quot;</span>),               <span class="comment">// SIMD selection (&quot;ONE48&quot;, &quot;TWO24&quot;, &quot;FOUR12&quot;)</span></span><br><span class="line">      <span class="comment">// Pattern Detector Attributes: Pattern Detection Configuration</span></span><br><span class="line">      <span class="variable">.AUTORESET_PATDET</span>(<span class="string">&quot;NO_RESET&quot;</span>),    <span class="comment">// &quot;NO_RESET&quot;, &quot;RESET_MATCH&quot;, &quot;RESET_NOT_MATCH&quot; </span></span><br><span class="line">      <span class="variable">.MASK</span>(<span class="number">48&#x27;h3fffffffffff</span>),          <span class="comment">// 48-bit mask value for pattern detect (1=ignore)</span></span><br><span class="line">      <span class="variable">.PATTERN</span>(<span class="number">48&#x27;h000000000000</span>),       <span class="comment">// 48-bit pattern match for pattern detect</span></span><br><span class="line">      <span class="variable">.SEL_MASK</span>(<span class="string">&quot;MASK&quot;</span>),                <span class="comment">// &quot;C&quot;, &quot;MASK&quot;, &quot;ROUNDING_MODE1&quot;, &quot;ROUNDING_MODE2&quot; </span></span><br><span class="line">      <span class="variable">.SEL_PATTERN</span>(<span class="string">&quot;PATTERN&quot;</span>),          <span class="comment">// Select pattern value (&quot;PATTERN&quot; or &quot;C&quot;)</span></span><br><span class="line">      <span class="variable">.USE_PATTERN_DETECT</span>(<span class="string">&quot;NO_PATDET&quot;</span>), <span class="comment">// Enable pattern detect (&quot;PATDET&quot; or &quot;NO_PATDET&quot;)</span></span><br><span class="line">      <span class="comment">// Register Control Attributes: Pipeline Register Configuration</span></span><br><span class="line">      <span class="variable">.ACASCREG</span>(<span class="number">1</span>),                     <span class="comment">// Number of pipeline stages between A/ACIN and ACOUT (0, 1 or 2)</span></span><br><span class="line">      <span class="variable">.ADREG</span>(<span class="number">1</span>),                        <span class="comment">// Number of pipeline stages for pre-adder (0 or 1)</span></span><br><span class="line">      <span class="variable">.ALUMODEREG</span>(<span class="number">1</span>),                   <span class="comment">// Number of pipeline stages for ALUMODE (0 or 1)</span></span><br><span class="line">      <span class="variable">.AREG</span>(<span class="number">1</span>),                         <span class="comment">// Number of pipeline stages for A (0, 1 or 2)</span></span><br><span class="line">      <span class="variable">.BCASCREG</span>(<span class="number">1</span>),                     <span class="comment">// Number of pipeline stages between B/BCIN and BCOUT (0, 1 or 2)</span></span><br><span class="line">      <span class="variable">.BREG</span>(<span class="number">1</span>),                         <span class="comment">// Number of pipeline stages for B (0, 1 or 2)</span></span><br><span class="line">      <span class="variable">.CARRYINREG</span>(<span class="number">1</span>),                   <span class="comment">// Number of pipeline stages for CARRYIN (0 or 1)</span></span><br><span class="line">      <span class="variable">.CARRYINSELREG</span>(<span class="number">1</span>),                <span class="comment">// Number of pipeline stages for CARRYINSEL (0 or 1)</span></span><br><span class="line">      <span class="variable">.CREG</span>(<span class="number">1</span>),                         <span class="comment">// Number of pipeline stages for C (0 or 1)</span></span><br><span class="line">      <span class="variable">.DREG</span>(<span class="number">1</span>),                         <span class="comment">// Number of pipeline stages for D (0 or 1)</span></span><br><span class="line">      <span class="variable">.INMODEREG</span>(<span class="number">1</span>),                    <span class="comment">// Number of pipeline stages for INMODE (0 or 1)</span></span><br><span class="line">      <span class="variable">.MREG</span>(<span class="number">1</span>),                         <span class="comment">// Number of multiplier pipeline stages (0 or 1)</span></span><br><span class="line">      <span class="variable">.OPMODEREG</span>(<span class="number">1</span>),                    <span class="comment">// Number of pipeline stages for OPMODE (0 or 1)</span></span><br><span class="line">      <span class="variable">.PREG</span>(<span class="number">1</span>)                          <span class="comment">// Number of pipeline stages for P (0 or 1)</span></span><br><span class="line">   )</span><br><span class="line">   DSP48E1_inst (</span><br><span class="line">      <span class="comment">// Cascade: 30-bit (each) output: Cascade Ports</span></span><br><span class="line">      <span class="variable">.ACOUT</span>(ACOUT),                   <span class="comment">// 30-bit output: A port cascade output</span></span><br><span class="line">      <span class="variable">.BCOUT</span>(BCOUT),                   <span class="comment">// 18-bit output: B port cascade output</span></span><br><span class="line">      <span class="variable">.CARRYCASCOUT</span>(CARRYCASCOUT),     <span class="comment">// 1-bit output: Cascade carry output</span></span><br><span class="line">      <span class="variable">.MULTSIGNOUT</span>(MULTSIGNOUT),       <span class="comment">// 1-bit output: Multiplier sign cascade output</span></span><br><span class="line">      <span class="variable">.PCOUT</span>(PCOUT),                   <span class="comment">// 48-bit output: Cascade output</span></span><br><span class="line">      <span class="comment">// Control: 1-bit (each) output: Control Inputs/Status Bits</span></span><br><span class="line">      <span class="variable">.OVERFLOW</span>(OVERFLOW),             <span class="comment">// 1-bit output: Overflow in add/acc output</span></span><br><span class="line">      <span class="variable">.PATTERNBDETECT</span>(PATTERNBDETECT), <span class="comment">// 1-bit output: Pattern bar detect output</span></span><br><span class="line">      <span class="variable">.PATTERNDETECT</span>(PATTERNDETECT),   <span class="comment">// 1-bit output: Pattern detect output</span></span><br><span class="line">      <span class="variable">.UNDERFLOW</span>(UNDERFLOW),           <span class="comment">// 1-bit output: Underflow in add/acc output</span></span><br><span class="line">      <span class="comment">// Data: 4-bit (each) output: Data Ports</span></span><br><span class="line">      <span class="variable">.CARRYOUT</span>(CARRYOUT),             <span class="comment">// 4-bit output: Carry output</span></span><br><span class="line">      <span class="variable">.P</span>(P),                           <span class="comment">// 48-bit output: Primary data output</span></span><br><span class="line">      <span class="comment">// Cascade: 30-bit (each) input: Cascade Ports</span></span><br><span class="line">      <span class="variable">.ACIN</span>(ACIN),                     <span class="comment">// 30-bit input: A cascade data input</span></span><br><span class="line">      <span class="variable">.BCIN</span>(BCIN),                     <span class="comment">// 18-bit input: B cascade input</span></span><br><span class="line">      <span class="variable">.CARRYCASCIN</span>(CARRYCASCIN),       <span class="comment">// 1-bit input: Cascade carry input</span></span><br><span class="line">      <span class="variable">.MULTSIGNIN</span>(MULTSIGNIN),         <span class="comment">// 1-bit input: Multiplier sign input</span></span><br><span class="line">      <span class="variable">.PCIN</span>(PCIN),                     <span class="comment">// 48-bit input: P cascade input</span></span><br><span class="line">      <span class="comment">// Control: 4-bit (each) input: Control Inputs/Status Bits</span></span><br><span class="line">      <span class="variable">.ALUMODE</span>(ALUMODE),               <span class="comment">// 4-bit input: ALU control input</span></span><br><span class="line">      <span class="variable">.CARRYINSEL</span>(CARRYINSEL),         <span class="comment">// 3-bit input: Carry select input</span></span><br><span class="line">      <span class="variable">.CLK</span>(CLK),                       <span class="comment">// 1-bit input: Clock input</span></span><br><span class="line">      <span class="variable">.INMODE</span>(INMODE),                 <span class="comment">// 5-bit input: INMODE control input</span></span><br><span class="line">      <span class="variable">.OPMODE</span>(OPMODE),                 <span class="comment">// 7-bit input: Operation mode input</span></span><br><span class="line">      <span class="comment">// Data: 30-bit (each) input: Data Ports</span></span><br><span class="line">      <span class="variable">.A</span>(A),                           <span class="comment">// 30-bit input: A data input</span></span><br><span class="line">      <span class="variable">.B</span>(B),                           <span class="comment">// 18-bit input: B data input</span></span><br><span class="line">      <span class="variable">.C</span>(C),                           <span class="comment">// 48-bit input: C data input</span></span><br><span class="line">      <span class="variable">.CARRYIN</span>(CARRYIN),               <span class="comment">// 1-bit input: Carry input signal</span></span><br><span class="line">      <span class="variable">.D</span>(D),                           <span class="comment">// 25-bit input: D data input</span></span><br><span class="line">      <span class="comment">// Reset/Clock Enable: 1-bit (each) input: Reset/Clock Enable Inputs</span></span><br><span class="line">      <span class="variable">.CEA1</span>(CEA1),                     <span class="comment">// 1-bit input: Clock enable input for 1st stage AREG</span></span><br><span class="line">      <span class="variable">.CEA2</span>(CEA2),                     <span class="comment">// 1-bit input: Clock enable input for 2nd stage AREG</span></span><br><span class="line">      <span class="variable">.CEAD</span>(CEAD),                     <span class="comment">// 1-bit input: Clock enable input for ADREG</span></span><br><span class="line">      <span class="variable">.CEALUMODE</span>(CEALUMODE),           <span class="comment">// 1-bit input: Clock enable input for ALUMODE</span></span><br><span class="line">      <span class="variable">.CEB1</span>(CEB1),                     <span class="comment">// 1-bit input: Clock enable input for 1st stage BREG</span></span><br><span class="line">      <span class="variable">.CEB2</span>(CEB2),                     <span class="comment">// 1-bit input: Clock enable input for 2nd stage BREG</span></span><br><span class="line">      <span class="variable">.CEC</span>(CEC),                       <span class="comment">// 1-bit input: Clock enable input for CREG</span></span><br><span class="line">      <span class="variable">.CECARRYIN</span>(CECARRYIN),           <span class="comment">// 1-bit input: Clock enable input for CARRYINREG</span></span><br><span class="line">      <span class="variable">.CECTRL</span>(CECTRL),                 <span class="comment">// 1-bit input: Clock enable input for OPMODEREG and CARRYINSELREG</span></span><br><span class="line">      <span class="variable">.CED</span>(CED),                       <span class="comment">// 1-bit input: Clock enable input for DREG</span></span><br><span class="line">      <span class="variable">.CEINMODE</span>(CEINMODE),             <span class="comment">// 1-bit input: Clock enable input for INMODEREG</span></span><br><span class="line">      <span class="variable">.CEM</span>(CEM),                       <span class="comment">// 1-bit input: Clock enable input for MREG</span></span><br><span class="line">      <span class="variable">.CEP</span>(CEP),                       <span class="comment">// 1-bit input: Clock enable input for PREG</span></span><br><span class="line">      <span class="variable">.RSTA</span>(RSTA),                     <span class="comment">// 1-bit input: Reset input for AREG</span></span><br><span class="line">      <span class="variable">.RSTALLCARRYIN</span>(RSTALLCARRYIN),   <span class="comment">// 1-bit input: Reset input for CARRYINREG</span></span><br><span class="line">      <span class="variable">.RSTALUMODE</span>(RSTALUMODE),         <span class="comment">// 1-bit input: Reset input for ALUMODEREG</span></span><br><span class="line">      <span class="variable">.RSTB</span>(RSTB),                     <span class="comment">// 1-bit input: Reset input for BREG</span></span><br><span class="line">      <span class="variable">.RSTC</span>(RSTC),                     <span class="comment">// 1-bit input: Reset input for CREG</span></span><br><span class="line">      <span class="variable">.RSTCTRL</span>(RSTCTRL),               <span class="comment">// 1-bit input: Reset input for OPMODEREG and CARRYINSELREG</span></span><br><span class="line">      <span class="variable">.RSTD</span>(RSTD),                     <span class="comment">// 1-bit input: Reset input for DREG and ADREG</span></span><br><span class="line">      <span class="variable">.RSTINMODE</span>(RSTINMODE),           <span class="comment">// 1-bit input: Reset input for INMODEREG</span></span><br><span class="line">      <span class="variable">.RSTM</span>(RSTM),                     <span class="comment">// 1-bit input: Reset input for MREG</span></span><br><span class="line">      <span class="variable">.RSTP</span>(RSTP)                      <span class="comment">// 1-bit input: Reset input for PREG</span></span><br><span class="line">   );</span><br></pre></td></tr></table></figure><br>DSP48E1的源语的结构如下<br><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/DSP48E1源语结构.png" alt></p>
+<h3 id="2-2-1源语功能属性"><a href="#2-2-1源语功能属性" class="headerlink" title="2.2.1源语功能属性"></a>2.2.1源语功能属性</h3><p>首先需要理解源语的几个比较有特点的属性：</p>
+<p><strong>.A_INPUT(“DIRECT”),   // Selects A input source, “DIRECT” (A port) or “CASCADE” (ACIN port)</strong></p>
+<p><strong>.B_INPUT(“DIRECT”),   // Selects B input source, “DIRECT” (B port) or “CASCADE” (BCIN port)</strong></p>
+<p><strong>.USE_DPORT(“FALSE”),  // Select D port usage (TRUE or FALSE)</strong></p>
+<p><strong>.USE_MULT(“MULTIPLY”),// Select multiplier usage (“MULTIPLY”, “DYNAMIC”, or “NONE”)</strong></p>
+<p><strong>.USE_SIMD(“ONE48”),   // SIMD selection (“ONE48”, “TWO24”, “FOUR12”)</strong></p>
+<p>A_INPUT,B_INPUT选择输入给AB的数据是来自直接的端口，还是上一级DSP48E1的输出。</p>
+<p>USE_DPORT表示是否使用预加器，也就是是否使用DSP48E1的D端口作为预加器的输入。</p>
+<p>USE_MULT：选择乘法器的使用方式。将其设置为NONE以节省功率，仅使用加法器/逻辑单元时。DYNAMIC设置表示用户正在动态切换A * B和A：B操作，因此需要获得两条路径的最坏情况时间。</p>
+<p>USE_SIMD：选择加法器/减法器的操作模式。属性设置可以是一个48位加法器模式（ONE48），两个24位加法器模式（TWO24）或四个12位加法器模式（FOUR12）。当模式设置为ONE48时，支持典型的乘-加运算。当选择TWO24或FOUR12模式时，<strong>不能使用乘法器</strong>，并且必须将<strong>USE_MULT设置为NONE</strong>。<br>下面是将USE_SIMD设置为使用4个12bit加法器的时候的结构，DSP48E1后端的结构。在 <strong>USE_SIMD</strong> 设置为 <strong>FOUR12</strong> 的时候， <strong>USE_MULT</strong>要设置为 NONE<br><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/SIMD.png" alt></p>
+<h3 id="2-2-2-源语寄存器属性"><a href="#2-2-2-源语寄存器属性" class="headerlink" title="2.2.2 源语寄存器属性"></a>2.2.2 源语寄存器属性</h3><p>源语当中关于寄存器的属性如下<br><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/关于寄存器的属性.png" alt></p>
+<h2 id="2-3-A-D-B-输入端口"><a href="#2-3-A-D-B-输入端口" class="headerlink" title="2.3 A D B 输入端口"></a>2.3 A D B 输入端口</h2><p>ABD输入端口在DSP48E1当中经过的路径如下图所示：<br><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/A%20D%20B输入端口.png" alt><br>ABD通道上都有寄存器，通过设置源语的属性，可以来设置寄存器的级数，通过INMODE和源语的属性的共同设置，可以选择给到 XY的多路复用器的值。<br>下面是INMODE的功能，INMODE和AREG，BREG源语属性一起，给到XY多路复用器的数据的来源。<br><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/INMODE功能.png" alt><br>下面举一个具体的例子：源语属性当中AREG和BREG都设置为1，INMODE的值设置为5’b00000。</p>
+<ul>
+<li>根据源语属性，USEP_DPORT设置为FALSE， 当AREG BREG都设为1，1的时候，使能的REG是 A2和B2，然后又在INMODE为5’b00000，因此最终给到XY的多路复用器的值的来源是A2和B2。</li>
+<li>根据源语属性，USEP_DPORT设置为FALSE， 当AREG BREG都设为2，2的时候，会使能A1,A2,B1,B2, 然后在INMODE设置为5’b00000,最终给到XY的多路复用器的值来源是A2和B2</li>
+<li>根据源语属性，USEP_DPORT设置为FALSE， 当AREG BREG都设为2，2的时候，会使能A1,A2,B1,B2, 然后在INMODE设置为5’b10001,最终给到XY的多路复用器的值来源是A1和B1</li>
+</ul>
+<p><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/AD路径.png" alt><br><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/B路径.png" alt></p>
+<h2 id="2-2-XYZ多路复用器"><a href="#2-2-XYZ多路复用器" class="headerlink" title="2.2 XYZ多路复用器"></a>2.2 XYZ多路复用器</h2><p>在DSP48E1当中有三个多路复用器，这三个多路复用器能够给后续的多功能计算单元提供数据。对于XYZ这三个多路复用器，可以通过OPMODE来控制输出给ALU的数据来源。<br><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/XYZ多路复用器.png" alt></p>
+<p>OPMODE输入提供了一种方式，使您可以从时钟周期到时钟周期动态更改DSP48E1的功能（例如，相对于给定计算序列更改DSP48E1片内数据路径配置）。<br>可以使用OPMODEREG属性选择是否使用寄存器寄存OPMODE。</p>
+<p>下面列出了OPMODE的可能值以及三个多路复用器（X，Y和Z多路复用器）的输出结果函数。多路复用器的输出向以下的加法器/减法器提供三个操作数。并非所有可能的多路复用器选择位组合都被允许。在表格中，有些被标记为“非法选择”，并给出未定义的结果。如果选择乘法器输出，则同时使用X和Y多路复用器向加法器/减法器提供乘法器部分积。</p>
+<p><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/X多路器.png" alt></p>
+<p><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/Y多路器.png" alt></p>
+<p><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/Z多路器.png" alt></p>
+<p>在XYZ多路器当中，需要注意，如果DSP48E1当中要使用到乘法，由于乘法器输出的是分部积，因此需要XY都输出M的时候才能得到最终的乘法得到的乘积。也就是说，当使用到<strong>乘法的时候OPMODE[3:0]=4’b0101</strong><br>其余情况下只需要根据自己的选择来进行使用就可以。</p>
+<h2 id="2-3-ALU计算单元"><a href="#2-3-ALU计算单元" class="headerlink" title="2.3 ALU计算单元"></a>2.3 ALU计算单元</h2><p>4位ALUMODE控制第二级加/减/逻辑单元的行为。当ALUMODE = 0000时，选择形如Z + (X + Y + CIN) 的加法操作。CIN是CARRYIN多路复用器的输出。当ALUMODE = 0011时，选择形如Z - (X + Y + CIN)的减法操作。当ALUMODE = 0001时，可以实现-Z + (X + Y + CIN) - 1。当ALUMODE = 0010时，可以实现-(Z + X + Y + CIN) - 1，这等效于not(Z + X + Y + CIN)。对于一个二进制补码数取相反数，需要将其按位取反再加一，例如，-k = not(k) + 1。增强的加/减/逻辑单元还可以实现其他减法和逻辑运算。<br><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/ALU控制.png" alt></p>
+<h1 id="3-DSP48E1使用实例"><a href="#3-DSP48E1使用实例" class="headerlink" title="3. DSP48E1使用实例"></a>3. DSP48E1使用实例</h1><p>在上面介绍了DSP48E1的基础功能之后，我们就可以动手来使用DSP48E1了，值得说明的是，关于DSP48E1我们还有很多东西没有深入分析，比如过于DSP48E1的级联，DSP48E1的进位链等等。这些功能等之后需要进一步了解的时候再来探索。<br>下面我们使用DSP48E1来试下一个简单的乘法器。</p>
+<figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">module</span> dsp48e1_module(</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            clk         ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            rst         ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>    [<span class="number">15</span>:<span class="number">0</span>]  a           ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>    [<span class="number">15</span>:<span class="number">0</span>]  b           , </span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">wire</span>    [<span class="number">31</span>:<span class="number">0</span>]  result    </span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">wire</span>    [<span class="number">4</span>:<span class="number">0</span>]   INMODE;</span><br><span class="line">    <span class="keyword">wire</span>    [<span class="number">6</span>:<span class="number">0</span>]   OPMODE;</span><br><span class="line">    <span class="keyword">wire</span>    [<span class="number">3</span>:<span class="number">0</span>]   ALUMODE;</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">wire</span>    [<span class="number">29</span>:<span class="number">0</span>]  dsp48e1_a;</span><br><span class="line">    <span class="keyword">wire</span>    [<span class="number">17</span>:<span class="number">0</span>]  dsp48e1_b;</span><br><span class="line">    <span class="keyword">wire</span>    [<span class="number">47</span>:<span class="number">0</span>]  dsp48e1_p;</span><br><span class="line">    <span class="keyword">assign</span> INMODE = <span class="number">5&#x27;b00000</span>;   <span class="comment">// A,B 1beat pipe stage</span></span><br><span class="line">    <span class="keyword">assign</span> OPMODE = <span class="number">7&#x27;b000_0101</span>; <span class="comment">// Z Multiplexers = 0 XY Multiplexers=M</span></span><br><span class="line">    <span class="keyword">assign</span> ALUMODE = <span class="number">4&#x27;b0000</span>; <span class="comment">// Z+X+Y+CIN</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">assign</span> dsp48e1_a = &#123;&#123;<span class="number">14</span>&#123;a[<span class="number">15</span>]&#125;&#125;, a&#125;;</span><br><span class="line">    <span class="keyword">assign</span> dsp48e1_b = &#123;&#123;<span class="number">2</span>&#123;b[<span class="number">15</span>]&#125;&#125;, b&#125;;</span><br><span class="line">    <span class="keyword">assign</span> result = dsp48e1_p[<span class="number">31</span>:<span class="number">0</span>];</span><br><span class="line"></span><br><span class="line">DSP48E1 #(</span><br><span class="line">    <span class="comment">// Feature Control Attributes: Data Path Selection</span></span><br><span class="line">    <span class="variable">.A_INPUT</span>(<span class="string">&quot;DIRECT&quot;</span>),               <span class="comment">// Selects A input source, &quot;DIRECT&quot; (A port) or &quot;CASCADE&quot; (ACIN port)</span></span><br><span class="line">    <span class="variable">.B_INPUT</span>(<span class="string">&quot;DIRECT&quot;</span>),               <span class="comment">// Selects B input source, &quot;DIRECT&quot; (B port) or &quot;CASCADE&quot; (BCIN port)</span></span><br><span class="line">    <span class="variable">.USE_DPORT</span>(<span class="string">&quot;FALSE&quot;</span>),              <span class="comment">// Select D port usage (TRUE or FALSE)</span></span><br><span class="line">    <span class="variable">.USE_MULT</span>(<span class="string">&quot;MULTIPLY&quot;</span>),            <span class="comment">// Select multiplier usage (&quot;MULTIPLY&quot;, &quot;DYNAMIC&quot;, or &quot;NONE&quot;)</span></span><br><span class="line">    <span class="variable">.USE_SIMD</span>(<span class="string">&quot;ONE48&quot;</span>),               <span class="comment">// SIMD selection (&quot;ONE48&quot;, &quot;TWO24&quot;, &quot;FOUR12&quot;)</span></span><br><span class="line">    <span class="comment">// Pattern Detector Attributes: Pattern Detection Configuration</span></span><br><span class="line">    <span class="variable">.AUTORESET_PATDET</span>(<span class="string">&quot;NO_RESET&quot;</span>),    <span class="comment">// &quot;NO_RESET&quot;, &quot;RESET_MATCH&quot;, &quot;RESET_NOT_MATCH&quot; </span></span><br><span class="line">    <span class="variable">.MASK</span>(<span class="number">48&#x27;h3fffffffffff</span>),          <span class="comment">// 48-bit mask value for pattern detect (1=ignore)</span></span><br><span class="line">    <span class="variable">.PATTERN</span>(<span class="number">48&#x27;h000000000000</span>),       <span class="comment">// 48-bit pattern match for pattern detect</span></span><br><span class="line">    <span class="variable">.SEL_MASK</span>(<span class="string">&quot;MASK&quot;</span>),                <span class="comment">// &quot;C&quot;, &quot;MASK&quot;, &quot;ROUNDING_MODE1&quot;, &quot;ROUNDING_MODE2&quot; </span></span><br><span class="line">    <span class="variable">.SEL_PATTERN</span>(<span class="string">&quot;PATTERN&quot;</span>),          <span class="comment">// Select pattern value (&quot;PATTERN&quot; or &quot;C&quot;)</span></span><br><span class="line">    <span class="variable">.USE_PATTERN_DETECT</span>(<span class="string">&quot;NO_PATDET&quot;</span>), <span class="comment">// Enable pattern detect (&quot;PATDET&quot; or &quot;NO_PATDET&quot;)</span></span><br><span class="line">    <span class="comment">// Register Control Attributes: Pipeline Register Configuration</span></span><br><span class="line">    <span class="variable">.ACASCREG</span>(<span class="number">1</span>),                     <span class="comment">// Number of pipeline stages between A/ACIN and ACOUT (0, 1 or 2)</span></span><br><span class="line">    <span class="variable">.ADREG</span>(<span class="number">1</span>),                        <span class="comment">// Number of pipeline stages for pre-adder (0 or 1)</span></span><br><span class="line">    <span class="variable">.ALUMODEREG</span>(<span class="number">1</span>),                   <span class="comment">// Number of pipeline stages for ALUMODE (0 or 1)</span></span><br><span class="line">    <span class="variable">.AREG</span>(<span class="number">1</span>),                         <span class="comment">// Number of pipeline stages for A (0, 1 or 2)</span></span><br><span class="line">    <span class="variable">.BCASCREG</span>(<span class="number">1</span>),                     <span class="comment">// Number of pipeline stages between B/BCIN and BCOUT (0, 1 or 2)</span></span><br><span class="line">    <span class="variable">.BREG</span>(<span class="number">1</span>),                         <span class="comment">// Number of pipeline stages for B (0, 1 or 2)</span></span><br><span class="line">    <span class="variable">.CARRYINREG</span>(<span class="number">1</span>),                   <span class="comment">// Number of pipeline stages for CARRYIN (0 or 1)</span></span><br><span class="line">    <span class="variable">.CARRYINSELREG</span>(<span class="number">1</span>),                <span class="comment">// Number of pipeline stages for CARRYINSEL (0 or 1)</span></span><br><span class="line">    <span class="variable">.CREG</span>(<span class="number">1</span>),                         <span class="comment">// Number of pipeline stages for C (0 or 1)</span></span><br><span class="line">    <span class="variable">.DREG</span>(<span class="number">1</span>),                         <span class="comment">// Number of pipeline stages for D (0 or 1)</span></span><br><span class="line">    <span class="variable">.INMODEREG</span>(<span class="number">1</span>),                    <span class="comment">// Number of pipeline stages for INMODE (0 or 1)</span></span><br><span class="line">    <span class="variable">.MREG</span>(<span class="number">1</span>),                         <span class="comment">// Number of multiplier pipeline stages (0 or 1)</span></span><br><span class="line">    <span class="variable">.OPMODEREG</span>(<span class="number">1</span>),                    <span class="comment">// Number of pipeline stages for OPMODE (0 or 1)</span></span><br><span class="line">    <span class="variable">.PREG</span>(<span class="number">1</span>)                          <span class="comment">// Number of pipeline stages for P (0 or 1)</span></span><br><span class="line"> )</span><br><span class="line"> DSP48E1_inst (</span><br><span class="line">    <span class="comment">// Cascade: 30-bit (each) output: Cascade Ports</span></span><br><span class="line">    <span class="variable">.ACOUT</span>(),                   <span class="comment">// 30-bit output: A port cascade output</span></span><br><span class="line">    <span class="variable">.BCOUT</span>(),                   <span class="comment">// 18-bit output: B port cascade output</span></span><br><span class="line">    <span class="variable">.CARRYCASCOUT</span>(),            <span class="comment">// 1-bit output: Cascade carry output</span></span><br><span class="line">    <span class="variable">.MULTSIGNOUT</span>(),             <span class="comment">// 1-bit output: Multiplier sign cascade output</span></span><br><span class="line">    <span class="variable">.PCOUT</span>(),                   <span class="comment">// 48-bit output: Cascade output</span></span><br><span class="line">    <span class="comment">// Control: 1-bit (each) output: Control Inputs/Status Bits</span></span><br><span class="line">    <span class="variable">.OVERFLOW</span>(),                <span class="comment">// 1-bit output: Overflow in add/acc output</span></span><br><span class="line">    <span class="variable">.PATTERNBDETECT</span>(),          <span class="comment">// 1-bit output: Pattern bar detect output</span></span><br><span class="line">    <span class="variable">.PATTERNDETECT</span>(),           <span class="comment">// 1-bit output: Pattern detect output</span></span><br><span class="line">    <span class="variable">.UNDERFLOW</span>(),               <span class="comment">// 1-bit output: Underflow in add/acc output</span></span><br><span class="line">    <span class="comment">// Data: 4-bit (each) output: Data Ports</span></span><br><span class="line">    <span class="variable">.CARRYOUT</span>(),                <span class="comment">// 4-bit output: Carry output</span></span><br><span class="line">    <span class="variable">.P</span>(dsp48e1_p),                           <span class="comment">// 48-bit output: Primary data output</span></span><br><span class="line">    <span class="comment">// Cascade: 30-bit (each) input: Cascade Ports</span></span><br><span class="line">    <span class="variable">.ACIN</span>(<span class="number">&#x27;d0</span>),                     <span class="comment">// 30-bit input: A cascade data input</span></span><br><span class="line">    <span class="variable">.BCIN</span>(<span class="number">&#x27;d0</span>),                     <span class="comment">// 18-bit input: B cascade input</span></span><br><span class="line">    <span class="variable">.CARRYCASCIN</span>(<span class="number">1&#x27;b0</span>),             <span class="comment">// 1-bit input: Cascade carry input</span></span><br><span class="line">    <span class="variable">.MULTSIGNIN</span>(<span class="number">1&#x27;b0</span>),              <span class="comment">// 1-bit input: Multiplier sign input</span></span><br><span class="line">    <span class="variable">.PCIN</span>(<span class="number">&#x27;d0</span>),                     <span class="comment">// 48-bit input: P cascade input</span></span><br><span class="line">    <span class="comment">// Control: 4-bit (each) input: Control Inputs/Status Bits</span></span><br><span class="line">    <span class="variable">.ALUMODE</span>(ALUMODE),               <span class="comment">// 4-bit input: ALU control input</span></span><br><span class="line">    <span class="variable">.CARRYINSEL</span>(<span class="number">3&#x27;b000</span>),             <span class="comment">// 3-bit input: Carry select input</span></span><br><span class="line">    <span class="variable">.CLK</span>(clk),                       <span class="comment">// 1-bit input: Clock input</span></span><br><span class="line">    <span class="variable">.INMODE</span>(INMODE),                 <span class="comment">// 5-bit input: INMODE control input</span></span><br><span class="line">    <span class="variable">.OPMODE</span>(OPMODE),                 <span class="comment">// 7-bit input: Operation mode input</span></span><br><span class="line">    <span class="comment">// Data: 30-bit (each) input: Data Ports</span></span><br><span class="line">    <span class="variable">.A</span>(dsp48e1_a),                           <span class="comment">// 30-bit input: A data input</span></span><br><span class="line">    <span class="variable">.B</span>(dsp48e1_b),                           <span class="comment">// 18-bit input: B data input</span></span><br><span class="line">    <span class="variable">.C</span>(<span class="number">&#x27;d0</span>),                         <span class="comment">// 48-bit input: C data input</span></span><br><span class="line">    <span class="variable">.CARRYIN</span>(<span class="number">1&#x27;b0</span>),                  <span class="comment">// 1-bit input: Carry input signal</span></span><br><span class="line">    <span class="variable">.D</span>(<span class="number">&#x27;d0</span>),                         <span class="comment">// 25-bit input: D data input</span></span><br><span class="line">    <span class="comment">// Reset/Clock Enable: 1-bit (each) input: Reset/Clock Enable Inputs</span></span><br><span class="line">    <span class="variable">.CEA1</span>(<span class="number">1&#x27;b1</span>),                     <span class="comment">// 1-bit input: Clock enable input for 1st stage AREG</span></span><br><span class="line">    <span class="variable">.CEA2</span>(<span class="number">1&#x27;b1</span>),                     <span class="comment">// 1-bit input: Clock enable input for 2nd stage AREG</span></span><br><span class="line">    <span class="variable">.CEAD</span>(<span class="number">1&#x27;b1</span>),                     <span class="comment">// 1-bit input: Clock enable input for ADREG</span></span><br><span class="line">    <span class="variable">.CEALUMODE</span>(<span class="number">1&#x27;b1</span>),                <span class="comment">// 1-bit input: Clock enable input for ALUMODE</span></span><br><span class="line">    <span class="variable">.CEB1</span>(<span class="number">1&#x27;b1</span>),                     <span class="comment">// 1-bit input: Clock enable input for 1st stage BREG</span></span><br><span class="line">    <span class="variable">.CEB2</span>(<span class="number">1&#x27;b1</span>),                     <span class="comment">// 1-bit input: Clock enable input for 2nd stage BREG</span></span><br><span class="line">    <span class="variable">.CEC</span>(<span class="number">1&#x27;b1</span>),                      <span class="comment">// 1-bit input: Clock enable input for CREG</span></span><br><span class="line">    <span class="variable">.CECARRYIN</span>(<span class="number">1&#x27;b1</span>),                <span class="comment">// 1-bit input: Clock enable input for CARRYINREG</span></span><br><span class="line">    <span class="variable">.CECTRL</span>(<span class="number">1&#x27;b1</span>),                   <span class="comment">// 1-bit input: Clock enable input for OPMODEREG and CARRYINSELREG</span></span><br><span class="line">    <span class="variable">.CED</span>(<span class="number">1&#x27;b1</span>),                      <span class="comment">// 1-bit input: Clock enable input for DREG</span></span><br><span class="line">    <span class="variable">.CEINMODE</span>(<span class="number">1&#x27;b1</span>),                 <span class="comment">// 1-bit input: Clock enable input for INMODEREG</span></span><br><span class="line">    <span class="variable">.CEM</span>(<span class="number">1&#x27;b1</span>),                      <span class="comment">// 1-bit input: Clock enable input for MREG</span></span><br><span class="line">    <span class="variable">.CEP</span>(<span class="number">1&#x27;b1</span>),                      <span class="comment">// 1-bit input: Clock enable input for PREG</span></span><br><span class="line">    <span class="variable">.RSTA</span>(rst),                      <span class="comment">// 1-bit input: Reset input for AREG</span></span><br><span class="line">    <span class="variable">.RSTALLCARRYIN</span>(rst),             <span class="comment">// 1-bit input: Reset input for CARRYINREG</span></span><br><span class="line">    <span class="variable">.RSTALUMODE</span>(rst),                <span class="comment">// 1-bit input: Reset input for ALUMODEREG</span></span><br><span class="line">    <span class="variable">.RSTB</span>(rst),                      <span class="comment">// 1-bit input: Reset input for BREG</span></span><br><span class="line">    <span class="variable">.RSTC</span>(rst),                      <span class="comment">// 1-bit input: Reset input for CREG</span></span><br><span class="line">    <span class="variable">.RSTCTRL</span>(rst),                   <span class="comment">// 1-bit input: Reset input for OPMODEREG and CARRYINSELREG</span></span><br><span class="line">    <span class="variable">.RSTD</span>(rst),                      <span class="comment">// 1-bit input: Reset input for DREG and ADREG</span></span><br><span class="line">    <span class="variable">.RSTINMODE</span>(rst),                 <span class="comment">// 1-bit input: Reset input for INMODEREG</span></span><br><span class="line">    <span class="variable">.RSTM</span>(rst),                      <span class="comment">// 1-bit input: Reset input for MREG</span></span><br><span class="line">    <span class="variable">.RSTP</span>(rst)                       <span class="comment">// 1-bit input: Reset input for PREG</span></span><br><span class="line"> );</span><br><span class="line"></span><br><span class="line"><span class="keyword">endmodule</span></span><br></pre></td></tr></table></figure>
+<p>在上面的代码当中，我们首先看关于DSP48E1的属性设置。<br>可以看到在这里面我们是直接使用AB端口，不使用D端口，使用乘法器，并使用一个48bit的加法器。<br>然后设置了各个接口的寄存器的值。<br><figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br></pre></td><td class="code"><pre><span class="line"><span class="variable">.A_INPUT</span>(<span class="string">&quot;DIRECT&quot;</span>),               <span class="comment">// Selects A input source, &quot;DIRECT&quot; (A port) or &quot;CASCADE&quot; (ACIN port)</span></span><br><span class="line"><span class="variable">.B_INPUT</span>(<span class="string">&quot;DIRECT&quot;</span>),               <span class="comment">// Selects B input source, &quot;DIRECT&quot; (B port) or &quot;CASCADE&quot; (BCIN port)</span></span><br><span class="line"><span class="variable">.USE_DPORT</span>(<span class="string">&quot;FALSE&quot;</span>),              <span class="comment">// Select D port usage (TRUE or FALSE)</span></span><br><span class="line"><span class="variable">.USE_MULT</span>(<span class="string">&quot;MULTIPLY&quot;</span>),            <span class="comment">// Select multiplier usage (&quot;MULTIPLY&quot;, &quot;DYNAMIC&quot;, or &quot;NONE&quot;)</span></span><br><span class="line"><span class="variable">.USE_SIMD</span>(<span class="string">&quot;ONE48&quot;</span>),               <span class="comment">// SIMD selection (&quot;ONE48&quot;, &quot;TWO24&quot;, &quot;FOUR12&quot;)</span></span><br><span class="line"></span><br><span class="line"><span class="variable">.ACASCREG</span>(<span class="number">1</span>),                     <span class="comment">// Number of pipeline stages between A/ACIN and ACOUT (0, 1 or 2)</span></span><br><span class="line"><span class="variable">.ADREG</span>(<span class="number">1</span>),                        <span class="comment">// Number of pipeline stages for pre-adder (0 or 1)</span></span><br><span class="line"><span class="variable">.ALUMODEREG</span>(<span class="number">1</span>),                   <span class="comment">// Number of pipeline stages for ALUMODE (0 or 1)</span></span><br><span class="line"><span class="variable">.AREG</span>(<span class="number">1</span>),                         <span class="comment">// Number of pipeline stages for A (0, 1 or 2)</span></span><br><span class="line"><span class="variable">.BCASCREG</span>(<span class="number">1</span>),                     <span class="comment">// Number of pipeline stages between B/BCIN and BCOUT (0, 1 or 2)</span></span><br><span class="line"><span class="variable">.BREG</span>(<span class="number">1</span>),                         <span class="comment">// Number of pipeline stages for B (0, 1 or 2)</span></span><br><span class="line"><span class="variable">.CARRYINREG</span>(<span class="number">1</span>),                   <span class="comment">// Number of pipeline stages for CARRYIN (0 or 1)</span></span><br><span class="line"><span class="variable">.CARRYINSELREG</span>(<span class="number">1</span>),                <span class="comment">// Number of pipeline stages for CARRYINSEL (0 or 1)</span></span><br><span class="line"><span class="variable">.CREG</span>(<span class="number">1</span>),                         <span class="comment">// Number of pipeline stages for C (0 or 1)</span></span><br><span class="line"><span class="variable">.DREG</span>(<span class="number">1</span>),                         <span class="comment">// Number of pipeline stages for D (0 or 1)</span></span><br><span class="line"><span class="variable">.INMODEREG</span>(<span class="number">1</span>),                    <span class="comment">// Number of pipeline stages for INMODE (0 or 1)</span></span><br><span class="line"><span class="variable">.MREG</span>(<span class="number">1</span>),                         <span class="comment">// Number of multiplier pipeline stages (0 or 1)</span></span><br><span class="line"><span class="variable">.OPMODEREG</span>(<span class="number">1</span>),                    <span class="comment">// Number of pipeline stages for OPMODE (0 or 1)</span></span><br><span class="line"><span class="variable">.PREG</span>(<span class="number">1</span>)                          <span class="comment">// Number of pipeline stages for P (0 or 1)</span></span><br></pre></td></tr></table></figure></p>
+<p>有了属性之后，还需要配合前面提供的操作码才能让系统正常工作，因此我们设置了如下的操作码：<br><figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">assign</span> INMODE = <span class="number">5&#x27;b00000</span>;   <span class="comment">// A,B 1beat pipe stage</span></span><br><span class="line"><span class="keyword">assign</span> OPMODE = <span class="number">7&#x27;b000_0101</span>; <span class="comment">// Z Multiplexers = 0 XY Multiplexers=M</span></span><br><span class="line"><span class="keyword">assign</span> ALUMODE = <span class="number">4&#x27;b0000</span>; <span class="comment">// Z+X+Y+CIN</span></span><br></pre></td></tr></table></figure><br>通过最开始的DSP48E1的结构我们可以只带，DSP48E1的寄存功能是P = (A+D)<em>B + C<br>在上面的这几个配置末实现，我们可以实现输出的结果是P=A</em>B</p>
+<p>接下来我们可以设计一个简单的仿真文件，来仿真一下我们的模块是不是按照预期进行工作的。</p>
+<figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">`<span class="meta-keyword">timescale</span>  1ns / 1ps</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">module</span> tb_dsp48e1_module;</span><br><span class="line"></span><br><span class="line"><span class="comment">// dsp48e1_module Parameters</span></span><br><span class="line"><span class="keyword">parameter</span> PERIOD  = <span class="number">10</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment">// dsp48e1_module Inputs</span></span><br><span class="line"><span class="keyword">reg</span>   clk                                  = <span class="number">0</span> ;</span><br><span class="line"><span class="keyword">reg</span>   rst                                  = <span class="number">1</span> ;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">initial</span></span><br><span class="line"><span class="keyword">begin</span></span><br><span class="line">    <span class="keyword">forever</span> <span class="variable">#(PERIOD/2)</span>  clk=~clk;</span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">initial</span></span><br><span class="line"><span class="keyword">begin</span></span><br><span class="line">    <span class="variable">#(PERIOD*200)</span> rst  =  <span class="number">0</span>;</span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="keyword">reg</span>    [<span class="number">15</span>:<span class="number">0</span>]  a         ; </span><br><span class="line"><span class="keyword">reg</span>    [<span class="number">15</span>:<span class="number">0</span>]  b         ;  </span><br><span class="line"><span class="keyword">wire</span>    [<span class="number">31</span>:<span class="number">0</span>]  result   ; </span><br><span class="line"></span><br><span class="line"><span class="keyword">integer</span> i =<span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"><span class="keyword">initial</span> <span class="keyword">begin</span></span><br><span class="line">    a = <span class="number">0</span>;</span><br><span class="line">    b = <span class="number">0</span>; </span><br><span class="line">    @(<span class="keyword">negedge</span> rst);</span><br><span class="line">    <span class="keyword">repeat</span>(<span class="number">50</span>)@(<span class="keyword">posedge</span> clk);</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i&lt;<span class="number">50</span>; i=i+<span class="number">1</span>) <span class="keyword">begin</span></span><br><span class="line">        a = i[<span class="number">15</span>:<span class="number">0</span>];</span><br><span class="line">        b = i[<span class="number">15</span>:<span class="number">0</span>]; </span><br><span class="line">        @(<span class="keyword">posedge</span> clk);</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line">    </span><br><span class="line">    <span class="keyword">repeat</span>(<span class="number">50</span>)@(<span class="keyword">posedge</span> clk);</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i&lt;<span class="number">50</span>; i=i+<span class="number">1</span>) <span class="keyword">begin</span></span><br><span class="line">        a = -i[<span class="number">15</span>:<span class="number">0</span>];</span><br><span class="line">        b = i[<span class="number">15</span>:<span class="number">0</span>]; </span><br><span class="line">        @(<span class="keyword">posedge</span> clk);</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">repeat</span>(<span class="number">50</span>)@(<span class="keyword">posedge</span> clk);</span><br><span class="line">    <span class="keyword">for</span> (i = <span class="number">0</span>; i&lt;<span class="number">50</span>; i=i+<span class="number">1</span>) <span class="keyword">begin</span></span><br><span class="line">        a = -i[<span class="number">15</span>:<span class="number">0</span>];</span><br><span class="line">        b = -i[<span class="number">15</span>:<span class="number">0</span>]; </span><br><span class="line">        @(<span class="keyword">posedge</span> clk);</span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    dsp48e1_module u_dsp48e1_module(</span><br><span class="line">        <span class="variable">.clk</span>  ( clk  ),</span><br><span class="line">        <span class="variable">.rst</span>  ( rst  ),</span><br><span class="line">        <span class="variable">.a</span>    ( a    ),</span><br><span class="line">        <span class="variable">.b</span>    ( b    ),</span><br><span class="line">        <span class="variable">.result</span>  ( result  )</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line"><span class="keyword">endmodule</span></span><br></pre></td></tr></table></figure>
+<p>可以看到模块在工作，然后我们可以看看具体实现的细节<br><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/DSP48E1乘法器仿真.png" alt></p>
+<p>可以看到，在当前设计模式下，乘法器输出有3拍的延时<br><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/DSP乘法计算结果.png" alt></p>
+<p><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/符号不相同.png" alt></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/FPGA/" rel="tag"># FPGA</a>
+              <a href="/tags/dsp/" rel="tag"># dsp</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/05/08/2023.5/python-dsp-1-baisc/" rel="prev" title="python-dsp-1-baisc">
+      <i class="fa fa-chevron-left"></i> python-dsp-1-baisc
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#1-%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">1. 前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#2-DSP48E1%E7%9A%84%E7%BB%93%E6%9E%84"><span class="nav-number">2.</span> <span class="nav-text">2. DSP48E1的结构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-DSP48E1%E4%B8%BB%E8%A6%81%E7%BB%93%E6%9E%84"><span class="nav-number">2.0.1.</span> <span class="nav-text">2.1 DSP48E1主要结构</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2-DSP48E1%E6%BA%90%E8%AF%AD%E4%B8%8E%E7%BB%93%E6%9E%84"><span class="nav-number">2.1.</span> <span class="nav-text">2.2 DSP48E1源语与结构</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-1%E6%BA%90%E8%AF%AD%E5%8A%9F%E8%83%BD%E5%B1%9E%E6%80%A7"><span class="nav-number">2.1.1.</span> <span class="nav-text">2.2.1源语功能属性</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-2-%E6%BA%90%E8%AF%AD%E5%AF%84%E5%AD%98%E5%99%A8%E5%B1%9E%E6%80%A7"><span class="nav-number">2.1.2.</span> <span class="nav-text">2.2.2 源语寄存器属性</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-3-A-D-B-%E8%BE%93%E5%85%A5%E7%AB%AF%E5%8F%A3"><span class="nav-number">2.2.</span> <span class="nav-text">2.3 A D B 输入端口</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-2-XYZ%E5%A4%9A%E8%B7%AF%E5%A4%8D%E7%94%A8%E5%99%A8"><span class="nav-number">2.3.</span> <span class="nav-text">2.2 XYZ多路复用器</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-3-ALU%E8%AE%A1%E7%AE%97%E5%8D%95%E5%85%83"><span class="nav-number">2.4.</span> <span class="nav-text">2.3 ALU计算单元</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-DSP48E1%E4%BD%BF%E7%94%A8%E5%AE%9E%E4%BE%8B"><span class="nav-number">3.</span> <span class="nav-text">3. DSP48E1使用实例</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">51</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">22</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>
