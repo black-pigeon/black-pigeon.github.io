@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="前言最近帮一个客户实现将一部分算法卸载到FPGA上，其中的一个部分是相关算法。相关简单来说就是一个乘累加的过程。如果在设计的的时候采用一些特殊的序列，比如PN码，那么甚至可以把乘法变成加减法来进行操作。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="使用FPGA实现相关运算">
+<meta property="og:url" content="https://black-pigeon.github.io/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="前言最近帮一个客户实现将一部分算法卸载到FPGA上，其中的一个部分是相关算法。相关简单来说就是一个乘累加的过程。如果在设计的的时候采用一些特殊的序列，比如PN码，那么甚至可以把乘法变成加减法来进行操作。">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/correlation_process.svg">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/python_correlation.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/adder_tree.svg">
+<meta property="article:published_time" content="2023-06-13T11:42:55.000Z">
+<meta property="article:modified_time" content="2023-06-14T05:13:34.488Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="FPGA">
+<meta property="article:tag" content="dsp">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/correlation_process.svg">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>使用FPGA实现相关运算 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">22</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">14</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">53</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          使用FPGA实现相关运算
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-06-13 19:42:55" itemprop="dateCreated datePublished" datetime="2023-06-13T19:42:55+08:00">2023-06-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-06-14 13:13:34" itemprop="dateModified" datetime="2023-06-14T13:13:34+08:00">2023-06-14</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/FPGA/" itemprop="url" rel="index"><span itemprop="name">FPGA</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/" class="post-meta-item leancloud_visitors" data-flag-title="使用FPGA实现相关运算" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>最近帮一个客户实现将一部分算法卸载到FPGA上，其中的一个部分是相关算法。相关简单来说就是一个乘累加的过程。如果在设计的的时候采用一些特殊的序列，比如PN码，那么甚至可以把乘法变成加减法来进行操作。<br><span id="more"></span></p>
+<h1 id="相关运算原理"><a href="#相关运算原理" class="headerlink" title="相关运算原理"></a>相关运算原理</h1><p>相关运算的数学表达式如下</p>
+<script type="math/tex; mode=display">
+    y(n) = \sum_{i=-\infty }^{\infty}h(i)x(n+i)</script><p>在实际处理的时候，我们一般是使用有限长的两个序列进行相关，假设两个序列的长度为N，则上面的可以转换为：</p>
+<script type="math/tex; mode=display">
+    y(n) = \sum_{i=0 }^{N-1}h(i)x(n+i)</script><p>下面以一个具体的例子来说明卷积运算的这个过程：<br><img src="/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/correlation_process.svg" alt="correlation_process"><br>我们假设要进行相关的序列的长度是1024，其中绿色部分我们可以看做是具体的系数，蓝色部分是实际的要处理的数据流，当i=0的时候，需要将x0~x1023分别与h0~h1023对应相乘，然后将这1024个乘积进行累加，得到第一个相关点的结果。<br>当i=1，也就是相当于数据流已经流过一个点，然后再执行上面的操作计算得到第二个相关点的结果。<br>依次类推下去，这样我们就能得到对应的相关结果了。</p>
+<h1 id="PN码"><a href="#PN码" class="headerlink" title="PN码"></a>PN码</h1><p>在之前的博客当中，已经学习过PN码，并且了解到PN码的伪随机性，通过对PN码进行相关，能够检测到一个相关峰。<br>==<a href="https://black-pigeon.github.io/2021/06/07/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-1-PN%E7%A0%81/">PN码以及生成多项式</a>==</p>
+<h1 id="使用python实现互相关与自相关操作"><a href="#使用python实现互相关与自相关操作" class="headerlink" title="使用python实现互相关与自相关操作"></a>使用python实现互相关与自相关操作</h1><p>下面是一个简单的python脚本，能够实现PN码的互相关与自相关。并且能够检测到峰值。<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br></pre></td><td class="code"><pre><span class="line"></span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">from</span> numpy <span class="keyword">import</span> empty, exp, pi, arange, int8, fromiter, <span class="built_in">sum</span></span><br><span class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">pnsequence</span>(<span class="params">pn_order, pn_seed, pn_mask, seq_length</span>):</span></span><br><span class="line">    <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">    Generate a PN (Pseudo-Noise) sequence using a Linear Feedback Shift Register (LFSR).</span></span><br><span class="line"><span class="string">    Seed and mask are ordered so that:</span></span><br><span class="line"><span class="string">        - seed[-1] will be the first output</span></span><br><span class="line"><span class="string">        - the new bit computed as :math:`sum(shift_register &amp; mask) % 2` is inserted in shift[0]</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Parameters</span></span><br><span class="line"><span class="string">    ----------</span></span><br><span class="line"><span class="string">    pn_order : int</span></span><br><span class="line"><span class="string">        Number of delay elements used in the LFSR.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    pn_seed : iterable providing 0&#x27;s and 1&#x27;s</span></span><br><span class="line"><span class="string">        Seed for the initialization of the LFSR delay elements.</span></span><br><span class="line"><span class="string">        The length of this string must be equal to &#x27;pn_order&#x27;.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    pn_mask : iterable providing 0&#x27;s and 1&#x27;s</span></span><br><span class="line"><span class="string">        Mask representing which delay elements contribute to the feedback</span></span><br><span class="line"><span class="string">        in the LFSR. The length of this string must be equal to &#x27;pn_order&#x27;.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    seq_length : int</span></span><br><span class="line"><span class="string">        Length of the PN sequence to be generated. Usually (2^pn_order - 1)</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Returns</span></span><br><span class="line"><span class="string">    -------</span></span><br><span class="line"><span class="string">    pnseq : 1D ndarray of ints</span></span><br><span class="line"><span class="string">        PN sequence generated.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    Raises</span></span><br><span class="line"><span class="string">    ------</span></span><br><span class="line"><span class="string">    ValueError</span></span><br><span class="line"><span class="string">        If the pn_order is equal to the length of the strings pn_seed and pn_mask.</span></span><br><span class="line"><span class="string"></span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line">    <span class="comment"># Check if pn_order is equal to the length of the strings &#x27;pn_seed&#x27; and &#x27;pn_mask&#x27;</span></span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(pn_seed) != pn_order:</span><br><span class="line">        <span class="keyword">raise</span> ValueError(<span class="string">&#x27;pn_seed has not the same length as pn_order&#x27;</span>)</span><br><span class="line">    <span class="keyword">if</span> <span class="built_in">len</span>(pn_mask) != pn_order:</span><br><span class="line">        <span class="keyword">raise</span> ValueError(<span class="string">&#x27;pn_mask has not the same length as pn_order&#x27;</span>)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># Pre-allocate memory for output</span></span><br><span class="line">    pnseq = empty(seq_length, int8)</span><br><span class="line"></span><br><span class="line">    <span class="comment"># Convert input as array</span></span><br><span class="line">    sr = fromiter(pn_seed, int8, pn_order)</span><br><span class="line">    mask = fromiter(pn_mask, int8, pn_order)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(seq_length):</span><br><span class="line">        pnseq[i] = sr[-<span class="number">1</span>]</span><br><span class="line">        new_bit = <span class="built_in">sum</span>(sr &amp; mask) % <span class="number">2</span></span><br><span class="line">        sr[<span class="number">1</span>:] = sr[:-<span class="number">1</span>]</span><br><span class="line">        sr[<span class="number">0</span>] = new_bit</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> pnseq</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">pn_order = <span class="number">11</span></span><br><span class="line">pn_seed = <span class="string">&#x27;11010011001&#x27;</span></span><br><span class="line">pn_mask = <span class="string">&#x27;11011000011&#x27;</span></span><br><span class="line">pn_mask1 = <span class="string">&#x27;11011100011&#x27;</span></span><br><span class="line">seq_length = <span class="number">1024</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># Generate PN sequence</span></span><br><span class="line">pn_sequence = pnsequence(pn_order, pn_seed, pn_mask, seq_length)</span><br><span class="line"><span class="comment"># pn_sequence[pn_sequence==0] = -1</span></span><br><span class="line">pn_sequence_shift =  np.roll(pn_sequence,seq_length//<span class="number">2</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;pn_sequence:&quot;</span>, pn_sequence[:<span class="number">20</span>])</span><br><span class="line"></span><br><span class="line">pn_sequence1 = pnsequence(pn_order, pn_seed, pn_mask1, seq_length)</span><br><span class="line"><span class="comment"># pn_sequence1[pn_sequence1==0] = -1</span></span><br><span class="line">pn_sequence_shift1 =  np.roll(pn_sequence1,seq_length//<span class="number">2</span>)</span><br><span class="line"><span class="built_in">print</span>(<span class="string">&quot;pn_sequence1:&quot;</span>, pn_sequence1[:<span class="number">20</span>])</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># Calculate autocorrelation function</span></span><br><span class="line"><span class="comment"># acf = np.correlate(pn_sequence, np.hstack((pn_sequence[32:], pn_sequence[:32])), mode=&#x27;full&#x27;)</span></span><br><span class="line">acf_auto = np.zeros(seq_length)</span><br><span class="line">acf_cross = np.zeros(seq_length)</span><br><span class="line"><span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(seq_length):</span><br><span class="line">    acf_auto[i] = np.<span class="built_in">sum</span>(pn_sequence * pn_sequence_shift);</span><br><span class="line">    acf_cross[i] = np.<span class="built_in">sum</span>(pn_sequence * pn_sequence_shift1);</span><br><span class="line">    pn_sequence_shift = np.roll(pn_sequence_shift,<span class="number">1</span>)</span><br><span class="line">    pn_sequence_shift1 = np.roll(pn_sequence_shift1,<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line"><span class="comment"># Plot results</span></span><br><span class="line">fig, (ax1, ax2) = plt.subplots(nrows=<span class="number">2</span>, ncols=<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">ax1.stem(pn_sequence)</span><br><span class="line">ax1.set_title(<span class="string">&#x27;PN Sequence&#x27;</span>)</span><br><span class="line">ax1.set_xlabel(<span class="string">&#x27;Index&#x27;</span>)</span><br><span class="line">ax1.set_ylabel(<span class="string">&#x27;Value&#x27;</span>)</span><br><span class="line"></span><br><span class="line">ax2.plot(acf_auto,<span class="string">&#x27;r&#x27;</span>, label=<span class="string">&quot;auto&quot;</span>)</span><br><span class="line">ax2.plot(acf_cross,<span class="string">&#x27;b&#x27;</span>, label=<span class="string">&quot;cross&quot;</span>)</span><br><span class="line"></span><br><span class="line">ax2.legend(loc=<span class="string">&quot;upper right&quot;</span>)</span><br><span class="line">ax2.set_title(<span class="string">&#x27;Autocorrelation Function&#x27;</span>)</span><br><span class="line">ax2.set_xlabel(<span class="string">&#x27;Lag&#x27;</span>)</span><br><span class="line">ax2.set_ylabel(<span class="string">&#x27;Correlation&#x27;</span>)</span><br><span class="line"></span><br><span class="line">plt.tight_layout()</span><br><span class="line">plt.show()</span><br><span class="line"></span><br><span class="line">out_seq = pnsequence(pn_order, pn_seed, pn_mask, seq_length)</span><br><span class="line"><span class="keyword">try</span>:</span><br><span class="line">    <span class="keyword">with</span> <span class="built_in">open</span>(<span class="string">&#x27;pn_sequence.txt&#x27;</span>, <span class="string">&#x27;w&#x27;</span>) <span class="keyword">as</span> f:</span><br><span class="line">        <span class="keyword">for</span> item <span class="keyword">in</span> out_seq:</span><br><span class="line">            f.write(<span class="string">&quot;%s\n&quot;</span> % item)</span><br><span class="line"></span><br><span class="line"><span class="keyword">except</span> Exception <span class="keyword">as</span> e:</span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;An error occurred while writing the file: &quot;</span>, e)</span><br><span class="line"></span><br></pre></td></tr></table></figure></p>
+<p><img src="/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/python_correlation.png" alt></p>
+<h1 id="使用FPGA实现相关运算"><a href="#使用FPGA实现相关运算" class="headerlink" title="使用FPGA实现相关运算"></a>使用FPGA实现相关运算</h1><p>在前面我们已经简单介绍了相关运算的原理，有了前面的介绍，想必在FPGA当中实现相关运算就有了一个大概的思路了。在FPGA当中想要实现相关操作的主要的限制是FPGA上的资源限制，比如DSP和查找表资源。如果相关的长度比较长的话，如果需要进行乘法运算，那么需要耗费大量的DSP资源。以我所使用的ZYNQ7020为例，一共只有220个DSP，因此在一些计算密集的应用当中，需要更高端的FPGA才能实现。</p>
+<p>前面我们介绍了PN码的相关操作，可以看到PN码只是01010这种的bit。通过这种bit我们就能够实现相关，在实际使用的时候，我们也会经常遇到只需要数据的符号位就可以进行相关的情况。因此我们在FPGA当中就可以把乘法运算变成加减法运算。</p>
+<p>然后我们还要注意的就是FPGA在进行相关运算的时候需要进行一定长度的累加，比如上面的相关的长度是1024，那么就需要进行1024个长度的累加。这么多数量的累加，想要在一个时钟周期内全部实现是不太现实的。因此我们需要实现一个模块，专门来实现1024个点的累加操作。</p>
+<h2 id="FPGA实现累加树"><a href="#FPGA实现累加树" class="headerlink" title="FPGA实现累加树"></a>FPGA实现累加树</h2><p>下面以一个9个数相加的过程来详细描述这个过程：<br><img src="/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/adder_tree.svg" alt></p>
+<ul>
+<li><p>第一个时钟周期：<br>首先，我们有d0~d8一共9个数需要累加，在进行第一轮加法的时候，我们需要两两进行相加，可以看到一个可以进行4组加法，然后剩余了一个数据。那么在这一个时钟周期，我们需要完成4个加法和一个寄存。</p>
+</li>
+<li><p>第二个时钟周期：<br>在上一个时钟周期结束之后，我们一共能够得到5个数据，继续执行两两相加，可以看到这里可以执行2组加法，剩余一个数据需要寄存。</p>
+</li>
+<li><p>第三个时钟周期：<br>在上一个时钟周期结束之后，我们得到了3个数据，继续执行两两相加，执行一组加法，剩余一个数据需要寄存。</p>
+</li>
+<li><p>第四个时钟周期<br>在第四个时钟周期当中，只剩下最后两个数据需要进行相加，我们就可以得到最终的结果。</p>
+</li>
+</ul>
+<p>假设：本次待相加的数目为n<br>(1) 本次需要进行的加法运算共有[n/2]组，也就是需要[n/2]的加法器，需要的寄存器的数目为[n/2] + n%2（其中[n/2]表示取整，n%2表示取余）<br>(2) 下一次运算需要相加的数目为[n/2] + n%2<br>(3)每一级的运算需要一个时钟周期的开销<br>  因此采用递归的方式，来完成这个运算是再方便不过了。但是在C/C++或其他高级语言中使用递归是在方便不过的事情了，但是在FPGA中想要使用递归还是有点麻烦的，这时候就需要灵活的使用generate语句，来在每一级生成不同的电路。</p>
+<p>下面是使用systemverilog实现的这个累加树的模块。<br><figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">`<span class="meta-keyword">timescale</span> 1ns / 1ps</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">module</span> add_tree_impl #(</span><br><span class="line">	<span class="comment">//==========================================</span></span><br><span class="line">	<span class="comment">//parameter define</span></span><br><span class="line">	<span class="comment">//==========================================</span></span><br><span class="line">    <span class="keyword">parameter</span>	DATA_NUM 		= <span class="number">1024</span>							        ,<span class="comment">//需要相加的个数</span></span><br><span class="line">	<span class="keyword">parameter</span> 	HALF_IDX		= DATA_NUM &gt;&gt; <span class="number">1</span>				        ,<span class="comment">//两两相加的个数</span></span><br><span class="line">	<span class="keyword">parameter</span>	DATA_NUM_NEW	= (DATA_NUM &gt;&gt; <span class="number">1</span>) + (DATA_NUM%<span class="number">2</span>)	,<span class="comment">//下一级模块需要相加的个数</span></span><br><span class="line">	<span class="keyword">parameter</span>	DW 				= <span class="number">8</span>						            ,<span class="comment">//本阶段的输入数据位宽</span></span><br><span class="line">	<span class="keyword">parameter</span>	DW_NEW			= DW + <span class="number">1</span> 				            ,<span class="comment">//本阶段的输出数据位宽</span></span><br><span class="line">    <span class="keyword">parameter</span>   DWO             = DW + clogb2(DATA_NUM-<span class="number">1</span>)            <span class="comment">// 最终输出结果的位宽  </span></span><br><span class="line">	)(</span><br><span class="line">	<span class="keyword">input</span> 	<span class="keyword">wire</span> 					    clk 		,</span><br><span class="line">	<span class="keyword">input</span>	<span class="keyword">wire</span>					    rst 		,</span><br><span class="line">	<span class="keyword">input</span>	<span class="keyword">wire</span>					    pi_dv		,</span><br><span class="line">	<span class="keyword">input</span>	<span class="keyword">wire</span>	[DW-<span class="number">1</span>: <span class="number">0</span>]	        pi_data	[DATA_NUM-<span class="number">1</span>:<span class="number">0</span>]	,</span><br><span class="line"></span><br><span class="line">	<span class="keyword">output</span> 	<span class="keyword">wire</span> 					    po_dv		,</span><br><span class="line">	<span class="keyword">output</span>	<span class="keyword">wire</span>	[DWO - <span class="number">1</span> : <span class="number">0</span>]	    po_data</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    <span class="keyword">generate</span></span><br><span class="line">        <span class="keyword">genvar</span> i;</span><br><span class="line">        <span class="keyword">reg</span> 	[(DW_NEW) - <span class="number">1</span> : <span class="number">0</span>]	sum_tmp	[DATA_NUM_NEW-<span class="number">1</span>:<span class="number">0</span>];</span><br><span class="line">        <span class="keyword">reg</span> 						tmp_dv	;</span><br><span class="line">        <span class="comment">//当前不是最后一次加法</span></span><br><span class="line">        <span class="keyword">if</span> (DATA_NUM != <span class="number">2</span>) <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">for</span>(i = <span class="number">0</span>; i &lt; HALF_IDX; i = i + <span class="number">1</span>)</span><br><span class="line">            <span class="keyword">begin</span>: cal_sum</span><br><span class="line">                <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk) <span class="keyword">begin</span></span><br><span class="line">                    <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">                        sum_tmp[i] &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">                        tmp_dv &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">                    <span class="keyword">end</span></span><br><span class="line">                    <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">                        <span class="comment">//两数相加，位宽扩充一位</span></span><br><span class="line">                        <span class="comment">//eg：sum_tmp[0] = pi_data[1] + pi_data[0];</span></span><br><span class="line">                        <span class="comment">//eg：sum_tmp[1] = pi_data[3] + pi_data[2];</span></span><br><span class="line">                        <span class="comment">//eg：sum_tmp[2] = pi_data[5] + pi_data[4];</span></span><br><span class="line">                        <span class="comment">//eg：sum_tmp[3] = pi_data[7] + pi_data[6];</span></span><br><span class="line">                        sum_tmp[i] &lt;= &#123;pi_data[(<span class="number">2</span>*i + <span class="number">1</span>)][DW-<span class="number">1</span>],pi_data[(<span class="number">2</span>*i + <span class="number">1</span>)]&#125; + &#123;pi_data[<span class="number">2</span>*i][DW-<span class="number">1</span>], pi_data[<span class="number">2</span>*i]&#125;;</span><br><span class="line">                        tmp_dv &lt;= pi_dv;</span><br><span class="line">                    <span class="keyword">end</span></span><br><span class="line">                <span class="keyword">end</span>	</span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">            <span class="comment">//递归调用求和模块,将本季求和计算得到的模块，传递到下一级</span></span><br><span class="line">            add_tree_impl #(</span><br><span class="line">                <span class="variable">.DATA_NUM</span>(DATA_NUM_NEW),</span><br><span class="line">                <span class="variable">.DW</span>(DW_NEW)</span><br><span class="line">            ) inst_add_tree (</span><br><span class="line">                <span class="variable">.clk</span>     (clk),</span><br><span class="line">                <span class="variable">.rst</span>     (rst),</span><br><span class="line">                <span class="variable">.pi_dv</span>   (tmp_dv),</span><br><span class="line">                <span class="variable">.pi_data</span> (sum_tmp),</span><br><span class="line">                <span class="variable">.po_dv</span>   (po_dv),</span><br><span class="line">                <span class="variable">.po_data</span> (po_data)</span><br><span class="line">            );</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="comment">//==========================================</span></span><br><span class="line">        <span class="comment">//当前需要相加的个数为奇数个需要将最后一个数据缓存</span></span><br><span class="line">        <span class="comment">//==========================================</span></span><br><span class="line">        <span class="keyword">if</span> (DATA_NUM%<span class="number">2</span> ==<span class="number">1</span>) <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk) <span class="keyword">begin</span></span><br><span class="line">                <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">                    sum_tmp[(DATA_NUM_NEW - <span class="number">1</span>)] &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">                <span class="keyword">end</span></span><br><span class="line">                <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">                    sum_tmp[(DATA_NUM_NEW - <span class="number">1</span>)] &lt;= &#123;pi_data[DATA_NUM-<span class="number">1</span>][DW-<span class="number">1</span>],pi_data[DATA_NUM-<span class="number">1</span>]&#125;;</span><br><span class="line">                <span class="keyword">end</span></span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">endgenerate</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">generate</span></span><br><span class="line">        <span class="comment">//执行最后一次加法,只剩下两个数相加</span></span><br><span class="line">        <span class="keyword">if</span> (DATA_NUM == <span class="number">2</span>) <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">reg</span> 								tmp_dv_final	;</span><br><span class="line">            <span class="keyword">reg</span> 	[DWO-<span class="number">1</span> : <span class="number">0</span>]			        sum_tmp_final	;</span><br><span class="line"></span><br><span class="line">            <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk) <span class="keyword">begin</span></span><br><span class="line">                <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">                    sum_tmp_final &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">                    tmp_dv_final &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">                <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">                    sum_tmp_final &lt;= &#123;pi_data[<span class="number">0</span>][DW-<span class="number">1</span>], pi_data[<span class="number">0</span>]&#125; + &#123;pi_data[<span class="number">1</span>][DW-<span class="number">1</span>], pi_data[<span class="number">1</span>]&#125;;				</span><br><span class="line">                    tmp_dv_final &lt;= pi_dv;		</span><br><span class="line">                <span class="keyword">end</span></span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">            <span class="keyword">assign</span> po_dv = tmp_dv_final;</span><br><span class="line">            <span class="keyword">assign</span> po_data = sum_tmp_final;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">endgenerate</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">function</span> <span class="keyword">integer</span> clogb2;</span><br><span class="line">    <span class="keyword">input</span> <span class="keyword">integer</span> depth;</span><br><span class="line">    <span class="keyword">for</span> (clogb2=<span class="number">0</span>; depth&gt;<span class="number">0</span>; clogb2=clogb2+<span class="number">1</span>)</span><br><span class="line">        depth = depth &gt;&gt; <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">endfunction</span></span><br><span class="line"><span class="keyword">endmodule</span></span><br></pre></td></tr></table></figure></p>
+<h2 id="FPGA实现相关操作"><a href="#FPGA实现相关操作" class="headerlink" title="FPGA实现相关操作"></a>FPGA实现相关操作</h2><p>前面我们实现了累加树的操作，有了上面的累加树，我们就可以实现一定个数的数据相加，并得到相加的结果。想要在FPGA上实现相关操作，接下来我们可以来实现”乘法”这一步，在本博客当中，主要是以PN码来进行的，因此是执行相关操作。</p>
+<p>在FPGA上有一个用于相关的序列，序列的值是-1，+1。现在有输入的IQ数据的值，我们只需要有用符号位来进行相关就可以。如果符号位与序列相同，那么”乘法”的结果就为1，如果符号位与序列不同，那么”乘法”的结果就为-1，最终将所有得到的结果累加起来就可以了。<br>下面是使用systemverilog实现这个功能的模块。</p>
+<figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br><span class="line">207</span><br><span class="line">208</span><br><span class="line">209</span><br><span class="line">210</span><br><span class="line">211</span><br><span class="line">212</span><br><span class="line">213</span><br><span class="line">214</span><br><span class="line">215</span><br><span class="line">216</span><br><span class="line">217</span><br><span class="line">218</span><br><span class="line">219</span><br><span class="line">220</span><br><span class="line">221</span><br><span class="line">222</span><br><span class="line">223</span><br><span class="line">224</span><br><span class="line">225</span><br><span class="line">226</span><br><span class="line">227</span><br><span class="line">228</span><br><span class="line">229</span><br><span class="line">230</span><br><span class="line">231</span><br><span class="line">232</span><br><span class="line">233</span><br><span class="line">234</span><br><span class="line">235</span><br><span class="line">236</span><br><span class="line">237</span><br><span class="line">238</span><br><span class="line">239</span><br><span class="line">240</span><br><span class="line">241</span><br><span class="line">242</span><br><span class="line">243</span><br><span class="line">244</span><br><span class="line">245</span><br><span class="line">246</span><br><span class="line">247</span><br><span class="line">248</span><br><span class="line">249</span><br><span class="line">250</span><br><span class="line">251</span><br><span class="line">252</span><br><span class="line">253</span><br><span class="line">254</span><br><span class="line">255</span><br><span class="line">256</span><br><span class="line">257</span><br><span class="line">258</span><br><span class="line">259</span><br><span class="line">260</span><br><span class="line">261</span><br><span class="line">262</span><br><span class="line">263</span><br><span class="line">264</span><br><span class="line">265</span><br><span class="line">266</span><br><span class="line">267</span><br><span class="line">268</span><br><span class="line">269</span><br><span class="line">270</span><br><span class="line">271</span><br><span class="line">272</span><br><span class="line">273</span><br><span class="line">274</span><br><span class="line">275</span><br><span class="line">276</span><br><span class="line">277</span><br><span class="line">278</span><br><span class="line">279</span><br><span class="line">280</span><br><span class="line">281</span><br><span class="line">282</span><br><span class="line">283</span><br><span class="line">284</span><br><span class="line">285</span><br><span class="line">286</span><br><span class="line">287</span><br><span class="line">288</span><br><span class="line">289</span><br><span class="line">290</span><br><span class="line">291</span><br><span class="line">292</span><br><span class="line">293</span><br><span class="line">294</span><br><span class="line">295</span><br><span class="line">296</span><br><span class="line">297</span><br><span class="line">298</span><br><span class="line">299</span><br><span class="line">300</span><br><span class="line">301</span><br><span class="line">302</span><br><span class="line">303</span><br><span class="line">304</span><br><span class="line">305</span><br><span class="line">306</span><br><span class="line">307</span><br><span class="line">308</span><br><span class="line">309</span><br><span class="line">310</span><br><span class="line">311</span><br><span class="line">312</span><br><span class="line">313</span><br><span class="line">314</span><br><span class="line">315</span><br><span class="line">316</span><br><span class="line">317</span><br><span class="line">318</span><br><span class="line">319</span><br><span class="line">320</span><br><span class="line">321</span><br><span class="line">322</span><br><span class="line">323</span><br><span class="line">324</span><br><span class="line">325</span><br><span class="line">326</span><br><span class="line">327</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">module</span> cross_correlation#(</span><br><span class="line">	<span class="comment">//==========================================</span></span><br><span class="line">	<span class="comment">//parameter define</span></span><br><span class="line">	<span class="comment">//==========================================</span></span><br><span class="line">    <span class="keyword">parameter</span>	DATA_NUM 		= <span class="number">1024</span>							    ,<span class="comment">//需要相加的个数</span></span><br><span class="line">	<span class="keyword">parameter</span> 	HALF_IDX		= DATA_NUM &gt;&gt; <span class="number">1</span>				        ,<span class="comment">//两两相加的个数</span></span><br><span class="line">	<span class="keyword">parameter</span>	DATA_NUM_NEW	= (DATA_NUM &gt;&gt; <span class="number">1</span>) + (DATA_NUM%<span class="number">2</span>)	,<span class="comment">//下一级模块需要相加的个数</span></span><br><span class="line">	<span class="keyword">parameter</span>	DW 				= <span class="number">2</span>						            ,<span class="comment">//本阶段的输入数据位宽</span></span><br><span class="line">	<span class="keyword">parameter</span>	DW_NEW			= DW + <span class="number">1</span> 				            ,<span class="comment">//本阶段的输出数据位宽</span></span><br><span class="line">    <span class="keyword">parameter</span>   DWO             = DW + clogb2(DATA_NUM-<span class="number">1</span>)            <span class="comment">// 最终输出结果的位宽  </span></span><br><span class="line">    )(</span><br><span class="line">        <span class="keyword">input</span>   <span class="keyword">wire</span>                clk                 ,</span><br><span class="line">        <span class="keyword">input</span>   <span class="keyword">wire</span>                rst                 ,</span><br><span class="line">        <span class="keyword">input</span>   <span class="keyword">wire</span>                enable              ,</span><br><span class="line">        <span class="keyword">input</span>   <span class="keyword">wire</span>                sample_valid        ,</span><br><span class="line">        <span class="keyword">input</span>   <span class="keyword">wire</span>    [<span class="number">15</span>:<span class="number">0</span>]      sample_i            ,</span><br><span class="line">        <span class="keyword">input</span>   <span class="keyword">wire</span>    [<span class="number">15</span>:<span class="number">0</span>]      sample_q            ,</span><br><span class="line">        <span class="keyword">input</span>   <span class="keyword">wire</span>    [<span class="number">15</span>:<span class="number">0</span>]      threshold           ,</span><br><span class="line">        </span><br><span class="line">        <span class="keyword">input</span>   <span class="keyword">wire</span>    [<span class="number">1</span>:<span class="number">0</span>]       h_taps  [DATA_NUM-<span class="number">1</span>:<span class="number">0</span>],</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">        <span class="comment">// output  reg    [15:0]       correlation_value   ,</span></span><br><span class="line">        <span class="keyword">output</span>  <span class="keyword">wire</span>   [<span class="number">15</span>:<span class="number">0</span>]       est_amp_mon         ,</span><br><span class="line">        <span class="keyword">output</span>  <span class="keyword">reg</span>                 peak_valid          </span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="comment">// parameter define</span></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="keyword">function</span> <span class="keyword">integer</span> clogb2;</span><br><span class="line">    <span class="keyword">input</span> <span class="keyword">integer</span> depth;</span><br><span class="line">    <span class="keyword">for</span> (clogb2=<span class="number">0</span>; depth&gt;<span class="number">0</span>; clogb2=clogb2+<span class="number">1</span>)</span><br><span class="line">        depth = depth &gt;&gt; <span class="number">1</span>;</span><br><span class="line">    <span class="keyword">endfunction</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">// localparam THRESHOLD = 320;</span></span><br><span class="line">    </span><br><span class="line"></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="comment">// internal signals and registers</span></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="keyword">wire</span>     [DWO-<span class="number">1</span>:<span class="number">0</span>]  acc_i               ;</span><br><span class="line">    <span class="keyword">wire</span>     [DWO-<span class="number">1</span>:<span class="number">0</span>]  acc_q               ;</span><br><span class="line">    <span class="keyword">wire</span>                acc_valid           ;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">reg</span>     [DWO-<span class="number">1</span>:<span class="number">0</span>]   abs_acc_i           ;</span><br><span class="line">    <span class="keyword">reg</span>     [DWO-<span class="number">1</span>:<span class="number">0</span>]   abs_acc_q           ;</span><br><span class="line">    <span class="keyword">reg</span>                 abs_acc_valid       ;</span><br><span class="line">    <span class="keyword">reg</span>     [DWO-<span class="number">1</span>:<span class="number">0</span>]   acc_i_delay1     ;</span><br><span class="line">    <span class="keyword">reg</span>     [DWO-<span class="number">1</span>:<span class="number">0</span>]   acc_q_delay1     ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">reg</span>     [DWO-<span class="number">1</span>:<span class="number">0</span>]   max_abs         ;</span><br><span class="line">    <span class="keyword">reg</span>     [DWO-<span class="number">1</span>:<span class="number">0</span>]   min_abs         ;</span><br><span class="line">    <span class="keyword">reg</span>                 max_abs_valid   ;</span><br><span class="line">    <span class="keyword">reg</span>     [DWO-<span class="number">1</span>:<span class="number">0</span>]   acc_i_delay2     ;</span><br><span class="line">    <span class="keyword">reg</span>     [DWO-<span class="number">1</span>:<span class="number">0</span>]   acc_q_delay2     ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">reg</span>     [DWO-<span class="number">1</span>:<span class="number">0</span>]   est_amp         ;</span><br><span class="line">    <span class="keyword">reg</span>                 est_amp_valid   ;</span><br><span class="line">    <span class="keyword">reg</span>     [DWO-<span class="number">1</span>:<span class="number">0</span>]   acc_i_delay3     ;</span><br><span class="line">    <span class="keyword">reg</span>     [DWO-<span class="number">1</span>:<span class="number">0</span>]   acc_q_delay3     ;</span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">3</span>:<span class="number">0</span>]       cnt_marker      ;      </span><br><span class="line"></span><br><span class="line">    (* ram_style = <span class="string">&quot;block&quot;</span> *) <span class="keyword">reg</span>     [<span class="number">1</span>:<span class="number">0</span>]       mult_i    [<span class="number">1023</span>:<span class="number">0</span>]  ; </span><br><span class="line">    (* ram_style = <span class="string">&quot;block&quot;</span> *) <span class="keyword">reg</span>     [<span class="number">1</span>:<span class="number">0</span>]       mult_q    [<span class="number">1023</span>:<span class="number">0</span>]  ; </span><br><span class="line">    <span class="keyword">reg</span>                 mult_valid          ;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">1023</span>:<span class="number">0</span>]            sign_i      ;</span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">1023</span>:<span class="number">0</span>]            sign_q      ;</span><br><span class="line">    <span class="comment">// reg             h_tap   [1023:0]    ;   // taps for h</span></span><br><span class="line">    <span class="comment">// wire            sign_i              ;</span></span><br><span class="line">    <span class="comment">// wire            sign_q              ;</span></span><br><span class="line">    <span class="keyword">integer</span> i = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">// assign sign_i = sample_i[15];</span></span><br><span class="line">    <span class="comment">// assign sign_q = sample_q[15];</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">for</span> (i=<span class="number">0</span>; i&lt;<span class="number">1024</span>; i=i+<span class="number">1</span>) <span class="keyword">begin</span></span><br><span class="line">                mult_i[i] &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">if</span> (enable == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">if</span> (sample_valid) <span class="keyword">begin</span></span><br><span class="line">                <span class="keyword">for</span>(i=<span class="number">0</span>; i&lt;<span class="number">1024</span>; i=i+<span class="number">1</span>)<span class="keyword">begin</span></span><br><span class="line">                    <span class="keyword">if</span> (h_taps[i] == <span class="number">&#x27;d0</span>) <span class="keyword">begin</span></span><br><span class="line">                        mult_i[i] &lt;= <span class="number">2&#x27;b00</span>;</span><br><span class="line">                    <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">                        mult_i[i] &lt;= sign_i[i]^h_taps[i][<span class="number">1</span>] ? <span class="number">2&#x27;b11</span> : <span class="number">2&#x27;b01</span>;</span><br><span class="line">                    <span class="keyword">end</span></span><br><span class="line">                <span class="keyword">end</span></span><br><span class="line">            <span class="keyword">end</span> </span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">for</span> (i=<span class="number">0</span>; i&lt;<span class="number">1024</span>; i=i+<span class="number">1</span>) <span class="keyword">begin</span></span><br><span class="line">                mult_i[i] &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">for</span> (i=<span class="number">0</span>; i&lt;<span class="number">1024</span>; i=i+<span class="number">1</span>) <span class="keyword">begin</span></span><br><span class="line">                mult_q[i] &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">if</span> (enable == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">if</span> (sample_valid) <span class="keyword">begin</span></span><br><span class="line">                <span class="keyword">for</span>(i=<span class="number">0</span>; i&lt;<span class="number">1024</span>; i=i+<span class="number">1</span>)<span class="keyword">begin</span></span><br><span class="line">                    <span class="keyword">if</span> (h_taps[i] == <span class="number">&#x27;d0</span>) <span class="keyword">begin</span></span><br><span class="line">                        mult_q[i] &lt;= <span class="number">2&#x27;b00</span>;</span><br><span class="line">                    <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">                        mult_q[i] &lt;= sign_q[i]^h_taps[i][<span class="number">1</span>] ? <span class="number">2&#x27;b11</span> : <span class="number">2&#x27;b01</span>;</span><br><span class="line">                    <span class="keyword">end</span></span><br><span class="line">                <span class="keyword">end</span></span><br><span class="line">            <span class="keyword">end</span> </span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">for</span> (i=<span class="number">0</span>; i&lt;<span class="number">1024</span>; i=i+<span class="number">1</span>) <span class="keyword">begin</span></span><br><span class="line">                mult_q[i] &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">for</span> (i=<span class="number">0</span>; i&lt;<span class="number">1024</span>; i=i+<span class="number">1</span>) <span class="keyword">begin</span></span><br><span class="line">                sign_i[i] &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">                sign_q[i] &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">if</span> (enable == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">if</span> (sample_valid) <span class="keyword">begin</span></span><br><span class="line">                sign_i[<span class="number">1023</span>] &lt;= sample_i[<span class="number">15</span>];</span><br><span class="line">                sign_q[<span class="number">1023</span>] &lt;= sample_q[<span class="number">15</span>];</span><br><span class="line">                <span class="keyword">for</span>(i=<span class="number">0</span>; i&lt;<span class="number">1023</span>; i=i+<span class="number">1</span>)<span class="keyword">begin</span></span><br><span class="line">                    sign_i[i] &lt;= sign_i[i+<span class="number">1</span>];</span><br><span class="line">                    sign_q[i] &lt;= sign_q[i+<span class="number">1</span>];</span><br><span class="line">                <span class="keyword">end</span></span><br><span class="line">            <span class="keyword">end</span> </span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">for</span> (i=<span class="number">0</span>; i&lt;<span class="number">1024</span>; i=i+<span class="number">1</span>) <span class="keyword">begin</span></span><br><span class="line">                sign_i[i] &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">                sign_q[i] &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            mult_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">if</span>(enable == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            mult_valid &lt;= sample_valid;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            mult_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    add_tree_impl#(</span><br><span class="line">        <span class="variable">.DATA_NUM</span>(DATA_NUM ),</span><br><span class="line">        <span class="variable">.HALF_IDX</span>(HALF_IDX ),</span><br><span class="line">        <span class="variable">.DATA_NUM_NEW</span>(DATA_NUM_NEW ),</span><br><span class="line">        <span class="variable">.DW</span>(DW ),</span><br><span class="line">        <span class="variable">.DW_NEW</span>(DW_NEW ),</span><br><span class="line">        <span class="variable">.DWO</span> ( DWO )</span><br><span class="line">    )add_tree_dut_i (</span><br><span class="line">        <span class="variable">.clk</span> (clk ),</span><br><span class="line">        <span class="variable">.rst</span> (rst ),</span><br><span class="line">        <span class="variable">.pi_dv</span> (mult_valid ),</span><br><span class="line">        <span class="variable">.pi_data</span> (mult_i ),</span><br><span class="line">        <span class="variable">.po_dv</span> (acc_valid ),</span><br><span class="line">        <span class="variable">.po_data</span>  ( acc_i)</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    add_tree_impl#(</span><br><span class="line">        <span class="variable">.DATA_NUM</span>(DATA_NUM ),</span><br><span class="line">        <span class="variable">.HALF_IDX</span>(HALF_IDX ),</span><br><span class="line">        <span class="variable">.DATA_NUM_NEW</span>(DATA_NUM_NEW ),</span><br><span class="line">        <span class="variable">.DW</span>(DW ),</span><br><span class="line">        <span class="variable">.DW_NEW</span>(DW_NEW ),</span><br><span class="line">        <span class="variable">.DWO</span> ( DWO )</span><br><span class="line">    )add_tree_dut_q (</span><br><span class="line">        <span class="variable">.clk</span> (clk ),</span><br><span class="line">        <span class="variable">.rst</span> (rst ),</span><br><span class="line">        <span class="variable">.pi_dv</span> (mult_valid ),</span><br><span class="line">        <span class="variable">.pi_data</span> (mult_q),</span><br><span class="line">        <span class="variable">.po_dv</span> ( ),</span><br><span class="line">        <span class="variable">.po_data</span>  ( acc_q)</span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="comment">// Amplitude estimation, step 1:</span></span><br><span class="line">    <span class="comment">// get the absolute value of i/q data</span></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            abs_acc_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            abs_acc_valid &lt;= acc_valid; </span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            abs_acc_i &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            abs_acc_q &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_i_delay1 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_q_delay1 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">if</span> (enable == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">if</span> (acc_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">                abs_acc_i &lt;= acc_i[DWO-<span class="number">1</span>]? ~(acc_i)+<span class="number">1</span> : acc_i;</span><br><span class="line">                abs_acc_q &lt;= acc_q[DWO-<span class="number">1</span>]? ~(acc_q)+<span class="number">1</span> : acc_q;</span><br><span class="line">                acc_i_delay1 &lt;= acc_i;</span><br><span class="line">                acc_q_delay1 &lt;= acc_q;</span><br><span class="line">            <span class="keyword">end</span> </span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            abs_acc_i &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            abs_acc_q &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_i_delay1 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_q_delay1 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="comment">// Amplitude estimation, step 2:</span></span><br><span class="line">    <span class="comment">// get the max and min value of |I|, |Q|</span></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            max_abs_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">if</span>(enable == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            max_abs_valid &lt;= abs_acc_valid; </span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            max_abs_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            max_abs &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            min_abs &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_i_delay2 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_q_delay2 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">if</span>(enable == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">if</span> (abs_acc_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">                max_abs &lt;= (abs_acc_i &gt; abs_acc_q) ? abs_acc_i : abs_acc_q;</span><br><span class="line">                min_abs &lt;= (abs_acc_i &lt; abs_acc_q) ? abs_acc_i : abs_acc_q;</span><br><span class="line">                acc_i_delay2 &lt;= acc_i_delay1;</span><br><span class="line">                acc_q_delay2 &lt;= acc_q_delay1;</span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            max_abs &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            min_abs &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_i_delay2 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_q_delay2 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span>   </span><br><span class="line"></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="comment">// Amplitude estimation, step 3:</span></span><br><span class="line">    <span class="comment">// calculate the amplitude estimation </span></span><br><span class="line">    <span class="comment">// mag = alpha*max(|I|, |Q|) + beta*min(|I|, |Q|);</span></span><br><span class="line">    <span class="comment">// alpha=1, beta=1/4</span></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            est_amp_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">if</span>(enable == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            est_amp_valid &lt;= max_abs_valid; </span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            est_amp_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            est_amp &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_i_delay3 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_q_delay3 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (enable == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">if</span> (max_abs_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">                est_amp &lt;= max_abs + min_abs[DWO-<span class="number">1</span>:<span class="number">2</span>];</span><br><span class="line">                acc_i_delay3 &lt;= acc_i_delay2;</span><br><span class="line">                acc_q_delay3 &lt;= acc_q_delay2;</span><br><span class="line">            <span class="keyword">end</span>  </span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            est_amp &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_i_delay3 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_q_delay3 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------peak_index------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            peak_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">if</span> (enable == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">if</span> (est_amp_valid == <span class="number">1&#x27;b1</span> &amp;&amp; est_amp &gt;= threshold) <span class="keyword">begin</span></span><br><span class="line">                peak_valid &lt;= <span class="number">1&#x27;b1</span>;</span><br><span class="line">            <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">if</span>(peak_valid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_marker == <span class="number">&#x27;d3</span>)<span class="keyword">begin</span></span><br><span class="line">                peak_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            peak_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//----------------cnt_marker------------------</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            cnt_marker &lt;= <span class="number">&#x27;d0</span> ;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">if</span> (peak_valid == <span class="number">1&#x27;b1</span> &amp;&amp; cnt_marker == <span class="number">&#x27;d3</span>) <span class="keyword">begin</span></span><br><span class="line">            cnt_marker &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">if</span> (peak_valid == <span class="number">1&#x27;b1</span> ) <span class="keyword">begin</span></span><br><span class="line">            cnt_marker &lt;= cnt_marker + <span class="number">1&#x27;b1</span> ;</span><br><span class="line">        <span class="keyword">end</span> </span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">assign</span> est_amp_mon = est_amp;</span><br><span class="line"></span><br><span class="line"><span class="keyword">endmodule</span></span><br></pre></td></tr></table></figure>
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/FPGA/" rel="tag"># FPGA</a>
+              <a href="/tags/dsp/" rel="tag"># dsp</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/06/01/2023.6/python-dsp-2-ofdm-basic/" rel="prev" title="python-dsp-2-ofdm-basic">
+      <i class="fa fa-chevron-left"></i> python-dsp-2-ofdm-basic
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97%E5%8E%9F%E7%90%86"><span class="nav-number">2.</span> <span class="nav-text">相关运算原理</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#PN%E7%A0%81"><span class="nav-number">3.</span> <span class="nav-text">PN码</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8python%E5%AE%9E%E7%8E%B0%E4%BA%92%E7%9B%B8%E5%85%B3%E4%B8%8E%E8%87%AA%E7%9B%B8%E5%85%B3%E6%93%8D%E4%BD%9C"><span class="nav-number">4.</span> <span class="nav-text">使用python实现互相关与自相关操作</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97"><span class="nav-number">5.</span> <span class="nav-text">使用FPGA实现相关运算</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#FPGA%E5%AE%9E%E7%8E%B0%E7%B4%AF%E5%8A%A0%E6%A0%91"><span class="nav-number">5.1.</span> <span class="nav-text">FPGA实现累加树</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E6%93%8D%E4%BD%9C"><span class="nav-number">5.2.</span> <span class="nav-text">FPGA实现相关操作</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">53</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">22</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>
