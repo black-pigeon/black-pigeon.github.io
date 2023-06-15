@@ -127,17 +127,17 @@
   </li>
         <li class="menu-item menu-item-tags">
 
-    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">22</span></a>
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">23</span></a>
 
   </li>
         <li class="menu-item menu-item-categories">
 
-    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">14</span></a>
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">15</span></a>
 
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">53</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">54</span></a>
 
   </li>
   </ul>
@@ -163,6 +163,108 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/06/14/2023.6/cocotb-1-intro/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/06/14/2023.6/cocotb-1-intro/" class="post-title-link" itemprop="url">cocotb-1-intro</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-06-14 19:28:00" itemprop="dateCreated datePublished" datetime="2023-06-14T19:28:00+08:00">2023-06-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-06-15 20:27:22" itemprop="dateModified" datetime="2023-06-15T20:27:22+08:00">2023-06-15</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cocotb/" itemprop="url" rel="index"><span itemprop="name">cocotb</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2023/06/14/2023.6/cocotb-1-intro/" class="post-meta-item leancloud_visitors" data-flag-title="cocotb-1-intro" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2023/06/14/2023.6/cocotb-1-intro/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2023/06/14/2023.6/cocotb-1-intro/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>模块和顶层测试的验证通常比创建 HDL 更复杂、更耗时。cocotb（基于协程的协同仿真测试平台）是基于 Python 协程的，可以验证 SystemVerilog 和 VHDL，允许开发人员在 Python 中创建测试台，当然，还引入了所有更广泛的 Python 库和框架，除了处理 UUT 的输出之外，它们还可用于创建激励。<br>在最高层，cocotb 提供了我们选择的仿真工具和 Python 之间的接口。<br>为了实现这一点，cocotb 使用协程和联合仿真。  协程是 Python 函数，可以自动暂停运行，使多个函数同时运行。  协同仿真意味着设计和测试平台是独立仿真的，这意味着当 Python 运行时，仿真时间不提前。  这是使用模拟器的 Verilog 程序接口 (VPI) 和 VHDL 程序接口 (VHPI) 实现的。<br>cocotb 的一个重要特色是广泛的社区开发附加功能，这些附加功能提供了一系列总线功能模型，可用于验证具有 AXI 或 Wishbone 接口的模块等。<br><img src="/2023/06/14/2023.6/cocotb-1-intro/cocotb_level.png" alt><br></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2023/06/14/2023.6/cocotb-1-intro/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -1077,110 +1179,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/08/21/2022.8/AXI4-lite-%E6%8E%A5%E5%8F%A3%E9%A9%B1%E5%8A%A8/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/./images/avatar.jpg">
-      <meta itemprop="name" content="wcc">
-      <meta itemprop="description" content="一点点学习笔记">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="wcc的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/08/21/2022.8/AXI4-lite-%E6%8E%A5%E5%8F%A3%E9%A9%B1%E5%8A%A8/" class="post-title-link" itemprop="url">AXI4-lite 接口驱动</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-08-21 16:11:17" itemprop="dateCreated datePublished" datetime="2022-08-21T16:11:17+08:00">2022-08-21</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a>
-                </span>
-            </span>
-
-          
-            <span id="/2022/08/21/2022.8/AXI4-lite-%E6%8E%A5%E5%8F%A3%E9%A9%B1%E5%8A%A8/" class="post-meta-item leancloud_visitors" data-flag-title="AXI4-lite 接口驱动" title="Views">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span class="post-meta-item-text">Views: </span>
-              <span class="leancloud-visitors-count"></span>
-            </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine: </span>
-    
-    <a title="valine" href="/2022/08/21/2022.8/AXI4-lite-%E6%8E%A5%E5%8F%A3%E9%A9%B1%E5%8A%A8/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2022/08/21/2022.8/AXI4-lite-%E6%8E%A5%E5%8F%A3%E9%A9%B1%E5%8A%A8/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>对于FPGA开发人员来说，可能会开发一些自己自定义的IP，这些IP一般可以通过axi接口连接到处理器上，对于zynq来说，在FPGA这边编写一些axi4-lite的接口之后，zynq句能够通过axi4-lite接口来访问PL端的寄存器了。<br>这样就能够控制IP的一些参数。</p>
-<p>在裸机下面，控制这些IP的驱动都是比较简单的，如果是需要在linux下面想要控制这些IP，就需要自己去实现这些IP的驱动了。</p>
-<p>在本篇博客当中会记录，这种IP的接口驱动开发。<br></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/08/21/2022.8/AXI4-lite-%E6%8E%A5%E5%8F%A3%E9%A9%B1%E5%8A%A8/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1252,20 +1250,20 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">53</span>
+          <span class="site-state-item-count">54</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
       <div class="site-state-item site-state-categories">
             <a href="/categories/">
           
-        <span class="site-state-item-count">14</span>
+        <span class="site-state-item-count">15</span>
         <span class="site-state-item-name">categories</span></a>
       </div>
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">22</span>
+        <span class="site-state-item-count">23</span>
         <span class="site-state-item-name">tags</span></a>
       </div>
   </nav>
