@@ -137,7 +137,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">55</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">56</span></a>
 
   </li>
   </ul>
@@ -163,6 +163,109 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/06/13/2021.6/Linux%E5%9C%A8ZYNQ%E4%B8%8A%E7%9A%84%E7%A7%BB%E6%A4%8D/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/06/13/2021.6/Linux%E5%9C%A8ZYNQ%E4%B8%8A%E7%9A%84%E7%A7%BB%E6%A4%8D/" class="post-title-link" itemprop="url">Linux在ZYNQ上的移植</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-06-13 21:46:51" itemprop="dateCreated datePublished" datetime="2021-06-13T21:46:51+08:00">2021-06-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/06/13/2021.6/Linux%E5%9C%A8ZYNQ%E4%B8%8A%E7%9A%84%E7%A7%BB%E6%A4%8D/" class="post-meta-item leancloud_visitors" data-flag-title="Linux在ZYNQ上的移植" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2021/06/13/2021.6/Linux%E5%9C%A8ZYNQ%E4%B8%8A%E7%9A%84%E7%A7%BB%E6%A4%8D/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/06/13/2021.6/Linux%E5%9C%A8ZYNQ%E4%B8%8A%E7%9A%84%E7%A7%BB%E6%A4%8D/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>最近感觉比较迷茫，一天天不知道该干些什么，每天上班太多水，有点在上海撑不下去了。抽点空记录下学习过程吧。最近看了下linux在zynq上的移植，就决定试一试，前前后后弄了好久，都开始怀疑人生了，但是最后还是移植成功了。</p>
+<h1 id="1-Fetch-Source"><a href="#1-Fetch-Source" class="headerlink" title="1. Fetch Source"></a>1. Fetch Source</h1><p>第一步主要就是获取源码，主要就是xilinx提供的u-boot，linux内核，还有设备树。这些文件在构建zynq支持的系统的时候都是十分重要的。这些文件都是提供在Git上的。Xilinx的wiki上也有给出如何来构建开源的linux的方法，可以参考下面的链接。<br><a target="_blank" rel="noopener" href="https://xilinx-wiki.atlassian.net/wiki/spaces/A/pages/18842156/Fetch+Sources">Xilinx Open Linux</a><br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">git <span class="built_in">clone</span> https://github.com/Xilinx/linux-xlnx.git</span><br><span class="line">git <span class="built_in">clone</span> https://github.com/Xilinx/u-boot-xlnx.git</span><br><span class="line">git <span class="built_in">clone</span> https://github.com/Xilinx/device-tree-xlnx.git</span><br></pre></td></tr></table></figure><br></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/06/13/2021.6/Linux%E5%9C%A8ZYNQ%E4%B8%8A%E7%9A%84%E7%A7%BB%E6%A4%8D/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -746,7 +849,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">55</span>
+          <span class="site-state-item-count">56</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
