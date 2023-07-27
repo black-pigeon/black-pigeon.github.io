@@ -137,7 +137,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">56</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">57</span></a>
 
   </li>
   </ul>
@@ -163,6 +163,108 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/06/09/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E6%A3%80%E6%B5%8B/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/06/09/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E6%A3%80%E6%B5%8B/" class="post-title-link" itemprop="url">OFDM_802.11a学习----短训练序列检测</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-06-09 14:08:35" itemprop="dateCreated datePublished" datetime="2022-06-09T14:08:35+08:00">2022-06-09</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/OFDM/" itemprop="url" rel="index"><span itemprop="name">OFDM</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2022/06/09/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E6%A3%80%E6%B5%8B/" class="post-meta-item leancloud_visitors" data-flag-title="OFDM_802.11a学习----短训练序列检测" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2022/06/09/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E6%A3%80%E6%B5%8B/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2022/06/09/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E6%A3%80%E6%B5%8B/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>在前面实现了802.11a的发送数据包的生成，从而完成了802.11a的发送数据通路。在上面实现了数据的加扰，卷积编码，交织，OFDM星座图映射，IFFT的转换和添加循环前缀，添加前导码LTS，STS等操作。<br>相较于802.11a的发送数据链路，接受数据链路的难度相较于发送链路会大很多，里面涉及了许多同步的算法的设置，频偏的校正等操作。<br>从这篇博客开始，我将会记录在学习802.11a数据解调的过程中所学习到的东西。<br></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2022/06/09/2022.6/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%9F%AD%E8%AE%AD%E7%BB%83%E5%BA%8F%E5%88%97%E6%A3%80%E6%B5%8B/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -1081,108 +1183,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/./images/avatar.jpg">
-      <meta itemprop="name" content="wcc">
-      <meta itemprop="description" content="一点点学习笔记">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="wcc的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/" class="post-title-link" itemprop="url">OFDM_802.11a学习----OFDM发射机整体结构</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-04-28 13:52:57" itemprop="dateCreated datePublished" datetime="2022-04-28T13:52:57+08:00">2022-04-28</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/OFDM/" itemprop="url" rel="index"><span itemprop="name">OFDM</span></a>
-                </span>
-            </span>
-
-          
-            <span id="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/" class="post-meta-item leancloud_visitors" data-flag-title="OFDM_802.11a学习----OFDM发射机整体结构" title="Views">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span class="post-meta-item-text">Views: </span>
-              <span class="leancloud-visitors-count"></span>
-            </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine: </span>
-    
-    <a title="valine" href="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>在上一篇博客当中，简单记录了一下802.11a的基本协议，想要在那么短短的篇幅当中把OFDM实现的细节讲完是不太现实的。<br>在这一篇博客当中，我将会介绍整个802.11a的发射机的整体结构，对发射机的整体有一个大概的了解。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-OFDM%E5%8F%91%E5%B0%84%E6%9C%BA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1254,7 +1254,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">56</span>
+          <span class="site-state-item-count">57</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
