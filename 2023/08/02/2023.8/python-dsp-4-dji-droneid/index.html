@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="前言最近开始整理和无人机相关的东西，在网上找了一圈，发现了两个比较好的开源项目，这两个开源项目都能够实现的DJI OcuSync 2.0 Droneid协议的解调。DroneSecuritydji_droneid在参考了上述两个仓库之后,给了我很多启发，通过阅读上面的代码，也让我对DJI的Droneid帧有了更加深刻的认识。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="python-dsp-4-dji-droneid">
+<meta property="og:url" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="前言最近开始整理和无人机相关的东西，在网上找了一圈，发现了两个比较好的开源项目，这两个开源项目都能够实现的DJI OcuSync 2.0 Droneid协议的解调。DroneSecuritydji_droneid在参考了上述两个仓库之后,给了我很多启发，通过阅读上面的代码，也让我对DJI的Droneid帧有了更加深刻的认识。">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/Droneid-packet.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/frame_stft.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/ZC_seq_calculate.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/zc_freq_domain.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/zc_time_domain.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/zc_cross_correlation.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/ofdm_frame_time_domain.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/zc600_in_frame.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/correlation.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/zc_freq_carrier.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/integer_offset.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/OFDM_CP.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/cyclic_prefix_cross_correlation.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/ofdm_data.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/channel_est.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/equalization.png">
+<meta property="article:published_time" content="2023-08-02T03:33:50.000Z">
+<meta property="article:modified_time" content="2023-08-02T09:21:05.134Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="dsp">
+<meta property="article:tag" content="python">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/Droneid-packet.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>python-dsp-4-dji-droneid | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">23</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">15</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">58</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          python-dsp-4-dji-droneid
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2023-08-02 11:33:50 / Modified: 17:21:05" itemprop="dateCreated datePublished" datetime="2023-08-02T11:33:50+08:00">2023-08-02</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/dsp/" itemprop="url" rel="index"><span itemprop="name">dsp</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2023/08/02/2023.8/python-dsp-4-dji-droneid/" class="post-meta-item leancloud_visitors" data-flag-title="python-dsp-4-dji-droneid" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2023/08/02/2023.8/python-dsp-4-dji-droneid/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2023/08/02/2023.8/python-dsp-4-dji-droneid/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>最近开始整理和无人机相关的东西，在网上找了一圈，发现了两个比较好的开源项目，这两个开源项目都能够实现的DJI OcuSync 2.0 Droneid协议的解调。<br><a target="_blank" rel="noopener" href="https://github.com/RUB-SysSec/DroneSecurity">DroneSecurity</a><br><a target="_blank" rel="noopener" href="https://github.com/proto17/dji_droneid">dji_droneid</a><br>在参考了上述两个仓库之后,给了我很多启发，通过阅读上面的代码，也让我对DJI的Droneid帧有了更加深刻的认识。<br><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/Droneid-packet.png" alt><br><span id="more"></span></p>
+<h1 id="DroneID-数据帧"><a href="#DroneID-数据帧" class="headerlink" title="DroneID 数据帧"></a>DroneID 数据帧</h1><p>在DroneSecurity这个项目当中，作者详细地介绍了DJI无人机的DroneID的数据帧结构。<br><a target="_blank" rel="noopener" href="https://www.ndss-symposium.org/wp-content/uploads/2023/02/ndss2023_f217_paper.pdf">ndss2023_f217_paper</a><br>国内也有人对这篇论文进行了翻译，译文链接如下：<br><a target="_blank" rel="noopener" href="https://bbs.kanxue.com/thread-276355.htm">文档翻译</a><br>该信号的结构如下所示：<br><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/frame_stft.png" alt><br>OcuSync和DroneID规范并非公开的。根据作者的分析，这些协议使用了与LTE类似的调制技术和参数。他们逐步逆向工程了所有后续的参数。一个数据包包含九个符号，其中包括两个Zadoff-Chu（ZC）同步符号（第4和第6个符号。其他符号是具有601个子载波（600个数据和1个直流）和15 kHz子载波间隔的OFDM数据符号。为了在下一步中应用快速傅里叶变换（FFT），载波被填充到下一个2的幂次方；这总共产生了1024个子载波，总带宽为15.36 MHz（包括保护带）。他们的记录显示，这些数据包每640毫秒重复广播一次。我们注意到一些无人机（Mavic 2和旧版OcuSync无人机）不发送第一个符号（第1个符号），这导致帧持续时间缩短为576微秒。其他参数保持不变。</p>
+<p>有了上面的这些信息，即使我们没有无人机，在验证算法的时候，也可以根据这些结构生成自己的帧。</p>
+<h1 id="Droneid-仿真"><a href="#Droneid-仿真" class="headerlink" title="Droneid 仿真"></a>Droneid 仿真</h1><p>根据上面介绍的一个droneid数据帧，包含9个OFDM符号，关于OFDM，前面也通过学习有了了解。这为我们学习DroneID的解调提供了便利。</p>
+<p>下面是一些常用的参数：<br>采样率为30.72M,占用的子载波是601个。子载波之间的频率是15KHz,根据采样率我们可以算在进行IFFT、FFT变换的时候需要的点数。<br>由于不同的符号所需要的循环前缀的长度是不一样的，因此我们需要给对应的符号不同的循环前缀。<br>在Droneid当中，很重要的一个OFDM符号就是第4个OFDM符号，该符号包含了一个ZC序列，使用这个符号，能够帮助我们定位这一个数据帧，尤其是在茫茫多的数据当中，通过使用这个数据帧在时域上和本地生成的ZC序列进行相关，能够快速定位数据帧。并且在之后的信道估计也可以使用这个序列。</p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br></pre></td><td class="code"><pre><span class="line">NCARRIERS = <span class="number">601</span> </span><br><span class="line">sample_rate = <span class="number">30.72e6</span></span><br><span class="line">TS = <span class="number">1</span>/sample_rate</span><br><span class="line"></span><br><span class="line"><span class="comment"># Step1: generate a droneid like frame</span></span><br><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">OFDM</span>():</span></span><br><span class="line">    <span class="function"><span class="keyword">def</span> <span class="title">__init__</span>(<span class="params">self, K, Kon, CP</span>):</span></span><br><span class="line">        self.k = K</span><br><span class="line">        self.kon = Kon</span><br><span class="line">        self.cp= CP</span><br><span class="line"></span><br><span class="line"><span class="comment"># calculate fft_size, ofdm carrier is 15KHz</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_fft_size</span>(<span class="params">sample_rate</span>):</span></span><br><span class="line">    fft_size = <span class="built_in">int</span>(sample_rate / <span class="number">15e3</span>)</span><br><span class="line">    <span class="keyword">return</span> fft_size</span><br><span class="line"></span><br><span class="line"><span class="comment"># calculate the cp length for different symbols</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">get_cp_lengths</span>(<span class="params">sample_rate</span>):</span></span><br><span class="line">    long_cp_len = <span class="built_in">int</span>(np.<span class="built_in">round</span>(<span class="number">1</span>/<span class="number">192000</span> * sample_rate))</span><br><span class="line">    short_cp_len = <span class="built_in">int</span>(np.<span class="built_in">round</span>(<span class="number">0.0000046875</span> * sample_rate))</span><br><span class="line">    <span class="keyword">return</span> long_cp_len, short_cp_len</span><br><span class="line"></span><br><span class="line">fft_bins = get_fft_size(sample_rate)</span><br><span class="line">long_cp_len, short_cp_len = get_cp_lengths(sample_rate)</span><br><span class="line"></span><br><span class="line"><span class="comment"># cyclic prefix for every ofdm symbol</span></span><br><span class="line">cyclic_prefix_length_schedule = [</span><br><span class="line">long_cp_len, </span><br><span class="line">short_cp_len,</span><br><span class="line">short_cp_len,</span><br><span class="line">short_cp_len,</span><br><span class="line">short_cp_len,</span><br><span class="line">short_cp_len,</span><br><span class="line">short_cp_len,</span><br><span class="line">short_cp_len,</span><br><span class="line">long_cp_len]</span><br><span class="line"></span><br><span class="line"><span class="comment"># number of ofdm symbols per droneid frame</span></span><br><span class="line">num_ofdm_symbols = <span class="built_in">len</span>(cyclic_prefix_length_schedule)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">zc600_offset = fft_bins*<span class="number">3</span> + short_cp_len*<span class="number">3</span> + long_cp_len    <span class="comment"># ZC600 sequence is very important</span></span><br><span class="line">frame_length = long_cp_len*<span class="number">2</span> + short_cp_len*<span class="number">7</span> + fft_bins*<span class="number">9</span>  <span class="comment"># frame total length in time domain</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">ofdm_zc_short_cp = OFDM(fft_bins, NCARRIERS, short_cp_len)  <span class="comment"># ofdm parameter for short cp (symbol1~symbol7)</span></span><br><span class="line">ofdm_zc_long_cp = OFDM(fft_bins, NCARRIERS, long_cp_len)    <span class="comment"># ofdm parameter for long cp (symbol0 and symol8)</span></span><br><span class="line"></span><br></pre></td></tr></table></figure>
+<h2 id="ZC序列"><a href="#ZC序列" class="headerlink" title="ZC序列"></a>ZC序列</h2><h3 id="ZC序列的原理"><a href="#ZC序列的原理" class="headerlink" title="ZC序列的原理"></a>ZC序列的原理</h3><p>在4G LTE系统中，PSS、SSS、cellRS、DMRS、SRS、PRACH、PUCCH等物理层信号，基本上都涉及到了ZC（Zadoff –Chu）序列信号。<br>在5G NR系统中，除了采用M序列来生成抵抗大频偏场景的PSS和SSS信号，其它信号也同样涉及到了Zadoff –Chu序列。<br>Zadoff –Chu序列，顾名思义，就是Zadoff 和Chu共同发现的序列。<br>ZC序列并不是一个二进制序列，而是一个欧拉复数序列。<br>也就是说，ZC序列并不是横坐标或纵坐标上一个个点的序列，也不是平面坐标上的任意一个个点的序列，而是复平面坐标上的单位圆上的一个个点组成的序列。<br>每个点对应一对（I, Q）的幅度值。</p>
+<p>ZC序列的计算公式如下<br><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/ZC_seq_calculate.png" alt><br>其中q是zc序列的根，不同的q值生成的ZC序列不同，在Droneid当中，使用ZC序列的根为600和147，其中最重要的是根值为600的这个序列。</p>
+<p>用python实现ZC序列生成的公式如下：<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">zcsequence_t</span>(<span class="params">u: <span class="built_in">int</span>, seq_length: <span class="built_in">int</span>, q: <span class="built_in">int</span>=<span class="number">0</span></span>) -&gt; np.array:</span></span><br><span class="line">    <span class="string">&quot;&quot;&quot;</span></span><br><span class="line"><span class="string">    Generate a Zadoff-Chu (ZC) sequence.</span></span><br><span class="line"><span class="string">    Parameters</span></span><br><span class="line"><span class="string">    ----------</span></span><br><span class="line"><span class="string">    u : int</span></span><br><span class="line"><span class="string">        Root index of the the ZC sequence: u&gt;0.</span></span><br><span class="line"><span class="string">    seq_length : int</span></span><br><span class="line"><span class="string">        Length of the sequence to be generated. Usually a prime number:</span></span><br><span class="line"><span class="string">        u&lt;seq_length, greatest-common-denominator(u,seq_length)=1.</span></span><br><span class="line"><span class="string">    q : int</span></span><br><span class="line"><span class="string">        Cyclic shift of the sequence (default 0).</span></span><br><span class="line"><span class="string">    Returns</span></span><br><span class="line"><span class="string">    -------</span></span><br><span class="line"><span class="string">    zcseq : 1D ndarray of complex floats</span></span><br><span class="line"><span class="string">        ZC sequence generated.</span></span><br><span class="line"><span class="string">    &quot;&quot;&quot;</span></span><br><span class="line"></span><br><span class="line">    zcseq = np.exp(-<span class="number">1j</span> * np.pi * u * np.arange(seq_length) * (np.arange(seq_length)+<span class="number">1</span>) / seq_length)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> zcseq</span><br></pre></td></tr></table></figure></p>
+<h3 id="ZC序列的性质"><a href="#ZC序列的性质" class="headerlink" title="ZC序列的性质"></a>ZC序列的性质</h3><p>  在前面介绍了简单的介绍了一下ZC序列，ZC序列具有一些比较好的特性</p>
+<ul>
+<li><p>恒包络<br>任意长度的ZC序列的信号的幅值是恒定的，这也意味着功率恒定，这个好处就是射频器件不用忽大忽小的改变能量。</p>
+</li>
+<li><p>理想周期自相关 与 良好的互相关<br>ZC序列循环移位N后，原序列只与移位后的序列得良好的相关峰值，其它位置的序列相关峰值为0。除此之外，两个根如果是互质的，生成的序列相关峰值几乎为零。</p>
+</li>
+<li><p>傅立叶变换后仍是ZC序列<br>这个性质，简直就是为OFDM系统量身打造，也省去多少运算量。既可以在时域相关，也可以在频域相关。   </p>
+</li>
+<li><p>对于信道估计，ZC序列幅值恒定，其图形可看作一个单位圆。  </p>
+</li>
+</ul>
+<p>下面我们就生成一个实际的ZC序列来介绍一下ZC系列的这些特点<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test_create_correlat_taps</span>(<span class="params">sample_rate, root, ofdm</span>):</span></span><br><span class="line">    zcseq = zcsequence_t(root, NCARRIERS)   <span class="comment"># create a zc sequence</span></span><br><span class="line">    zcseq[NCARRIERS//<span class="number">2</span>] = <span class="number">0</span>                 <span class="comment"># this is DC</span></span><br><span class="line">    zc_seqs, zc_taps =  ofdm_modulation(ofdm, zcseq)</span><br><span class="line">    <span class="keyword">return</span> zc_seqs, zc_taps, zcseq</span><br><span class="line">_, test_zc_taps, test_zcseq = test_create_correlat_taps(sample_rate, <span class="number">600</span>, ofdm_zc_short_cp)</span><br><span class="line">plt.figure()</span><br><span class="line">plt.plot(test_zcseq.real, test_zcseq.imag, <span class="string">&#x27;bo&#x27;</span>)</span><br><span class="line">plt.figure()</span><br><span class="line">plt.subplot(<span class="number">211</span>)</span><br><span class="line">plt.plot(test_zc_taps.real)</span><br><span class="line">plt.subplot(<span class="number">212</span>)</span><br><span class="line">plt.plot(test_zc_taps.imag)</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">test_data = np.hstack([test_zc_taps[<span class="number">200</span>:], test_zc_taps[:<span class="number">200</span>]])</span><br><span class="line">test_cfo = np.zeros(<span class="built_in">len</span>(test_data))</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">test_cross_correlation_to_find_peak</span>(<span class="params">signal</span>):</span></span><br><span class="line">    temp_signal = signal</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(signal)):</span><br><span class="line">        temp_sig = temp_signal[:<span class="built_in">len</span>(test_zc_taps)]</span><br><span class="line">        test_cfo[i] = np.<span class="built_in">abs</span>(np.<span class="built_in">sum</span>(test_zc_taps * temp_sig.conj()))</span><br><span class="line">        <span class="comment"># cross_acf_147[i] = np.abs(np.sum(zc_taps_147 * temp_sig.conj()))</span></span><br><span class="line">        temp_signal = np.roll(temp_signal, -<span class="number">1</span>)</span><br><span class="line"></span><br><span class="line">test_cross_correlation_to_find_peak(test_data)</span><br><span class="line">plt.figure()</span><br><span class="line">plt.plot(test_cfo)</span><br></pre></td></tr></table></figure><br>首先是该序列在频域当中的形式。可以看到在频域当中是zc序列是一个单位圆。在这里我们可以看到在中心位置有一个点，这是由于我们在实际使用ZC序列的时候，中心子载波为DC。<br><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/zc_freq_domain.png" alt></p>
+<p>下面是时域当中的信号波形的实部和虚部：<br><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/zc_time_domain.png" alt><br>下面是该信号互相关出来的结果：<br><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/zc_cross_correlation.png" alt></p>
+<h2 id="生成OFDM帧"><a href="#生成OFDM帧" class="headerlink" title="生成OFDM帧"></a>生成OFDM帧</h2><p>OFDM这部分在这里就不多说了，在前面已经介绍过OFDM如何来处理了，下面是实际生成的一个可以进行仿真的OFDM在时域当中的序列，并且添加了频偏和噪声。<br><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/ofdm_frame_time_domain.png" alt><br>从这个帧当中，我们还是能够很容易地找到ZC600这个序列。<br><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/zc600_in_frame.png" alt></p>
+<h2 id="OFDM解调"><a href="#OFDM解调" class="headerlink" title="OFDM解调"></a>OFDM解调</h2><h3 id="使用ZC序列进行相关峰检测"><a href="#使用ZC序列进行相关峰检测" class="headerlink" title="使用ZC序列进行相关峰检测"></a>使用ZC序列进行相关峰检测</h3><p>在一帧数据当中，首先需要进行对检测当前的数据当中是否存在droneid的帧，这可以通使用ZC序列来进行检测，前面介绍过ZC序列具有良好的自相关性。在本地我们生成一个ZC600的序列，对这个序列和采集到的数据进行相关，检测到一个明显的峰值，就说明当前采集到的数据当中存在droneid帧。<br>在实际的采集当中，这一步可以在FPGA当中完成，在上位机完成这个相关是比较耗时间的，尤其是在python当中，在前面也介绍了如何在FPGA当中实现实时互相关操作。<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line">cross_acf_600 = np.zeros(<span class="built_in">len</span>(rx_data), dtype=<span class="built_in">complex</span>)</span><br><span class="line">threshold =<span class="number">0.2</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">peak_detect</span>(<span class="params">signal, amp_threshold</span>):</span></span><br><span class="line">    max_value = np.amax(signal)</span><br><span class="line">    max_index = np.argmax(signal)</span><br><span class="line">    <span class="keyword">if</span> max_value &gt; amp_threshold :</span><br><span class="line">        <span class="keyword">return</span> max_index</span><br><span class="line">    <span class="keyword">else</span> :</span><br><span class="line">        <span class="built_in">print</span>(<span class="string">&quot;no peak detect&quot;</span>)</span><br><span class="line">        <span class="keyword">return</span> <span class="literal">None</span></span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">cross_correlation_to_find_peak</span>(<span class="params">signal, threshold</span>):</span></span><br><span class="line">    temp_signal = signal</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">len</span>(signal)):</span><br><span class="line">        temp_sig = temp_signal[:<span class="built_in">len</span>(zc_taps_600)]</span><br><span class="line">        cross_acf_600[i] = np.<span class="built_in">abs</span>(np.<span class="built_in">sum</span>(zc_taps_600 * temp_sig.conj()))</span><br><span class="line">        <span class="comment"># cross_acf_147[i] = np.abs(np.sum(zc_taps_147 * temp_sig.conj()))</span></span><br><span class="line">        temp_signal = np.roll(temp_signal, -<span class="number">1</span>)</span><br><span class="line">    <span class="comment"># plt.figure()</span></span><br><span class="line">    <span class="comment"># plt.plot(cross_acf_600)</span></span><br><span class="line">    zc600_coarse_idx = peak_detect(cross_acf_600, threshold)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> zc600_coarse_idx</span><br><span class="line"></span><br><span class="line">zc600_coarse_idx = cross_correlation_to_find_peak(rx_data, threshold)</span><br></pre></td></tr></table></figure><br><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/correlation.png" alt><br>在这一步当中，只是为了来大致地定位一下这个ZC序列的位置，为接下来的整数倍频偏做准备。</p>
+<h3 id="整数倍频偏校正"><a href="#整数倍频偏校正" class="headerlink" title="整数倍频偏校正"></a>整数倍频偏校正</h3><p>在进行整数倍频偏校正的时候，我们使用的是ZC序列来进行校准，这样，前面在进行ZC序列的粗定位的时候，给我们提供了一个ZC序列的起始值，这个起始位置可能不太精确，但是足够包含大部分ZC序列的时域当中的点。<br>有前面ZC序列的性质可以知道，ZC序列具有恒包络，在频域上的点都在一个单位圆上面。而在中心载波，也就是0频的位置，我们给这个位置的载波的值为0，这样，中心载波的值相较于其他子载波的值就最下，如下图所示：<br><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/zc_freq_carrier.png" alt><br>整数倍频偏校准的方法就是</p>
+<ul>
+<li>粗略地获取到了一个ZC序列</li>
+<li>将这个ZC序列转换到频域</li>
+<li>比较当前频域中，中心部分的几个子载波的大小，找到最小的子载波所在的索引</li>
+<li>比较最小的子载波所在的索引与标准的ZC序列的频域的DC位置索引，计算出的差值d, 整数被频偏为d*15KHz</li>
+</ul>
+<p><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/integer_offset.png" alt></p>
+<figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">cfo_estimation_freq_domain</span>(<span class="params">signal</span>):</span></span><br><span class="line">    f_d = np.fft.fftshift(np.fft.fft(signal))</span><br><span class="line">    power_of_signal = <span class="number">20</span>*np.log10(<span class="built_in">abs</span>(f_d))</span><br><span class="line">    bin_count = <span class="number">15</span>; <span class="comment"># How far left and right to look for the lowest carrier</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># Set all of the FFT bins on the outside to infinity so they can&#x27;t possibly be the minimum value</span></span><br><span class="line">    power_of_signal[:fft_bins//<span class="number">2</span> -bin_count] = np.inf</span><br><span class="line">    power_of_signal[fft_bins//<span class="number">2</span> +bin_count:] = np.inf</span><br><span class="line">    min_value = np.amin(power_of_signal)</span><br><span class="line">    min_index = np.argmin(power_of_signal)</span><br><span class="line">    <span class="built_in">print</span>(min_index)</span><br><span class="line">    integer_offset = (min_index - ((fft_bins // <span class="number">2</span>))) * <span class="number">15e3</span></span><br><span class="line">    <span class="comment"># radians = 2 * np.pi * integer_offset / (sample_rate)</span></span><br><span class="line">    <span class="built_in">print</span>(<span class="string">&quot;integer_offset = %d&quot;</span> % integer_offset)</span><br><span class="line"></span><br><span class="line">    <span class="keyword">return</span> integer_offset</span><br><span class="line"></span><br><span class="line">integer_offset = cfo_estimation_freq_domain(test_data_for_freq_domain_cfo)</span><br><span class="line">data_with_integer_offset = cfo_correct(rx_data, integer_offset)</span><br></pre></td></tr></table></figure>
+<h3 id="时间同步与小数倍频偏校正"><a href="#时间同步与小数倍频偏校正" class="headerlink" title="时间同步与小数倍频偏校正"></a>时间同步与小数倍频偏校正</h3><p><a target="_blank" rel="noopener" href="http://dspillustrations.com/pages/posts/misc/schmidlcox-synchronization-for-ofdm.html">Schmidl &amp; Cox算法</a>当中，介绍了一种特殊的序列来进行序列的检测和频偏的校正，在当前的OFDM系统当中，虽然不具备Schmidl &amp; Cox算法当中特定的数据帧，但是由于OFDM当中的CP的存在，使得我们依旧可以通过这种类似的方法来进行频偏的校正。<br><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/OFDM_CP.png" alt><br><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/cyclic_prefix_cross_correlation.png" alt></p>
+<p>在我们的ofdm帧当中存在CP，我们可以通过对间隔 len_ofdm - len_cp 个点的len_cp个长度的时域点进行互相关操作，这样当CP与OFDM尾部对齐的时候，就能够检测到一个相关峰，我们可以利用这个来实现信号的精确的时间同步。<br>在我们的实现算法当中，我们不只计算一个OFDM的循环前缀的相关，我们一共计算9个OFDM符号的循环前缀相关，并求取这9个相关值的平均值，这样能够进一步优化我们的时间同步。最终我们提取出计算出来的最大的相关峰的索引值，这个索引值，就是实际一个OFDM符号开始的地方比较准确的估计。<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">find_sto_cp</span>(<span class="params">signal</span>):</span></span><br><span class="line">    full_burst_len = np.<span class="built_in">sum</span>(cyclic_prefix_length_schedule) + (fft_bins * num_ofdm_symbols);</span><br><span class="line">    num_tests = <span class="built_in">len</span>(signal) - full_burst_len</span><br><span class="line">    scores_cp_sto = np.zeros(num_tests, dtype=<span class="built_in">complex</span>)</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(num_tests):</span><br><span class="line">        offset = i</span><br><span class="line">        scores = np.zeros( num_ofdm_symbols, dtype=<span class="built_in">complex</span>)</span><br><span class="line"></span><br><span class="line">        <span class="keyword">for</span> cp_idx <span class="keyword">in</span> <span class="built_in">range</span>(num_ofdm_symbols):</span><br><span class="line">            cp_len = cyclic_prefix_length_schedule[cp_idx]</span><br><span class="line"></span><br><span class="line">            window = signal[offset:offset+fft_bins+cp_len]</span><br><span class="line"></span><br><span class="line">            left = window[:cp_len]</span><br><span class="line">            right = window[-cp_len:]</span><br><span class="line"></span><br><span class="line">            scores[cp_idx] = np.<span class="built_in">abs</span>(np.<span class="built_in">sum</span>(left*right.conj()))</span><br><span class="line"></span><br><span class="line">            offset = offset + cp_len + fft_bins</span><br><span class="line"></span><br><span class="line">        scores_cp_sto[i] = np.<span class="built_in">sum</span>(scores[<span class="number">1</span>:]) / (<span class="built_in">len</span>(scores) - <span class="number">1</span>)</span><br><span class="line">    </span><br><span class="line">    start_offset = np.argmax(scores_cp_sto)</span><br><span class="line">    <span class="keyword">return</span> start_offset</span><br><span class="line">true_start_index = find_sto_cp(data_with_integer_offset)</span><br></pre></td></tr></table></figure><br>上面完成了比较准确地时间同步，接下来我们就可以利用这个信息，来提取出ZC序列的循环前缀和ZC序列OFDM符号的尾部，从而来计算出小数被频偏。<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line">burst = data_with_integer_offset[true_start_index:]</span><br><span class="line"></span><br><span class="line">zc_start = long_cp_len + (fft_bins * <span class="number">3</span>) + (short_cp_len * <span class="number">3</span>)</span><br><span class="line"><span class="comment"># Extract out the full OFDM symbol (cyclic prefix included)</span></span><br><span class="line">cfo_est_symbol = burst[zc_start - short_cp_len:zc_start + fft_bins]</span><br><span class="line"></span><br><span class="line"><span class="comment"># Get the cyclic prefix, and then the copy of the cyclic prefix that exists at the end of the OFDM symbol</span></span><br><span class="line">cyclic_prefix = cfo_est_symbol[:short_cp_len]</span><br><span class="line">symbol_tail = cfo_est_symbol[ - short_cp_len:]</span><br><span class="line"></span><br><span class="line"><span class="comment"># Calculate the frequency offset by taking the dot product of the two copies of the cyclic prefix and dividing out</span></span><br><span class="line"><span class="comment"># the number of samples in between each cyclic prefix sample (the FFT size)</span></span><br><span class="line">offset_radians = np.angle(np.<span class="built_in">sum</span>(cyclic_prefix*symbol_tail.conj())) / fft_bins</span><br><span class="line">offset_hz = -offset_radians * sample_rate / (<span class="number">2</span> * np.pi)</span><br><span class="line">burst_with_cp_cfo = cfo_correct(burst, offset_hz)</span><br></pre></td></tr></table></figure></p>
+<p>在执行完这一步之后，时域当中基本就处理完了，我们可以再一次利用找相关峰的操作，完成对频偏校正和时间同步之后的信号的相关峰检测，这能给我们一个更加精确的位置，这对之后进行ofdm符号的获取十分有帮助。</p>
+<h3 id="OFDM符号获取"><a href="#OFDM符号获取" class="headerlink" title="OFDM符号获取"></a>OFDM符号获取</h3><p>在前面完成了频偏的校正，并且获取了ofdm_frame比较准确的起始值之后，我们就可以去掉ofdm当中的所有CP，以获取每个符号了。<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></td><td class="code"><pre><span class="line">symbol = np.zeros((<span class="number">9</span>,fft_bins), dtype=<span class="built_in">complex</span>)</span><br><span class="line">symbol_f = np.zeros((<span class="number">9</span>,fft_bins), dtype=<span class="built_in">complex</span>)</span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">extract_symbols</span>(<span class="params">signal, frame_start_idx, frame_end_idx </span>):</span></span><br><span class="line">    symbol[<span class="number">0</span>] = signal[frame_start_idx+long_cp_len: frame_start_idx +long_cp_len+fft_bins]</span><br><span class="line">    symbol[<span class="number">8</span>] = signal[frame_end_idx-fft_bins:frame_end_idx]</span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">1</span>, <span class="number">8</span>):</span><br><span class="line">        symbol[i] = signal[frame_start_idx+long_cp_len+short_cp_len*i + fft_bins*i: frame_start_idx + long_cp_len + short_cp_len*i + fft_bins*(i+<span class="number">1</span>)]</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">return</span> symbol</span><br><span class="line"></span><br><span class="line">symbol = extract_symbols(burst_with_cp_cfo, frame_start_idx, frame_end_idx)</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">symbol_dft</span>(<span class="params">symbols</span>):</span></span><br><span class="line">    <span class="keyword">for</span> i <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">9</span>):</span><br><span class="line">        symbol_f[i] = np.fft.fftshift(np.fft.fft(symbols[i]))</span><br><span class="line">    <span class="keyword">return</span> symbol_f</span><br><span class="line"></span><br><span class="line">symbol_f = symbol_dft(symbol)</span><br><span class="line">plt.figure()</span><br><span class="line">plt.subplot(<span class="number">211</span>)</span><br><span class="line">plt.plot(symbol_f[<span class="number">3</span>].real, symbol_f[<span class="number">3</span>].imag, <span class="string">&#x27;bo&#x27;</span>, label =<span class="string">&quot;zcseq symbol&quot;</span>)</span><br><span class="line">plt.legend()</span><br><span class="line">plt.subplot(<span class="number">212</span>)</span><br><span class="line">plt.plot(symbol_f[<span class="number">1</span>].real, symbol_f[<span class="number">1</span>].imag, <span class="string">&#x27;ro&#x27;</span>, label =<span class="string">&quot;normal data symbol&quot;</span>)</span><br><span class="line">plt.legend()</span><br></pre></td></tr></table></figure><br>上面的代码当中，并没有删除DC和pad子载波，因此我们获取到的星座图会在中间位置有许多点。<br><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/ofdm_data.png" alt><br>在上面也可以看到，ZC序列在频域当中还是一个近似的单位圆，而其他数据符号，具有一定的偏移。<br>接下来就需要进行信道的估计了和均衡了。</p>
+<h3 id="信道估计与均衡"><a href="#信道估计与均衡" class="headerlink" title="信道估计与均衡"></a>信道估计与均衡</h3><p>在前面我们已经获取了接收到的ZC序列在疲于当中的所有数据，由于ZC序列我们是已知的，通过比较接收到的ZC序列的值与已知的准确的ZC序列的值，我们就能够完成信道的估计。<br>值得注意的是，在信道估计的时候，我们只是估计数据子载波对应的那些信道。对于pad和DC需要移除。<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">delete_unused_carriers</span>(<span class="params">signal, ofdm</span>):</span></span><br><span class="line">    off = <span class="built_in">int</span>(np.ceil((ofdm.k-ofdm.kon)/<span class="number">2</span>)) <span class="comment"># calculate the data sub-carrier start position</span></span><br><span class="line">    data = signal[off:off+ofdm.kon]</span><br><span class="line">    xk = np.delete(data, NCARRIERS//<span class="number">2</span>)</span><br><span class="line">    <span class="keyword">return</span> xk</span><br><span class="line"></span><br><span class="line">zcseq_600 = zcsequence_t(<span class="number">600</span>, NCARRIERS)   <span class="comment"># create a zc sequence</span></span><br><span class="line">zcseq_600[NCARRIERS//<span class="number">2</span>] = <span class="number">0</span>                 <span class="comment"># this is DC</span></span><br><span class="line">zc_correct_600 = np.delete(zcseq_600, NCARRIERS//<span class="number">2</span>)</span><br><span class="line"></span><br><span class="line">zcseq_147 = zcsequence_t(<span class="number">147</span>, NCARRIERS)   <span class="comment"># create a zc sequence</span></span><br><span class="line">zcseq_147[NCARRIERS//<span class="number">2</span>] = <span class="number">0</span>                 <span class="comment"># this is DC</span></span><br><span class="line">zc_correct_147 = np.delete(zcseq_147, NCARRIERS//<span class="number">2</span>)</span><br><span class="line"></span><br><span class="line">rx_zc_seq600 = delete_unused_carriers(symbol_f[<span class="number">3</span>], ofdm_zc_short_cp)</span><br><span class="line">rx_zc_seq147 = delete_unused_carriers(symbol_f[<span class="number">5</span>], ofdm_zc_short_cp)</span><br><span class="line"></span><br><span class="line">h_csi_600 = rx_zc_seq600 / zc_correct_600</span><br><span class="line">h_csi_147 = rx_zc_seq147 / zc_correct_147</span><br><span class="line">plt.figure()</span><br><span class="line">plt.plot(h_csi_600, <span class="string">&#x27;-o&#x27;</span>)</span><br></pre></td></tr></table></figure><br><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/channel_est.png" alt></p>
+<p>有了信道的响应之后，我们就可以对其他符号进行均衡了。<br><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">symbol_f1 = delete_unused_carriers(symbol_f[<span class="number">1</span>], ofdm_zc_short_cp)</span><br><span class="line">symbol_f2 = delete_unused_carriers(symbol_f[<span class="number">2</span>], ofdm_zc_short_cp)</span><br><span class="line">symbol_f2_eq = (symbol_f2 / h_csi_600)</span><br><span class="line">symbol_f1_eq = (symbol_f1 / h_csi_600)</span><br><span class="line">plt.figure()</span><br><span class="line">plt.subplot(<span class="number">211</span>)</span><br><span class="line">plt.plot(symbol_f2.real, symbol_f2.imag, <span class="string">&#x27;bo&#x27;</span>, label=<span class="string">&quot;un eq&quot;</span>)</span><br><span class="line">plt.legend()</span><br><span class="line">plt.subplot(<span class="number">212</span>)</span><br><span class="line">plt.plot(symbol_f2_eq.real, symbol_f2_eq.imag, <span class="string">&#x27;bo&#x27;</span>, label=<span class="string">&quot;eq&quot;</span>)</span><br><span class="line">plt.legend()</span><br></pre></td></tr></table></figure><br><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/equalization.png" alt></p>
+<p>到这里在物理层上的所有这一系列操作都完成了，接下来就可以对星座图进行解隐射，并且进行后续的解码了。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/dsp/" rel="tag"># dsp</a>
+              <a href="/tags/python/" rel="tag"># python</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/07/26/2023.7/python-dsp-3-ofdm-symbol-detect/" rel="prev" title="python-dsp-3-ofdm-symbol-detect">
+      <i class="fa fa-chevron-left"></i> python-dsp-3-ofdm-symbol-detect
+    </a></div>
+      <div class="post-nav-item"></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#DroneID-%E6%95%B0%E6%8D%AE%E5%B8%A7"><span class="nav-number">2.</span> <span class="nav-text">DroneID 数据帧</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#Droneid-%E4%BB%BF%E7%9C%9F"><span class="nav-number">3.</span> <span class="nav-text">Droneid 仿真</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#ZC%E5%BA%8F%E5%88%97"><span class="nav-number">3.1.</span> <span class="nav-text">ZC序列</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#ZC%E5%BA%8F%E5%88%97%E7%9A%84%E5%8E%9F%E7%90%86"><span class="nav-number">3.1.1.</span> <span class="nav-text">ZC序列的原理</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#ZC%E5%BA%8F%E5%88%97%E7%9A%84%E6%80%A7%E8%B4%A8"><span class="nav-number">3.1.2.</span> <span class="nav-text">ZC序列的性质</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%94%9F%E6%88%90OFDM%E5%B8%A7"><span class="nav-number">3.2.</span> <span class="nav-text">生成OFDM帧</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#OFDM%E8%A7%A3%E8%B0%83"><span class="nav-number">3.3.</span> <span class="nav-text">OFDM解调</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BD%BF%E7%94%A8ZC%E5%BA%8F%E5%88%97%E8%BF%9B%E8%A1%8C%E7%9B%B8%E5%85%B3%E5%B3%B0%E6%A3%80%E6%B5%8B"><span class="nav-number">3.3.1.</span> <span class="nav-text">使用ZC序列进行相关峰检测</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%95%B4%E6%95%B0%E5%80%8D%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3"><span class="nav-number">3.3.2.</span> <span class="nav-text">整数倍频偏校正</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E6%97%B6%E9%97%B4%E5%90%8C%E6%AD%A5%E4%B8%8E%E5%B0%8F%E6%95%B0%E5%80%8D%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3"><span class="nav-number">3.3.3.</span> <span class="nav-text">时间同步与小数倍频偏校正</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#OFDM%E7%AC%A6%E5%8F%B7%E8%8E%B7%E5%8F%96"><span class="nav-number">3.3.4.</span> <span class="nav-text">OFDM符号获取</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#%E4%BF%A1%E9%81%93%E4%BC%B0%E8%AE%A1%E4%B8%8E%E5%9D%87%E8%A1%A1"><span class="nav-number">3.3.5.</span> <span class="nav-text">信道估计与均衡</span></a></li></ol></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">58</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">23</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

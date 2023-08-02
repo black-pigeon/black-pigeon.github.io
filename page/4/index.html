@@ -137,7 +137,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">57</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">58</span></a>
 
   </li>
   </ul>
@@ -163,6 +163,108 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/" class="post-title-link" itemprop="url">OFDM-802-11a学习-用户数据与CRC</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-04-28 16:34:22" itemprop="dateCreated datePublished" datetime="2022-04-28T16:34:22+08:00">2022-04-28</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/OFDM/" itemprop="url" rel="index"><span itemprop="name">OFDM</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/" class="post-meta-item leancloud_visitors" data-flag-title="OFDM-802-11a学习-用户数据与CRC" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>在前面的博客介绍了OFDM发射机的整体结构，真个发射机的模块还是比较多的，因此在实现的时候，按照模块设计的方式来一一实现每一个模块。这篇博客当中会介绍用户数据生成模块和为用户数据添加CRC的模块。<br>通过前面的介绍，我们可以知道，802.11a是可以实现传输网络数据的，在学习以太网的时候，我们可以知道在mac层上需要对数据进行crc校验，因此在实现802.11a的时候，同样可以对用户数据进行校验。<br></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2022/04/28/2022.4/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%94%A8%E6%88%B7%E6%95%B0%E6%8D%AE%E4%B8%8ECRC/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -1086,108 +1188,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/11/24/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-5-%E4%BA%8C%E9%98%B6%E9%94%81%E9%A2%91%E7%8E%AF%E8%B7%AF/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/./images/avatar.jpg">
-      <meta itemprop="name" content="wcc">
-      <meta itemprop="description" content="一点点学习笔记">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="wcc的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/11/24/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-5-%E4%BA%8C%E9%98%B6%E9%94%81%E9%A2%91%E7%8E%AF%E8%B7%AF/" class="post-title-link" itemprop="url">北斗卫星定位--5--二阶锁频环路</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-11-24 10:59:49" itemprop="dateCreated datePublished" datetime="2021-11-24T10:59:49+08:00">2021-11-24</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/SDR/" itemprop="url" rel="index"><span itemprop="name">SDR</span></a>
-                </span>
-            </span>
-
-          
-            <span id="/2021/11/24/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-5-%E4%BA%8C%E9%98%B6%E9%94%81%E9%A2%91%E7%8E%AF%E8%B7%AF/" class="post-meta-item leancloud_visitors" data-flag-title="北斗卫星定位--5--二阶锁频环路" title="Views">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span class="post-meta-item-text">Views: </span>
-              <span class="leancloud-visitors-count"></span>
-            </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine: </span>
-    
-    <a title="valine" href="/2021/11/24/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-5-%E4%BA%8C%E9%98%B6%E9%94%81%E9%A2%91%E7%8E%AF%E8%B7%AF/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2021/11/24/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-5-%E4%BA%8C%E9%98%B6%E9%94%81%E9%A2%91%E7%8E%AF%E8%B7%AF/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>在前面的一段时间的学习当中，学习了如何对信号进行捕获。在GPS接收机当中，捕获到信号之后，接下来的操作就是对捕获到的信号进行跟踪处理了，在接收机当中，常见的同步方法有PLL，其主要目的是使得本地生成的载波能够跟踪接受到的信号的频率和相位的变化，从而达到相干解调的目的。<br></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/11/24/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-5-%E4%BA%8C%E9%98%B6%E9%94%81%E9%A2%91%E7%8E%AF%E8%B7%AF/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1259,7 +1259,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">57</span>
+          <span class="site-state-item-count">58</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
