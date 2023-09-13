@@ -1,4 +1,5 @@
 ---
+date: 2022-3-13 19:42:55
 title: DMA传输的基本模型
 tags: ["DMA", "ZYNQ"]
 categories: ZYNQ
