@@ -137,7 +137,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">59</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">61</span></a>
 
   </li>
   </ul>
@@ -163,6 +163,204 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/" class="post-title-link" itemprop="url">FPGA DSP48E1使用1----乘法器</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2023-05-18 10:46:47 / Modified: 13:50:44" itemprop="dateCreated datePublished" datetime="2023-05-18T10:46:47+08:00">2023-05-18</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/FPGA/" itemprop="url" rel="index"><span itemprop="name">FPGA</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/" class="post-meta-item leancloud_visitors" data-flag-title="FPGA DSP48E1使用1----乘法器" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>FPGA在数字信号处理（DSP）应用方面非常高效，因为它们可以实现定制的、完全并行的算法。 DSP应用使用许多二进制乘法器和累加器，最好在专用的DSP片上实现。 所有7系列FPGA都有许多专用的、完全定制的低功耗DSP片，将高速性与小尺寸相结合，同时保留了系统设计的灵活性。<br><img src="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/dsp48e1整体结构.png" alt><br>DSP48E1的常见的一个功能就是实现 <code>P=(A+D)*B+C</code> 这个功能。<br></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2023/05/18/2023.5/FPGA-DSP48E1%E4%BD%BF%E7%94%A81-%E4%B9%98%E6%B3%95%E5%99%A8/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/05/08/2023.5/python-dsp-1-baisc/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/05/08/2023.5/python-dsp-1-baisc/" class="post-title-link" itemprop="url">python-dsp-1-baisc</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-05-08 23:10:45" itemprop="dateCreated datePublished" datetime="2023-05-08T23:10:45+08:00">2023-05-08</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-05-16 10:03:02" itemprop="dateModified" datetime="2023-05-16T10:03:02+08:00">2023-05-16</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/dsp/" itemprop="url" rel="index"><span itemprop="name">dsp</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2023/05/08/2023.5/python-dsp-1-baisc/" class="post-meta-item leancloud_visitors" data-flag-title="python-dsp-1-baisc" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2023/05/08/2023.5/python-dsp-1-baisc/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2023/05/08/2023.5/python-dsp-1-baisc/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>晚上回家尝试学习一些新的东西。感觉python挺好用的，利用Python当中的numpy和和scipy等工具包可以很好地来处理DSP和无线通信相关的算法，因此我觉得可以简单地来了解一下如何使用Python进行DSP的处理。<br></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2023/05/08/2023.5/python-dsp-1-baisc/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -247,101 +445,6 @@
           <!--noindex-->
             <div class="post-button">
               <a class="btn" href="/2023/03/06/2023.3/artix7-QSPI-Flash-%E8%AF%BB%E5%86%99/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/02/07/2022.3/DMA%E4%BC%A0%E8%BE%93%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A8%A1%E5%9E%8B/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/./images/avatar.jpg">
-      <meta itemprop="name" content="wcc">
-      <meta itemprop="description" content="一点点学习笔记">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="wcc的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/02/07/2022.3/DMA%E4%BC%A0%E8%BE%93%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A8%A1%E5%9E%8B/" class="post-title-link" itemprop="url">DMA传输的基本模型</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2023-02-07 14:50:37" itemprop="dateCreated datePublished" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/ZYNQ/" itemprop="url" rel="index"><span itemprop="name">ZYNQ</span></a>
-                </span>
-            </span>
-
-          
-            <span id="/2023/02/07/2022.3/DMA%E4%BC%A0%E8%BE%93%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A8%A1%E5%9E%8B/" class="post-meta-item leancloud_visitors" data-flag-title="DMA传输的基本模型" title="Views">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span class="post-meta-item-text">Views: </span>
-              <span class="leancloud-visitors-count"></span>
-            </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine: </span>
-    
-    <a title="valine" href="/2023/02/07/2022.3/DMA%E4%BC%A0%E8%BE%93%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A8%A1%E5%9E%8B/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2023/02/07/2022.3/DMA%E4%BC%A0%E8%BE%93%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A8%A1%E5%9E%8B/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在ZYNQ的系统设计当中，经常需要处理ARM与FPGA之间的数据交互的问题。这就引申出一个很重要的内容就是AXI4接口。<br>AXI接口我在之前也写过博客记录如何在FPGA当中实现数据的传输：<br><a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_41332806/article/details/106519058">AXI4向内存写入数据</a><br><a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_41332806/article/details/106488920">AXI4从内存获取数据</a><br>但是这两篇博客只是实现了一个比较简单的模块，并且里面的功能也是比较固定和死板的。<br></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2023/02/07/2022.3/DMA%E4%BC%A0%E8%BE%93%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A8%A1%E5%9E%8B/#more" rel="contents">
                 Read more &raquo;
               </a>
             </div>
@@ -1085,112 +1188,10 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/07/06/2022.7/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%B2%BE%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/./images/avatar.jpg">
-      <meta itemprop="name" content="wcc">
-      <meta itemprop="description" content="一点点学习笔记">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="wcc的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/07/06/2022.7/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%B2%BE%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/" class="post-title-link" itemprop="url">OFDM_802.11a学习----精频偏校正</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-07-06 09:04:55" itemprop="dateCreated datePublished" datetime="2022-07-06T09:04:55+08:00">2022-07-06</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/OFDM/" itemprop="url" rel="index"><span itemprop="name">OFDM</span></a>
-                </span>
-            </span>
-
-          
-            <span id="/2022/07/06/2022.7/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%B2%BE%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/" class="post-meta-item leancloud_visitors" data-flag-title="OFDM_802.11a学习----精频偏校正" title="Views">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span class="post-meta-item-text">Views: </span>
-              <span class="leancloud-visitors-count"></span>
-            </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine: </span>
-    
-    <a title="valine" href="/2022/07/06/2022.7/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%B2%BE%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2022/07/06/2022.7/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%B2%BE%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>在之前的博客当中已经记录了802.11a当中的短训练序列检测，使用短训练序列进行粗频偏校正，检测长训练序列并完成长训练序列的对齐。<br>在这篇博客当中将会记录使用长训练序列进行精频偏校正，这一部分也是我在学习的时候，在时域当中进行校正的最后一个步骤。在这个步骤之后，就要到频域当中进行操作了。<br></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/07/06/2022.7/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%B2%BE%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left" aria-label="Previous page"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><a class="extend next" rel="next" href="/page/3/"><i class="fa fa-angle-right" aria-label="Next page"></i></a>
+    <a class="extend prev" rel="prev" href="/"><i class="fa fa-angle-left" aria-label="Previous page"></i></a><a class="page-number" href="/">1</a><span class="page-number current">2</span><a class="page-number" href="/page/3/">3</a><span class="space">&hellip;</span><a class="page-number" href="/page/7/">7</a><a class="extend next" rel="next" href="/page/3/"><i class="fa fa-angle-right" aria-label="Next page"></i></a>
   </nav>
 
 
@@ -1258,7 +1259,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-count">61</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>

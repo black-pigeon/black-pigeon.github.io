@@ -137,7 +137,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">59</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">61</span></a>
 
   </li>
   </ul>
@@ -163,6 +163,108 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/07/06/2022.7/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%B2%BE%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/07/06/2022.7/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%B2%BE%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/" class="post-title-link" itemprop="url">OFDM_802.11a学习----精频偏校正</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-07-06 09:04:55" itemprop="dateCreated datePublished" datetime="2022-07-06T09:04:55+08:00">2022-07-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/OFDM/" itemprop="url" rel="index"><span itemprop="name">OFDM</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2022/07/06/2022.7/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%B2%BE%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/" class="post-meta-item leancloud_visitors" data-flag-title="OFDM_802.11a学习----精频偏校正" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2022/07/06/2022.7/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%B2%BE%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2022/07/06/2022.7/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%B2%BE%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>在之前的博客当中已经记录了802.11a当中的短训练序列检测，使用短训练序列进行粗频偏校正，检测长训练序列并完成长训练序列的对齐。<br>在这篇博客当中将会记录使用长训练序列进行精频偏校正，这一部分也是我在学习的时候，在时域当中进行校正的最后一个步骤。在这个步骤之后，就要到频域当中进行操作了。<br></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2022/07/06/2022.7/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E7%B2%BE%E9%A2%91%E5%81%8F%E6%A0%A1%E6%AD%A3/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -1081,112 +1183,10 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/05/01/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E5%8D%B7%E7%A7%AF%E7%BC%96%E7%A0%81/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/./images/avatar.jpg">
-      <meta itemprop="name" content="wcc">
-      <meta itemprop="description" content="一点点学习笔记">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="wcc的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/05/01/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E5%8D%B7%E7%A7%AF%E7%BC%96%E7%A0%81/" class="post-title-link" itemprop="url">OFDM_802.11a学习----卷积编码</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-05-01 10:30:21" itemprop="dateCreated datePublished" datetime="2022-05-01T10:30:21+08:00">2022-05-01</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/OFDM/" itemprop="url" rel="index"><span itemprop="name">OFDM</span></a>
-                </span>
-            </span>
-
-          
-            <span id="/2022/05/01/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E5%8D%B7%E7%A7%AF%E7%BC%96%E7%A0%81/" class="post-meta-item leancloud_visitors" data-flag-title="OFDM_802.11a学习----卷积编码" title="Views">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span class="post-meta-item-text">Views: </span>
-              <span class="leancloud-visitors-count"></span>
-            </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine: </span>
-    
-    <a title="valine" href="/2022/05/01/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E5%8D%B7%E7%A7%AF%E7%BC%96%E7%A0%81/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2022/05/01/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E5%8D%B7%E7%A7%AF%E7%BC%96%E7%A0%81/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>在上一篇博客当中，已经实现了PPDU的数据域的用户数据的生成，在这之中按照service域，PSDU域，tail bit和pad bit进行生成和填充。<br>然后对生成的bit流数据进行了加扰操作。<br>在对802.11a的数据域的接下来的操作就是进行信道编码。在本博客当中会介绍802.11a当中的卷积编码和删余操作，从而实现想要的3/4码速率数据。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/05/01/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-%E5%8D%B7%E7%A7%AF%E7%BC%96%E7%A0%81/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
-    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left" aria-label="Previous page"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/6/">6</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right" aria-label="Next page"></i></a>
+    <a class="extend prev" rel="prev" href="/page/2/"><i class="fa fa-angle-left" aria-label="Previous page"></i></a><a class="page-number" href="/">1</a><a class="page-number" href="/page/2/">2</a><span class="page-number current">3</span><a class="page-number" href="/page/4/">4</a><span class="space">&hellip;</span><a class="page-number" href="/page/7/">7</a><a class="extend next" rel="next" href="/page/4/"><i class="fa fa-angle-right" aria-label="Next page"></i></a>
   </nav>
 
 
@@ -1254,7 +1254,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">59</span>
+          <span class="site-state-item-count">61</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>

@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="前言在前面有使用过cocotb进行一些简单的操作仿真操作，了解了cocotb当中的基础使用方法，并且能够使用cocotb来关联modelsim&#x2F;questasim 进行Vivado当中IP的仿真。cocotb可以使用python来提供测试数据源，这对DSP算法的FPGA实现实很友好的，之前在FPGA上如何想要实现DSP的算法的验证，可能需要先从matlab生成测试数据，然后再将数据导入到仿真平台当">
+<meta property="og:type" content="article">
+<meta property="og:title" content="cocotb-3-sim-with-fft">
+<meta property="og:url" content="https://black-pigeon.github.io/2023/09/06/2023.9/cocotb-3-sim-with-fft/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="前言在前面有使用过cocotb进行一些简单的操作仿真操作，了解了cocotb当中的基础使用方法，并且能够使用cocotb来关联modelsim&#x2F;questasim 进行Vivado当中IP的仿真。cocotb可以使用python来提供测试数据源，这对DSP算法的FPGA实现实很友好的，之前在FPGA上如何想要实现DSP的算法的验证，可能需要先从matlab生成测试数据，然后再将数据导入到仿真平台当">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/09/06/2023.9/cocotb-3-sim-with-fft/cocotb_signal_source.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/09/06/2023.9/cocotb-3-sim-with-fft/cocotb_modelsim.png">
+<meta property="article:published_time" content="2023-09-06T15:04:01.000Z">
+<meta property="article:modified_time" content="2023-10-21T06:17:36.680Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="FPGA">
+<meta property="article:tag" content="cocotb">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2023/09/06/2023.9/cocotb-3-sim-with-fft/cocotb_signal_source.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2023/09/06/2023.9/cocotb-3-sim-with-fft/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>cocotb-3-sim-with-fft | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">23</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">15</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">61</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/09/06/2023.9/cocotb-3-sim-with-fft/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          cocotb-3-sim-with-fft
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-09-06 23:04:01" itemprop="dateCreated datePublished" datetime="2023-09-06T23:04:01+08:00">2023-09-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-10-21 14:17:36" itemprop="dateModified" datetime="2023-10-21T14:17:36+08:00">2023-10-21</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cocotb/" itemprop="url" rel="index"><span itemprop="name">cocotb</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2023/09/06/2023.9/cocotb-3-sim-with-fft/" class="post-meta-item leancloud_visitors" data-flag-title="cocotb-3-sim-with-fft" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2023/09/06/2023.9/cocotb-3-sim-with-fft/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2023/09/06/2023.9/cocotb-3-sim-with-fft/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在前面有使用过cocotb进行一些简单的操作仿真操作，了解了cocotb当中的基础使用方法，并且能够使用cocotb来关联modelsim/questasim 进行Vivado当中IP的仿真。<br>cocotb可以使用python来提供测试数据源，这对DSP算法的FPGA实现实很友好的，之前在FPGA上如何想要实现DSP的算法的验证，可能需要先从matlab生成测试数据，然后再将数据导入到仿真平台当中，在cocotb当中，我们可以使用numpy和scipy能够很容易地生成这些测试数据，并将这些数据灌入到我们自己的实现的HDL模块当中。<br>这篇博客，记录一下使用cocotb来完成仿真fft ip的功能仿真。<br><span id="more"></span></p>
+<h1 id="仿真fft-ip"><a href="#仿真fft-ip" class="headerlink" title="仿真fft ip"></a>仿真fft ip</h1><p>结构目录如下图：<br><figure class="highlight bash"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br></pre></td><td class="code"><pre><span class="line">wcc@wcc-h:~/wcc_demo/cocotb/fft_ip$ tree -L 2</span><br><span class="line">.</span><br><span class="line">├── fft_ip</span><br><span class="line">│   ├── fft_ip.cache</span><br><span class="line">│   ├── fft_ip.hw</span><br><span class="line">│   ├── fft_ip.ip_user_files</span><br><span class="line">│   ├── fft_ip.runs</span><br><span class="line">│   ├── fft_ip.sim</span><br><span class="line">│   ├── fft_ip.srcs</span><br><span class="line">│   ├── fft_ip.xpr</span><br><span class="line">│   ├── vivado.jou</span><br><span class="line">│   ├── vivado.log</span><br><span class="line">│   └── vivado_pid15096.str</span><br><span class="line">├── rtl</span><br><span class="line">│   └── fft_wrapper.v</span><br><span class="line">└── tb</span><br><span class="line">    ├── Makefile</span><br><span class="line">    ├── modelsim.ini</span><br><span class="line">    ├── __pycache__</span><br><span class="line">    ├── results.xml</span><br><span class="line">    ├── sim_build</span><br><span class="line">    ├── tb_fft_wrapper.py</span><br><span class="line">    ├── transcript</span><br><span class="line">    ├── vish_stacktrace.vstf</span><br><span class="line">    ├── vsim.wlf</span><br><span class="line">    └── wlftkVBf3W</span><br><span class="line"></span><br><span class="line"></span><br></pre></td></tr></table></figure></p>
+<h2 id="RTL-代码"><a href="#RTL-代码" class="headerlink" title="RTL 代码"></a>RTL 代码</h2><p>其中rtl用来存放我们自己需要设计的RTL代码，tb文件存放仿真用的测试文件和Makefile,第一个目录则是对应的vivodo的工程目录。<br>在这个工程当中我们主要使用一个fft ip。</p>
+<p>rtl 代码如下：<br><figure class="highlight verilog"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">module</span> fft_wrapper(</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            clk         ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            rst         ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>    [<span class="number">15</span>:<span class="number">0</span>]  sample_i    ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>    [<span class="number">15</span>:<span class="number">0</span>]  sample_q    ,</span><br><span class="line">    <span class="keyword">input</span>   <span class="keyword">wire</span>            sample_valid,</span><br><span class="line">    </span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">wire</span>    [<span class="number">15</span>:<span class="number">0</span>]  freq_sample_i      ,</span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">wire</span>    [<span class="number">15</span>:<span class="number">0</span>]  freq_sample_q      ,</span><br><span class="line">    <span class="keyword">output</span>  <span class="keyword">wire</span>            freq_sample_valid   </span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">wire</span> [<span class="number">15</span> : <span class="number">0</span>] s_axis_config_tdata   ;</span><br><span class="line">    <span class="keyword">wire</span> s_axis_config_tvalid   ;</span><br><span class="line">    <span class="keyword">wire</span> s_axis_config_tready   ;</span><br><span class="line">    <span class="keyword">wire</span> [<span class="number">31</span> : <span class="number">0</span>] s_axis_data_tdata ;</span><br><span class="line">    <span class="keyword">wire</span> s_axis_data_tvalid ;</span><br><span class="line">    <span class="keyword">wire</span> s_axis_data_tready ;</span><br><span class="line">    <span class="keyword">wire</span> s_axis_data_tlast  ;</span><br><span class="line">    <span class="keyword">wire</span> [<span class="number">31</span> : <span class="number">0</span>] m_axis_data_tdata ;</span><br><span class="line">    <span class="keyword">wire</span> [<span class="number">15</span> : <span class="number">0</span>] m_axis_data_tuser ;</span><br><span class="line">    <span class="keyword">wire</span> m_axis_data_tvalid ;</span><br><span class="line">    <span class="keyword">wire</span> m_axis_data_tready ;</span><br><span class="line">    <span class="keyword">wire</span> m_axis_data_tlast  ;</span><br><span class="line">    <span class="keyword">wire</span> event_frame_started    ;</span><br><span class="line">    <span class="keyword">wire</span> event_tlast_unexpected ;</span><br><span class="line">    <span class="keyword">wire</span> event_tlast_missing    ;</span><br><span class="line">    <span class="keyword">wire</span> event_status_channel_halt  ;</span><br><span class="line">    <span class="keyword">wire</span> event_data_in_channel_halt ;</span><br><span class="line">    <span class="keyword">wire</span> event_data_out_channel_halt    ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">wire</span> full, empty ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">assign</span> s_axis_config_tdata = <span class="number">1&#x27;b1</span>;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    fifo_generator_0 your_instance_name (</span><br><span class="line">        <span class="variable">.clk</span>(clk),      <span class="comment">// input wire clk</span></span><br><span class="line">        <span class="variable">.din</span>(&#123;sample_q, sample_i&#125;),      <span class="comment">// input wire [31 : 0] din</span></span><br><span class="line">        <span class="variable">.wr_en</span>(sample_valid),  <span class="comment">// input wire wr_en</span></span><br><span class="line">        <span class="variable">.rd_en</span>(s_axis_data_tvalid&amp;s_axis_data_tready),  <span class="comment">// input wire rd_en</span></span><br><span class="line">        <span class="variable">.dout</span>(s_axis_data_tdata),    <span class="comment">// output wire [31 : 0] dout</span></span><br><span class="line">        <span class="variable">.full</span>(full),    <span class="comment">// output wire full</span></span><br><span class="line">        <span class="variable">.empty</span>(empty)  <span class="comment">// output wire empty</span></span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    <span class="keyword">assign</span> s_axis_data_tvalid = ~empty;</span><br><span class="line"></span><br><span class="line">    xfft_0 u_xfft (</span><br><span class="line">    <span class="variable">.aclk</span>(clk),                                                <span class="comment">// input wire aclk</span></span><br><span class="line">    <span class="variable">.s_axis_config_tdata</span>(s_axis_config_tdata),                  <span class="comment">// input wire [15 : 0] s_axis_config_tdata</span></span><br><span class="line">    <span class="variable">.s_axis_config_tvalid</span>(<span class="number">1&#x27;b1</span>),                                <span class="comment">// input wire s_axis_config_tvalid</span></span><br><span class="line">    <span class="variable">.s_axis_config_tready</span>(),                                    <span class="comment">// output wire s_axis_config_tready</span></span><br><span class="line">    <span class="variable">.s_axis_data_tdata</span>(s_axis_data_tdata),                      <span class="comment">// input wire [31 : 0] s_axis_data_tdata</span></span><br><span class="line">    <span class="variable">.s_axis_data_tvalid</span>(s_axis_data_tvalid),                    <span class="comment">// input wire s_axis_data_tvalid</span></span><br><span class="line">    <span class="variable">.s_axis_data_tready</span>(s_axis_data_tready),                    <span class="comment">// output wire s_axis_data_tready</span></span><br><span class="line">    <span class="variable">.s_axis_data_tlast</span>(s_axis_data_tlast),                      <span class="comment">// input wire s_axis_data_tlast</span></span><br><span class="line">    <span class="variable">.m_axis_data_tdata</span>(m_axis_data_tdata),                      <span class="comment">// output wire [31 : 0] m_axis_data_tdata</span></span><br><span class="line">    <span class="variable">.m_axis_data_tuser</span>(m_axis_data_tuser),                      <span class="comment">// output wire [15 : 0] m_axis_data_tuser</span></span><br><span class="line">    <span class="variable">.m_axis_data_tvalid</span>(m_axis_data_tvalid),                    <span class="comment">// output wire m_axis_data_tvalid</span></span><br><span class="line">    <span class="variable">.m_axis_data_tready</span>(<span class="number">1&#x27;b1</span>),                    <span class="comment">// input wire m_axis_data_tready</span></span><br><span class="line">    <span class="variable">.m_axis_data_tlast</span>(m_axis_data_tlast),                      <span class="comment">// output wire m_axis_data_tlast</span></span><br><span class="line">    <span class="variable">.event_frame_started</span>(event_frame_started),                  <span class="comment">// output wire event_frame_started</span></span><br><span class="line">    <span class="variable">.event_tlast_unexpected</span>(event_tlast_unexpected),            <span class="comment">// output wire event_tlast_unexpected</span></span><br><span class="line">    <span class="variable">.event_tlast_missing</span>(event_tlast_missing),                  <span class="comment">// output wire event_tlast_missing</span></span><br><span class="line">    <span class="variable">.event_status_channel_halt</span>(event_status_channel_halt),      <span class="comment">// output wire event_status_channel_halt</span></span><br><span class="line">    <span class="variable">.event_data_in_channel_halt</span>(event_data_in_channel_halt),    <span class="comment">// output wire event_data_in_channel_halt</span></span><br><span class="line">    <span class="variable">.event_data_out_channel_halt</span>(event_data_out_channel_halt)  <span class="comment">// output wire event_data_out_channel_halt</span></span><br><span class="line">    );</span><br><span class="line"></span><br><span class="line">    <span class="keyword">assign</span> freq_sample_valid = m_axis_data_tvalid;</span><br><span class="line">    <span class="keyword">assign</span> &#123;freq_sample_q, freq_sample_i&#125; = m_axis_data_tdata;</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="comment">// internal signals and registers</span></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">16</span>-<span class="number">1</span>:<span class="number">0</span>]   abs_acc_i           ;</span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">16</span>-<span class="number">1</span>:<span class="number">0</span>]   abs_acc_q           ;</span><br><span class="line">    <span class="keyword">reg</span>                 abs_acc_valid       ;</span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">16</span>-<span class="number">1</span>:<span class="number">0</span>]   acc_i_delay1     ;</span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">16</span>-<span class="number">1</span>:<span class="number">0</span>]   acc_q_delay1     ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">16</span>-<span class="number">1</span>:<span class="number">0</span>]   max_abs         ;</span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">16</span>-<span class="number">1</span>:<span class="number">0</span>]   min_abs         ;</span><br><span class="line">    <span class="keyword">reg</span>                 max_abs_valid   ;</span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">16</span>-<span class="number">1</span>:<span class="number">0</span>]   acc_i_delay2     ;</span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">16</span>-<span class="number">1</span>:<span class="number">0</span>]   acc_q_delay2     ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">17</span>-<span class="number">1</span>:<span class="number">0</span>]   est_amp         ;</span><br><span class="line">    <span class="keyword">reg</span>                 est_amp_valid   ;</span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">16</span>-<span class="number">1</span>:<span class="number">0</span>]   acc_i_delay3     ;</span><br><span class="line">    <span class="keyword">reg</span>     [<span class="number">16</span>-<span class="number">1</span>:<span class="number">0</span>]   acc_q_delay3     ;</span><br><span class="line"></span><br><span class="line">    <span class="keyword">wire</span> enable;</span><br><span class="line">    <span class="keyword">assign</span> enable = <span class="number">1&#x27;b1</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="comment">// Amplitude estimation, step 1:</span></span><br><span class="line">    <span class="comment">// get the absolute value of i/q data</span></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            abs_acc_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            abs_acc_valid &lt;= m_axis_data_tvalid; </span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            abs_acc_i &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            abs_acc_q &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_i_delay1 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_q_delay1 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">if</span> (enable == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">if</span> (m_axis_data_tvalid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">                abs_acc_i &lt;= freq_sample_i[<span class="number">15</span>]? ~(freq_sample_i)+<span class="number">1</span> : freq_sample_i;</span><br><span class="line">                abs_acc_q &lt;= freq_sample_q[<span class="number">15</span>]? ~(freq_sample_q)+<span class="number">1</span> : freq_sample_q;</span><br><span class="line">                acc_i_delay1 &lt;= freq_sample_i;</span><br><span class="line">                acc_q_delay1 &lt;= freq_sample_q;</span><br><span class="line">            <span class="keyword">end</span> </span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            abs_acc_i &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            abs_acc_q &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_i_delay1 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_q_delay1 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="comment">// Amplitude estimation, step 2:</span></span><br><span class="line">    <span class="comment">// get the max and min value of |I|, |Q|</span></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            max_abs_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">if</span>(enable == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            max_abs_valid &lt;= abs_acc_valid; </span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            max_abs_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            max_abs &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            min_abs &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_i_delay2 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_q_delay2 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">if</span>(enable == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">if</span> (abs_acc_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">                max_abs &lt;= (abs_acc_i &gt; abs_acc_q) ? abs_acc_i : abs_acc_q;</span><br><span class="line">                min_abs &lt;= (abs_acc_i &lt; abs_acc_q) ? abs_acc_i : abs_acc_q;</span><br><span class="line">                acc_i_delay2 &lt;= acc_i_delay1;</span><br><span class="line">                acc_q_delay2 &lt;= acc_q_delay1;</span><br><span class="line">            <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            max_abs &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            min_abs &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_i_delay2 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_q_delay2 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span>   </span><br><span class="line"></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="comment">// Amplitude estimation, step 3:</span></span><br><span class="line">    <span class="comment">// calculate the amplitude estimation </span></span><br><span class="line">    <span class="comment">// mag = alpha*max(|I|, |Q|) + beta*min(|I|, |Q|);</span></span><br><span class="line">    <span class="comment">// alpha=1, beta=1/4</span></span><br><span class="line">    <span class="comment">//====================================================</span></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            est_amp_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">if</span>(enable == <span class="number">1&#x27;b1</span>)<span class="keyword">begin</span></span><br><span class="line">            est_amp_valid &lt;= max_abs_valid; </span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            est_amp_valid &lt;= <span class="number">1&#x27;b0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"></span><br><span class="line">    <span class="keyword">always</span> @(<span class="keyword">posedge</span> clk ) <span class="keyword">begin</span></span><br><span class="line">        <span class="keyword">if</span> (rst==<span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            est_amp &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_i_delay3 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_q_delay3 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">        <span class="keyword">else</span> <span class="keyword">if</span> (enable == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">            <span class="keyword">if</span> (max_abs_valid == <span class="number">1&#x27;b1</span>) <span class="keyword">begin</span></span><br><span class="line">                est_amp &lt;= max_abs + min_abs[<span class="number">16</span>-<span class="number">1</span>:<span class="number">2</span>];</span><br><span class="line">                acc_i_delay3 &lt;= acc_i_delay2;</span><br><span class="line">                acc_q_delay3 &lt;= acc_q_delay2;</span><br><span class="line">            <span class="keyword">end</span>  </span><br><span class="line">        <span class="keyword">end</span> <span class="keyword">else</span> <span class="keyword">begin</span></span><br><span class="line">            est_amp &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_i_delay3 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">            acc_q_delay3 &lt;= <span class="number">&#x27;d0</span>;</span><br><span class="line">        <span class="keyword">end</span></span><br><span class="line">    <span class="keyword">end</span></span><br><span class="line"><span class="keyword">endmodule</span></span><br></pre></td></tr></table></figure></p>
+<p>主要功能是使用FFT IP进行FFT IP的变换，FFT结束之后，求取变换之后的信号的模。并将FFT转换之后的结果输出给外部。<br>测试脚本如下：<br>在这里我们导入了numpy和matplotlib的库，这样方便我们生成测试数据，并且绘制具体的图形。</p>
+<h2 id="测试脚本"><a href="#测试脚本" class="headerlink" title="测试脚本"></a>测试脚本</h2><figure class="highlight python"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># Simple tests for an fir_filter module</span></span><br><span class="line"><span class="keyword">import</span> cocotb</span><br><span class="line"><span class="keyword">import</span> random</span><br><span class="line"><span class="keyword">from</span> cocotb.clock <span class="keyword">import</span> Clock</span><br><span class="line"><span class="keyword">from</span> cocotb.triggers <span class="keyword">import</span> Timer</span><br><span class="line"><span class="keyword">from</span> cocotb.triggers <span class="keyword">import</span> RisingEdge</span><br><span class="line"><span class="keyword">from</span> scipy.signal <span class="keyword">import</span> lfilter</span><br><span class="line"><span class="keyword">import</span> numpy <span class="keyword">as</span> np</span><br><span class="line"><span class="keyword">import</span> matplotlib.pyplot <span class="keyword">as</span> plt</span><br><span class="line"></span><br><span class="line"><span class="comment"># as a non-generator</span></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">wave</span>(<span class="params">amp, f, fs, clks</span>):</span> </span><br><span class="line">    clks = np.arange(<span class="number">0</span>, clks)</span><br><span class="line">    sample = amp*np.exp(<span class="number">1j</span>*<span class="number">2.0</span>*np.pi*f/fs*clks)</span><br><span class="line">    <span class="keyword">return</span> sample</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">def</span> <span class="title">predictor</span>(<span class="params">signal,coefs</span>):</span></span><br><span class="line">    output = lfilter(coefs,<span class="number">1.0</span>,signal)</span><br><span class="line">    <span class="keyword">return</span> output</span><br><span class="line"></span><br><span class="line"><span class="keyword">async</span> <span class="function"><span class="keyword">def</span>  <span class="title">capture_output_data</span>(<span class="params">dut</span>):</span></span><br><span class="line">    output_signal=[]</span><br><span class="line">    <span class="keyword">await</span> RisingEdge(dut.freq_sample_valid)</span><br><span class="line">    <span class="keyword">while</span> dut.freq_sample_valid.value == <span class="number">1</span>:</span><br><span class="line">        tmp_i = dut.freq_sample_i.value.signed_integer</span><br><span class="line">        tmp_q = dut.freq_sample_q.value.signed_integer</span><br><span class="line">        output_signal.append(tmp_i + <span class="number">1j</span>*tmp_q) </span><br><span class="line">        <span class="keyword">await</span> RisingEdge(dut.clk)</span><br><span class="line"></span><br><span class="line">    fft_result = <span class="number">20</span>*np.log10(np.<span class="built_in">abs</span>(output_signal))</span><br><span class="line">    plt.figure()</span><br><span class="line">    plt.plot(fft_result.real)</span><br><span class="line">    plt.show()</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="meta">@cocotb.test()</span></span><br><span class="line"><span class="keyword">async</span> <span class="function"><span class="keyword">def</span> <span class="title">filter_test</span>(<span class="params">dut</span>):</span></span><br><span class="line">    <span class="comment">#initialize</span></span><br><span class="line">    <span class="comment"># dut.data_in.value = 0</span></span><br><span class="line">    fs       = <span class="number">100e6</span></span><br><span class="line">    amp0     = <span class="number">2048</span></span><br><span class="line">    </span><br><span class="line">    <span class="comment"># nfft     = num_clks</span></span><br><span class="line">    f0       = <span class="number">1e5</span></span><br><span class="line">    num_clks = <span class="built_in">int</span>(fs//f0)</span><br><span class="line">    f1       = <span class="number">2e6</span></span><br><span class="line">    coefs    = np.array([-<span class="number">1.</span>, -<span class="number">7.</span>, -<span class="number">4.</span>,  <span class="number">4.</span>, <span class="number">18.</span>, <span class="number">32.</span>, <span class="number">38.</span>, <span class="number">32.</span>, <span class="number">18.</span>,  <span class="number">4.</span>, -<span class="number">4.</span>, -<span class="number">7.</span>, -<span class="number">1.</span>])</span><br><span class="line">    cnt      = <span class="number">0</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># input data</span></span><br><span class="line">    input_signal = wave(amp0, f0, fs,num_clks)</span><br><span class="line">    plt.figure()</span><br><span class="line">    plt.plot(input_signal.real)</span><br><span class="line">    plt.plot(input_signal.imag)</span><br><span class="line">    <span class="comment"># plt.show()</span></span><br><span class="line"></span><br><span class="line">    <span class="comment"># start simulator clock</span></span><br><span class="line">    cocotb.start_soon(Clock(dut.clk, <span class="number">10</span>, units=<span class="string">&quot;ns&quot;</span>).start())</span><br><span class="line">    output_signal = cocotb.start_soon(capture_output_data(dut))</span><br><span class="line"></span><br><span class="line">    <span class="comment"># Reset DUT</span></span><br><span class="line">    dut.rst.value = <span class="number">1</span></span><br><span class="line">    dut.sample_valid.value = <span class="number">0</span></span><br><span class="line">    dut.sample_i.value = <span class="number">0</span></span><br><span class="line">    dut.sample_q.value = <span class="number">0</span></span><br><span class="line">    <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">10</span>):</span><br><span class="line">        <span class="keyword">await</span> RisingEdge(dut.clk)</span><br><span class="line">    dut.rst.value = <span class="number">0</span></span><br><span class="line"></span><br><span class="line">    </span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">20</span>):</span><br><span class="line">        <span class="keyword">await</span> RisingEdge(dut.clk)</span><br><span class="line">    </span><br><span class="line">    </span><br><span class="line"></span><br><span class="line">    <span class="comment"># run through each clock</span></span><br><span class="line">    <span class="keyword">for</span> samp <span class="keyword">in</span> <span class="built_in">range</span>(<span class="built_in">int</span>(num_clks*<span class="number">5</span>)):</span><br><span class="line">        </span><br><span class="line">        dut.sample_valid.value = <span class="number">1</span></span><br><span class="line">        <span class="comment"># feed a new input in</span></span><br><span class="line">        dut.sample_i.value  = <span class="built_in">int</span>(input_signal[samp%num_clks].real)</span><br><span class="line">        dut.sample_q.value  = <span class="built_in">int</span>(input_signal[samp%num_clks].imag)</span><br><span class="line">        <span class="keyword">await</span> RisingEdge(dut.clk)</span><br><span class="line"></span><br><span class="line">    dut.sample_valid.value = <span class="number">0</span></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">    <span class="keyword">for</span> _ <span class="keyword">in</span> <span class="built_in">range</span>(<span class="number">5000</span>):</span><br><span class="line">        <span class="keyword">await</span> RisingEdge(dut.clk)</span><br><span class="line"></span><br><span class="line">    plt.show()</span><br></pre></td></tr></table></figure>
+<p>在仿真脚本当中，我们首先设计采样率，输入的单音信号的频率，采样点的个数等，然后我们生成这个单音信号。接下来完成复位等操作，复位完成之后，等待一段时间，我们把数据送给我们的带仿真模块的数据输入端口。<br>与此同时我们使用了一些协程来检测待测模块的输出，并且我们将FFT转换之后的数据进行一个简单的求模。最终我们绘制出处理得到的结果。</p>
+<h2 id="Makefile"><a href="#Makefile" class="headerlink" title="Makefile"></a>Makefile</h2><figure class="highlight makefile"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br></pre></td><td class="code"><pre><span class="line"><span class="comment"># defaults</span></span><br><span class="line">SIM ?= modelsim</span><br><span class="line">WAVES ?= 1</span><br><span class="line">TOPLEVEL_LANG ?= verilog</span><br><span class="line"></span><br><span class="line"></span><br><span class="line"></span><br><span class="line">VERILOG_SOURCES += <span class="variable">$(PWD)</span>/../rtl/*.v</span><br><span class="line">VERILOG_SOURCES += /opt/Xilinx/Vivado/2019.1/data/verilog/src/glbl.v</span><br><span class="line">VERILOG_SOURCES += /opt/Xilinx/Vivado/2019.1/data/verilog/src/unisims/*.v</span><br><span class="line">VHDL_SOURCES +=<span class="variable">$(PWD)</span>/../fft_ip/fft_ip.srcs/sources_1/ip/fifo_generator_0/synth/*.vhd</span><br><span class="line">VHDL_SOURCES +=<span class="variable">$(PWD)</span>/../fft_ip/fft_ip.srcs/sources_1/ip/xfft_0/synth/xfft_0.vhd</span><br><span class="line"><span class="comment"># VERILOG_SOURCES = $(PWD)/tb/*.v</span></span><br><span class="line"><span class="comment"># use VHDL_SOURCES for VHDL files</span></span><br><span class="line"></span><br><span class="line"><span class="comment"># TOPLEVEL is the name of the toplevel module in your Verilog or VHDL file</span></span><br><span class="line">TOPLEVEL = fft_wrapper</span><br><span class="line"></span><br><span class="line"></span><br><span class="line">SIM_ARGS = -L fifo_generator_v13_2_4 -L unisims_ver -L unimacro_ver -L secureip -L xpm -L xfft_v9_1_2 work.glbl </span><br><span class="line"></span><br><span class="line"></span><br><span class="line"><span class="comment"># MODULE is the basename of the Python test file</span></span><br><span class="line">MODULE = tb_fft_wrapper</span><br><span class="line"></span><br><span class="line">COCOTB_HDL_TIMEUNIT = 1ns</span><br><span class="line">COCOTB_HDL_TIMEPRECISION = 1ps</span><br><span class="line"><span class="comment"># include cocotb&#x27;s make rules to take care of the simulator setup</span></span><br><span class="line"><span class="keyword">include</span> <span class="variable">$(<span class="built_in">shell</span> cocotb-config --makefiles)</span>/Makefile.sim</span><br></pre></td></tr></table></figure>
+<p>在Makefile当中，要做的和之前的类似，主要是指定要使用仿真工具，添加所有的待仿真的源文件，指定顶层文件，链接IP所在的库文件路径。</p>
+<h2 id="运行结果"><a href="#运行结果" class="headerlink" title="运行结果"></a>运行结果</h2><p><img src="/2023/09/06/2023.9/cocotb-3-sim-with-fft/cocotb_signal_source.png" alt><br>在cocotb当中，我们生成了测试数据，并且使用matplotlib将测试数据进行了绘制，并且将FFT转换之后的数据进行了简单的求模操作，可以看到在每隔特定时间会出现一个峰值，这是由于我们在前面循环多次将数据灌入了我们的测试模块。</p>
+<p>我们还可以从modelsim的仿真波形当中来看看仿真的具体过程。<br><img src="/2023/09/06/2023.9/cocotb-3-sim-with-fft/cocotb_modelsim.png" alt></p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/FPGA/" rel="tag"># FPGA</a>
+              <a href="/tags/cocotb/" rel="tag"># cocotb</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/08/11/2023.8/pyqt%E5%A4%9A%E7%BA%BF%E7%A8%8B/" rel="prev" title="pyqt多线程">
+      <i class="fa fa-chevron-left"></i> pyqt多线程
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/10/21/2023.10/FPGA-multiboot/" rel="next" title="FPGA multiboot">
+      FPGA multiboot <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#%E5%89%8D%E8%A8%80"><span class="nav-number">1.</span> <span class="nav-text">前言</span></a></li><li class="nav-item nav-level-1"><a class="nav-link" href="#%E4%BB%BF%E7%9C%9Ffft-ip"><span class="nav-number">2.</span> <span class="nav-text">仿真fft ip</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#RTL-%E4%BB%A3%E7%A0%81"><span class="nav-number">2.1.</span> <span class="nav-text">RTL 代码</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E6%B5%8B%E8%AF%95%E8%84%9A%E6%9C%AC"><span class="nav-number">2.2.</span> <span class="nav-text">测试脚本</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#Makefile"><span class="nav-number">2.3.</span> <span class="nav-text">Makefile</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E8%BF%90%E8%A1%8C%E7%BB%93%E6%9E%9C"><span class="nav-number">2.4.</span> <span class="nav-text">运行结果</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">61</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">15</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">23</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>
