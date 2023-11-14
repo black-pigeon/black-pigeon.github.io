@@ -137,7 +137,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">63</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">64</span></a>
 
   </li>
   </ul>
@@ -163,6 +163,108 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/06/14/2023.6/cocotb-1-intro/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/06/14/2023.6/cocotb-1-intro/" class="post-title-link" itemprop="url">cocotb-1-intro</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-06-14 19:28:00" itemprop="dateCreated datePublished" datetime="2023-06-14T19:28:00+08:00">2023-06-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-06-15 20:27:22" itemprop="dateModified" datetime="2023-06-15T20:27:22+08:00">2023-06-15</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/cocotb/" itemprop="url" rel="index"><span itemprop="name">cocotb</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2023/06/14/2023.6/cocotb-1-intro/" class="post-meta-item leancloud_visitors" data-flag-title="cocotb-1-intro" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2023/06/14/2023.6/cocotb-1-intro/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2023/06/14/2023.6/cocotb-1-intro/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>模块和顶层测试的验证通常比创建 HDL 更复杂、更耗时。cocotb（基于协程的协同仿真测试平台）是基于 Python 协程的，可以验证 SystemVerilog 和 VHDL，允许开发人员在 Python 中创建测试台，当然，还引入了所有更广泛的 Python 库和框架，除了处理 UUT 的输出之外，它们还可用于创建激励。<br>在最高层，cocotb 提供了我们选择的仿真工具和 Python 之间的接口。<br>为了实现这一点，cocotb 使用协程和联合仿真。  协程是 Python 函数，可以自动暂停运行，使多个函数同时运行。  协同仿真意味着设计和测试平台是独立仿真的，这意味着当 Python 运行时，仿真时间不提前。  这是使用模拟器的 Verilog 程序接口 (VPI) 和 VHDL 程序接口 (VHPI) 实现的。<br>cocotb 的一个重要特色是广泛的社区开发附加功能，这些附加功能提供了一系列总线功能模型，可用于验证具有 AXI 或 Wishbone 接口的模块等。<br><img src="/2023/06/14/2023.6/cocotb-1-intro/cocotb_level.png" alt><br></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2023/06/14/2023.6/cocotb-1-intro/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -1086,108 +1188,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/08/13/2022.8/usrp-e320-FPGA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/./images/avatar.jpg">
-      <meta itemprop="name" content="wcc">
-      <meta itemprop="description" content="一点点学习笔记">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="wcc的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/08/13/2022.8/usrp-e320-FPGA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/" class="post-title-link" itemprop="url">usrp_e320 FPGA整体结构分析</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-08-13 13:10:44" itemprop="dateCreated datePublished" datetime="2022-08-13T13:10:44+08:00">2022-08-13</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/usrp/" itemprop="url" rel="index"><span itemprop="name">usrp</span></a>
-                </span>
-            </span>
-
-          
-            <span id="/2022/08/13/2022.8/usrp-e320-FPGA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/" class="post-meta-item leancloud_visitors" data-flag-title="usrp_e320 FPGA整体结构分析" title="Views">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span class="post-meta-item-text">Views: </span>
-              <span class="leancloud-visitors-count"></span>
-            </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine: </span>
-    
-    <a title="valine" href="/2022/08/13/2022.8/usrp-e320-FPGA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2022/08/13/2022.8/usrp-e320-FPGA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>最近学习了一点linux驱动的开发，尤其是涉及到和FPGA资源相关的驱动的开发，其实主要是DMA的，有了这个基础，对于了解其他的知识是很有帮助的。之前可能不回去看的内核的源码也可以尝试去看一看了。 在这里不得不说默罕默德的视频和对应的源码对我来说还是很有帮助的，所以这几千块还是花得挺值的。</p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/08/13/2022.8/usrp-e320-FPGA%E6%95%B4%E4%BD%93%E7%BB%93%E6%9E%84%E5%88%86%E6%9E%90/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1259,7 +1259,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">63</span>
+          <span class="site-state-item-count">64</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
