@@ -137,7 +137,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">64</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">65</span></a>
 
   </li>
   </ul>
@@ -163,6 +163,110 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/08/21/2022.8/AXI4-lite-%E6%8E%A5%E5%8F%A3%E9%A9%B1%E5%8A%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/08/21/2022.8/AXI4-lite-%E6%8E%A5%E5%8F%A3%E9%A9%B1%E5%8A%A8/" class="post-title-link" itemprop="url">AXI4-lite 接口驱动</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-08-21 16:11:17" itemprop="dateCreated datePublished" datetime="2022-08-21T16:11:17+08:00">2022-08-21</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2022/08/21/2022.8/AXI4-lite-%E6%8E%A5%E5%8F%A3%E9%A9%B1%E5%8A%A8/" class="post-meta-item leancloud_visitors" data-flag-title="AXI4-lite 接口驱动" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2022/08/21/2022.8/AXI4-lite-%E6%8E%A5%E5%8F%A3%E9%A9%B1%E5%8A%A8/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2022/08/21/2022.8/AXI4-lite-%E6%8E%A5%E5%8F%A3%E9%A9%B1%E5%8A%A8/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>对于FPGA开发人员来说，可能会开发一些自己自定义的IP，这些IP一般可以通过axi接口连接到处理器上，对于zynq来说，在FPGA这边编写一些axi4-lite的接口之后，zynq句能够通过axi4-lite接口来访问PL端的寄存器了。<br>这样就能够控制IP的一些参数。</p>
+<p>在裸机下面，控制这些IP的驱动都是比较简单的，如果是需要在linux下面想要控制这些IP，就需要自己去实现这些IP的驱动了。</p>
+<p>在本篇博客当中会记录，这种IP的接口驱动开发。<br></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2022/08/21/2022.8/AXI4-lite-%E6%8E%A5%E5%8F%A3%E9%A9%B1%E5%8A%A8/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -1081,108 +1185,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-Signal%E5%9F%9F%E6%95%B0%E6%8D%AE%E5%B8%A7/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/./images/avatar.jpg">
-      <meta itemprop="name" content="wcc">
-      <meta itemprop="description" content="一点点学习笔记">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="wcc的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-Signal%E5%9F%9F%E6%95%B0%E6%8D%AE%E5%B8%A7/" class="post-title-link" itemprop="url">OFDM_802.11a学习----Signal域数据帧</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-05-06 15:49:00" itemprop="dateCreated datePublished" datetime="2022-05-06T15:49:00+08:00">2022-05-06</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/OFDM/" itemprop="url" rel="index"><span itemprop="name">OFDM</span></a>
-                </span>
-            </span>
-
-          
-            <span id="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-Signal%E5%9F%9F%E6%95%B0%E6%8D%AE%E5%B8%A7/" class="post-meta-item leancloud_visitors" data-flag-title="OFDM_802.11a学习----Signal域数据帧" title="Views">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span class="post-meta-item-text">Views: </span>
-              <span class="leancloud-visitors-count"></span>
-            </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine: </span>
-    
-    <a title="valine" href="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-Signal%E5%9F%9F%E6%95%B0%E6%8D%AE%E5%B8%A7/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-Signal%E5%9F%9F%E6%95%B0%E6%8D%AE%E5%B8%A7/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>在之前的博客当中，已经实现了802.11a当中数据域的一系列处理，最终得到了数据域的时域波形。相较于数据域，signal域的处理很类似并且更简单。<br>signal域的数据不需要进行加扰和删余操作，因此实现起来比较简单。<br>signal域的数据采用的是BPSK的调制方式，占据一个OFDM符号。<br>下图的紫色部分，显示了signal域数据的处理过程。<br><img src="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-Signal%E5%9F%9F%E6%95%B0%E6%8D%AE%E5%B8%A7/ofdm_tx_struct.png" alt="ofdm_tx_struct"><br>signal域数首先会根据格式产生一帧数据，然后这个数据再依次经过1/2卷积编码，交织，BPSK调制，IFFT转换以及添加循环前缀之后，最终得到signal域的时域波形。<br></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/05/06/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-Signal%E5%9F%9F%E6%95%B0%E6%8D%AE%E5%B8%A7/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1254,7 +1256,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">64</span>
+          <span class="site-state-item-count">65</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
