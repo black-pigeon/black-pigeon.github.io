@@ -14,6 +14,7 @@ TYPE a = （TYPE）EXPRESSION;
 直接将要转换的变量前面加上需要的目标类型。
 C风格的类型转换可以在任意类型之间转换。比如可以把一个指向const对象的指针转换成指向非const对象的指针，把一个指向基类对象的指针转换成指向一个派生类对象的指针。这在某些时候是比较危险的。
 
+<!--more-->
 CPP引进了4个新的类型转换操作符，他们是static_cast，const_cast，dynamic_cast，reinterpret_cast。
 在这几种类型转换当中使用得最多的应该是static_cast。
 下面举个简单的例子来说明cpp当中的类型转换。
