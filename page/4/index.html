@@ -137,7 +137,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">65</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">66</span></a>
 
   </li>
   </ul>
@@ -163,6 +163,108 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/05/07/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-signal%E5%9F%9F%E7%BC%96%E7%A0%81%E3%80%81%E4%BA%A4%E7%BB%87%E4%B8%8E%E8%B0%83%E5%88%B6/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2022/05/07/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-signal%E5%9F%9F%E7%BC%96%E7%A0%81%E3%80%81%E4%BA%A4%E7%BB%87%E4%B8%8E%E8%B0%83%E5%88%B6/" class="post-title-link" itemprop="url">OFDM_802.11a学习----signal域编码、交织与调制</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2022-05-07 10:25:00" itemprop="dateCreated datePublished" datetime="2022-05-07T10:25:00+08:00">2022-05-07</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/OFDM/" itemprop="url" rel="index"><span itemprop="name">OFDM</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2022/05/07/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-signal%E5%9F%9F%E7%BC%96%E7%A0%81%E3%80%81%E4%BA%A4%E7%BB%87%E4%B8%8E%E8%B0%83%E5%88%B6/" class="post-meta-item leancloud_visitors" data-flag-title="OFDM_802.11a学习----signal域编码、交织与调制" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2022/05/07/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-signal%E5%9F%9F%E7%BC%96%E7%A0%81%E3%80%81%E4%BA%A4%E7%BB%87%E4%B8%8E%E8%B0%83%E5%88%B6/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2022/05/07/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-signal%E5%9F%9F%E7%BC%96%E7%A0%81%E3%80%81%E4%BA%A4%E7%BB%87%E4%B8%8E%E8%B0%83%E5%88%B6/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="1-前言"><a href="#1-前言" class="headerlink" title="1. 前言"></a>1. 前言</h1><p>在之前的博客当中，已经完成了数据域的OFDM的处理，信号域数据的生成，再接下来就是对信号域的数据进行处理了。信号域的数据的处理，相较于数据域信号的处理，是十分类似，但是更加简单的。<br><img src="/2022/05/07/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-signal%E5%9F%9F%E7%BC%96%E7%A0%81%E3%80%81%E4%BA%A4%E7%BB%87%E4%B8%8E%E8%B0%83%E5%88%B6/ofdm_tx_struct.png" alt="ofdm_tx_struct"><br></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2022/05/07/2022.5/OFDM-802-11a%E5%AD%A6%E4%B9%A0-signal%E5%9F%9F%E7%BC%96%E7%A0%81%E3%80%81%E4%BA%A4%E7%BB%87%E4%B8%8E%E8%B0%83%E5%88%B6/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -1081,108 +1183,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/03/13/2022.3/DMA%E4%BC%A0%E8%BE%93%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A8%A1%E5%9E%8B/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/./images/avatar.jpg">
-      <meta itemprop="name" content="wcc">
-      <meta itemprop="description" content="一点点学习笔记">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="wcc的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/03/13/2022.3/DMA%E4%BC%A0%E8%BE%93%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A8%A1%E5%9E%8B/" class="post-title-link" itemprop="url">DMA传输的基本模型</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-03-13 19:42:55" itemprop="dateCreated datePublished" datetime="2022-03-13T19:42:55+08:00">2022-03-13</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-10-21 14:17:36" itemprop="dateModified" datetime="2023-10-21T14:17:36+08:00">2023-10-21</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/ZYNQ/" itemprop="url" rel="index"><span itemprop="name">ZYNQ</span></a>
-                </span>
-            </span>
-
-          
-            <span id="/2022/03/13/2022.3/DMA%E4%BC%A0%E8%BE%93%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A8%A1%E5%9E%8B/" class="post-meta-item leancloud_visitors" data-flag-title="DMA传输的基本模型" title="Views">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span class="post-meta-item-text">Views: </span>
-              <span class="leancloud-visitors-count"></span>
-            </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine: </span>
-    
-    <a title="valine" href="/2022/03/13/2022.3/DMA%E4%BC%A0%E8%BE%93%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A8%A1%E5%9E%8B/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2022/03/13/2022.3/DMA%E4%BC%A0%E8%BE%93%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A8%A1%E5%9E%8B/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在ZYNQ的系统设计当中，经常需要处理ARM与FPGA之间的数据交互的问题。这就引申出一个很重要的内容就是AXI4接口。<br>AXI接口我在之前也写过博客记录如何在FPGA当中实现数据的传输：<br><a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_41332806/article/details/106519058">AXI4向内存写入数据</a><br><a target="_blank" rel="noopener" href="https://blog.csdn.net/qq_41332806/article/details/106488920">AXI4从内存获取数据</a><br>但是这两篇博客只是实现了一个比较简单的模块，并且里面的功能也是比较固定和死板的。<br></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/03/13/2022.3/DMA%E4%BC%A0%E8%BE%93%E7%9A%84%E5%9F%BA%E6%9C%AC%E6%A8%A1%E5%9E%8B/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1254,7 +1254,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">65</span>
+          <span class="site-state-item-count">66</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
