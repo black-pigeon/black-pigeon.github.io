@@ -137,7 +137,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">66</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">68</span></a>
 
   </li>
   </ul>
@@ -163,6 +163,209 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/11/24/2023.11/cpp-07-%E6%8B%B7%E8%B4%9D%E6%9E%84%E9%80%A0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/11/24/2023.11/cpp-07-%E6%8B%B7%E8%B4%9D%E6%9E%84%E9%80%A0/" class="post-title-link" itemprop="url">cpp-07-拷贝构造</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2023-11-24 10:49:45 / Modified: 14:40:44" itemprop="dateCreated datePublished" datetime="2023-11-24T10:49:45+08:00">2023-11-24</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/C/" itemprop="url" rel="index"><span itemprop="name">C++</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2023/11/24/2023.11/cpp-07-%E6%8B%B7%E8%B4%9D%E6%9E%84%E9%80%A0/" class="post-meta-item leancloud_visitors" data-flag-title="cpp-07-拷贝构造" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2023/11/24/2023.11/cpp-07-%E6%8B%B7%E8%B4%9D%E6%9E%84%E9%80%A0/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2023/11/24/2023.11/cpp-07-%E6%8B%B7%E8%B4%9D%E6%9E%84%E9%80%A0/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="拷贝构造函数"><a href="#拷贝构造函数" class="headerlink" title="拷贝构造函数"></a>拷贝构造函数</h1><p>C++中经常会使用一个变量初始化另一个变量，如<br><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="keyword">int</span> x = <span class="number">1</span>;</span><br><span class="line"><span class="keyword">int</span> y = x;</span><br></pre></td></tr></table></figure></p>
+<p>我们希望这样的操作也能作用于自定义类类型，如<br><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line"><span class="function">Point <span class="title">pt1</span><span class="params">(<span class="number">1</span>, <span class="number">2</span>)</span></span>;</span><br><span class="line">Point pt2 = pt1;</span><br></pre></td></tr></table></figure><br>这两组操作是不是一致的呢？第一组好说，而第二组只是将类型换成了Poin类型，执行Point pt2 = pt1;语句时，pt1对象已经存在，而<strong>pt2对象还不存在</strong>，所以也是这句创建了pt2对象，既然涉及到<strong>对象的创建</strong>，就必然需要调用构造函数，而这里会调用的就是<strong>复制构造函数</strong>，又称为<strong>拷贝构造函数</strong>。<br></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2023/11/24/2023.11/cpp-07-%E6%8B%B7%E8%B4%9D%E6%9E%84%E9%80%A0/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/11/23/2023.11/cpp-06-%E5%AF%B9%E8%B1%A1%E7%9A%84%E9%94%80%E6%AF%81/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/11/23/2023.11/cpp-06-%E5%AF%B9%E8%B1%A1%E7%9A%84%E9%94%80%E6%AF%81/" class="post-title-link" itemprop="url">cpp-06-对象的销毁</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-11-23 15:35:02" itemprop="dateCreated datePublished" datetime="2023-11-23T15:35:02+08:00">2023-11-23</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-11-24 11:04:49" itemprop="dateModified" datetime="2023-11-24T11:04:49+08:00">2023-11-24</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/C/" itemprop="url" rel="index"><span itemprop="name">C++</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2023/11/23/2023.11/cpp-06-%E5%AF%B9%E8%B1%A1%E7%9A%84%E9%94%80%E6%AF%81/" class="post-meta-item leancloud_visitors" data-flag-title="cpp-06-对象的销毁" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2023/11/23/2023.11/cpp-06-%E5%AF%B9%E8%B1%A1%E7%9A%84%E9%94%80%E6%AF%81/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2023/11/23/2023.11/cpp-06-%E5%AF%B9%E8%B1%A1%E7%9A%84%E9%94%80%E6%AF%81/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="析构函数"><a href="#析构函数" class="headerlink" title="析构函数"></a>析构函数</h1><p>构造函数(constructor)在创建对象时被系统自动调用，而析构函数(Destructor)在对象被撤销时被自动调用，相比构造函数，析构函数要简单的多。析构函数有如下特点：</p>
+<ul>
+<li>与类同名，之前冠以波浪号，以区别于构造函数。</li>
+<li>析构函数没有返回类型，也不能指定参数。因此，析构函数只能有一个，不能被重载。</li>
+<li>对象超出其作用域被销毁时，析构函数会被自动调用。</li></ul>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2023/11/23/2023.11/cpp-06-%E5%AF%B9%E8%B1%A1%E7%9A%84%E9%94%80%E6%AF%81/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -949,207 +1152,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/08/02/2023.8/python-dsp-4-dji-droneid/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/./images/avatar.jpg">
-      <meta itemprop="name" content="wcc">
-      <meta itemprop="description" content="一点点学习笔记">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="wcc的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/08/02/2023.8/python-dsp-4-dji-droneid/" class="post-title-link" itemprop="url">python-dsp-4-dji-droneid</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-              
-
-              <time title="Created: 2023-08-02 11:33:50 / Modified: 17:21:05" itemprop="dateCreated datePublished" datetime="2023-08-02T11:33:50+08:00">2023-08-02</time>
-            </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/dsp/" itemprop="url" rel="index"><span itemprop="name">dsp</span></a>
-                </span>
-            </span>
-
-          
-            <span id="/2023/08/02/2023.8/python-dsp-4-dji-droneid/" class="post-meta-item leancloud_visitors" data-flag-title="python-dsp-4-dji-droneid" title="Views">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span class="post-meta-item-text">Views: </span>
-              <span class="leancloud-visitors-count"></span>
-            </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine: </span>
-    
-    <a title="valine" href="/2023/08/02/2023.8/python-dsp-4-dji-droneid/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2023/08/02/2023.8/python-dsp-4-dji-droneid/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>最近开始整理和无人机相关的东西，在网上找了一圈，发现了两个比较好的开源项目，这两个开源项目都能够实现的DJI OcuSync 2.0 Droneid协议的解调。<br><a target="_blank" rel="noopener" href="https://github.com/RUB-SysSec/DroneSecurity">DroneSecurity</a><br><a target="_blank" rel="noopener" href="https://github.com/proto17/dji_droneid">dji_droneid</a><br>在参考了上述两个仓库之后,给了我很多启发，通过阅读上面的代码，也让我对DJI的Droneid帧有了更加深刻的认识。<br><img src="/2023/08/02/2023.8/python-dsp-4-dji-droneid/Droneid-packet.png" alt><br></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2023/08/02/2023.8/python-dsp-4-dji-droneid/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/07/26/2023.7/python-dsp-3-ofdm-symbol-detect/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/./images/avatar.jpg">
-      <meta itemprop="name" content="wcc">
-      <meta itemprop="description" content="一点点学习笔记">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="wcc的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/07/26/2023.7/python-dsp-3-ofdm-symbol-detect/" class="post-title-link" itemprop="url">python-dsp-3-ofdm-symbol-detect</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2023-07-26 10:46:25" itemprop="dateCreated datePublished" datetime="2023-07-26T10:46:25+08:00">2023-07-26</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-07-27 13:26:14" itemprop="dateModified" datetime="2023-07-27T13:26:14+08:00">2023-07-27</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/dsp/" itemprop="url" rel="index"><span itemprop="name">dsp</span></a>
-                </span>
-            </span>
-
-          
-            <span id="/2023/07/26/2023.7/python-dsp-3-ofdm-symbol-detect/" class="post-meta-item leancloud_visitors" data-flag-title="python-dsp-3-ofdm-symbol-detect" title="Views">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span class="post-meta-item-text">Views: </span>
-              <span class="leancloud-visitors-count"></span>
-            </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine: </span>
-    
-    <a title="valine" href="/2023/07/26/2023.7/python-dsp-3-ofdm-symbol-detect/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2023/07/26/2023.7/python-dsp-3-ofdm-symbol-detect/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在之前的我学习过OFDM的verilog实现，在接收端，在时域当中的各个操作已经完成，目前来看好像烂尾了，但是在这之后，我会继续完成前面没有完成的部分。<br>在之前，因为没有一个完整的算法仿真模型在，所以我之前在使用FPGA实现OFDM收发器的时候，也不是很清楚其中的具体的每一个步骤。因此在这里我首先需要一个完整的算法模型，来帮助我理解其中的意义。<br>最近在GitHub上也找到了一些比较好的参考</p>
-<ul>
-<li><a target="_blank" rel="noopener" href="https://github.com/MeowLucian/SDR_Matlab_OFDM_802.11a">matlab ofdm 802.11a</a></li>
-<li><a target="_blank" rel="noopener" href="https://openofdm.readthedocs.io/en/latest/">openofdm</a><br>在这里我会尝试使用python来完整这个仿真模型的构建，值得注意的是，这里实现的并不完全和802.11a的协议规范当中的完全一致。</li></ul>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2023/07/26/2023.7/python-dsp-3-ofdm-symbol-detect/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1221,7 +1223,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">66</span>
+          <span class="site-state-item-count">68</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
