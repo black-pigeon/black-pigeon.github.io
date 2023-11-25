@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="zh-CH">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 5.4.0">
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/icon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/icon.ico">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+
+<link rel="stylesheet" href="/lib/font-awesome/css/all.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+<script id="hexo-configurations">
+    var NexT = window.NexT || {};
+    var CONFIG = {"hostname":"black-pigeon.github.io","root":"/","scheme":"Mist","version":"7.8.0","exturl":false,"sidebar":{"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},"copycode":{"enable":true,"show_result":true,"style":null},"back2top":{"enable":true,"sidebar":false,"scrollpercent":false},"bookmark":{"enable":false,"color":"#222","save":"auto"},"fancybox":true,"mediumzoom":false,"lazyload":false,"pangu":false,"comments":{"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},"algolia":{"hits":{"per_page":10},"labels":{"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}},"localsearch":{"enable":false,"trigger":"auto","top_n_per_article":1,"unescape":true,"preload":false},"motion":{"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}};
+  </script>
+
+  <meta name="description" content="XFFT1. 概述FFT IP计算N点正向DFT或逆向DFT（IDFT），其中N可以是2的m次方，m的取值范围是3-16。 计算 FFT 时可使用三种算术选项： • Full-precision unscaled arithmetic• Scaled fixed-point, where you provide the scaling schedule• Block floating-point">
+<meta property="og:type" content="article">
+<meta property="og:title" content="XFFT IP使用">
+<meta property="og:url" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/index.html">
+<meta property="og:site_name" content="wcc的博客">
+<meta property="og:description" content="XFFT1. 概述FFT IP计算N点正向DFT或逆向DFT（IDFT），其中N可以是2的m次方，m的取值范围是3-16。 计算 FFT 时可使用三种算术选项： • Full-precision unscaled arithmetic• Scaled fixed-point, where you provide the scaling schedule• Block floating-point">
+<meta property="og:locale" content="zh_CH">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231113172757836.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231113174556771.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231113191410626.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231113194102105.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231113194539890.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231113194943736.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231113195013761.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231114104123657.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231114105220756.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231114105723290.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/系统结构.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/upstream_process.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/FFT_SIZE_monitor.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/FFT动态配置.png">
+<meta property="og:image" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/FFT%20IP整体工作状态.png">
+<meta property="article:published_time" content="2023-11-24T06:51:00.000Z">
+<meta property="article:modified_time" content="2023-11-25T08:35:28.577Z">
+<meta property="article:author" content="wcc">
+<meta property="article:tag" content="SDR">
+<meta property="article:tag" content="FPGA">
+<meta property="article:tag" content="DSP">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231113172757836.png">
+
+<link rel="canonical" href="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome : false,
+    isPost : true,
+    lang   : 'zh-CH'
+  };
+</script>
+
+  <title>XFFT IP使用 | wcc的博客</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="Toggle navigation bar">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+
+  <div class="site-meta">
+
+    <a href="/" class="brand" rel="start">
+      <span class="logo-line-before"><i></i></span>
+      <h1 class="site-title">wcc的博客</h1>
+      <span class="logo-line-after"><i></i></span>
+    </a>
+      <p class="site-subtitle" itemprop="description">日常笔记</p>
+  </div>
+
+  <div class="site-nav-right">
+    <div class="toggle popup-trigger">
+    </div>
+  </div>
+</div>
+
+
+
+
+<nav class="site-nav">
+  <ul id="menu" class="main-menu menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-home fa-fw"></i>Home</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-user fa-fw"></i>About</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">25</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-th fa-fw"></i>Categories<span class="badge">16</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">70</span></a>
+
+  </li>
+  </ul>
+</nav>
+
+
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content post posts-expand">
+            
+
+    
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          XFFT IP使用
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-11-24 14:51:00" itemprop="dateCreated datePublished" datetime="2023-11-24T14:51:00+08:00">2023-11-24</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-11-25 16:35:28" itemprop="dateModified" datetime="2023-11-25T16:35:28+08:00">2023-11-25</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/FPGA/" itemprop="url" rel="index"><span itemprop="name">FPGA</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/" class="post-meta-item leancloud_visitors" data-flag-title="XFFT IP使用" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <h1 id="XFFT"><a href="#XFFT" class="headerlink" title="XFFT"></a>XFFT</h1><h2 id="1-概述"><a href="#1-概述" class="headerlink" title="1. 概述"></a>1. 概述</h2><p>FFT IP计算N点正向DFT或逆向DFT（IDFT），其中N可以是2的m次方，m的取值范围是3-16。</p>
+<p>计算 FFT 时可使用三种算术选项：</p>
+<p>• Full-precision unscaled arithmetic<br>• Scaled fixed-point, where you provide the scaling schedule<br>• Block floating-point (run time adjusted scaling)</p>
+<p>点数N、正向或逆向变换的选择、缩放计划和循环前缀长度可以在运行时进行配置。变换类型（正向或逆向）、缩放计划和循环前缀长度可以在逐帧的基础上进行更改。更改点数将重置核心。   </p>
+<p><img src="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231113172757836.png" alt="image-20231113172757836"></p>
+<span id="more"></span>
+<h2 id="2-IP核的设计"><a href="#2-IP核的设计" class="headerlink" title="2. IP核的设计"></a>2. IP核的设计</h2><h3 id="2-1-配置通道"><a href="#2-1-配置通道" class="headerlink" title="2.1 配置通道"></a>2.1 配置通道</h3><p><img src="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231113174556771.png" alt="image-20231113174556771"></p>
+<p>关于配置通道的TDATA有如下内容：</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th></th>
+<th>width</th>
+<th>padded</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NFFT</td>
+<td>5</td>
+<td>yes</td>
+<td>变换的点数大小：NFFT可以是最大变换的大小，也可以是任何较小的点数大小。例如，1024点FFT可以计算1024、512、256等点数大小。NFFT的值为log2（点数大小）。此字段仅在运行时可配置的变换点数大小时存在。</td>
+</tr>
+<tr>
+<td>CP_LEN</td>
+<td>log 2<br>(maximum point size)</td>
+<td>Yes</td>
+<td>循环前缀长度：循环前缀长度是指从变换末尾开始输出的样本数，该样本在整个变换输出之前作为循环前缀输出。CP_LEN可以是从零到点数减一的任意数字。此字段仅在启用循环前缀插入时存在。</td>
+</tr>
+<tr>
+<td>FWD_INV</td>
+<td>1 bit per FFT data channel</td>
+<td>No</td>
+<td>执行正向FFT变换还是逆向FFT变换的指示。当FWD_INV = 1时，执行正向变换。如果FWD_INV = 0，则执行逆向变换。   该字段每个FFT数据通道包含1位，其中位0（最低位）表示通道0，位1表示通道1，依此类推。   有关更多信息，请参阅正向/逆向和缩放计划文档。</td>
+</tr>
+<tr>
+<td>SCALE_SCH</td>
+<td>2xceil(NFFT/2)<br>对于流水线式流式I/O和Radix-4突发式I/O架构，或者对于Radix-2突发式I/O和Radix-2 Lite突发式I/O架构，点数大小为2 x NFFT，其中NFFT是log2（最大点数大小）或阶段数。</td>
+<td>No padding per channel, butt he whole field is padded.</td>
+<td>缩放计划：对于突发式I/O架构，缩放计划使用每个阶段两bit来指定，其中第一个阶段的缩放由最低的两位来表示。缩放可以指定为3、2、1或0，表示要进行的位移数。例如，对于N = 1024，Radix-4突发式I/O，一个示例的缩放计划是[1 0 2 3 2]（从最后一个阶段到第一个阶段顺序排列）。对于N = 128，Radix-2突发式I/O或Radix-2 Lite突发式I/O，一个可能的缩放计划是[1 1 1 1 0 1 2]（从最后一个阶段到第一个阶段顺序排列）。   对于流水线式流式I/O架构，缩放计划使用每对Radix-2阶段的两bit来指定，从最低的两位开始。例如，对于N = 256，一个缩放计划可以是[2 2 2 3]。当N不是4的幂次时，最后一个阶段的最大bit growth为1位。例如，[0 2 2 2 2]或[1 2 2 2 2]是N = 512的有效缩放计划，但[2 2 2 2 2]是无效的。对于这个变换长度，SCALE_SCH的两个最高位只能是00或01。该字段仅在scaled arithmetic （而不是无缩放、块浮点或单精度浮点）中可用。   有关更多信息，请参阅变换大小（Transform Size）文档。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>所有具有填充的字段，如果它们不已经以8位边界结束，应该扩展到下一个8位边界。IP忽略填充位的值，因此可以将它们设置为任何值。将它们连接到常数值可能有助于减少设备资源的使用。</p>
+<p><img src="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231113191410626.png" alt="image-20231113191410626"></p>
+<h3 id="2-2-数据输入通道"><a href="#2-2-数据输入通道" class="headerlink" title="2.2 数据输入通道"></a>2.2 数据输入通道</h3><p>如果数据输入不是字节对齐的，那么将会对IQ分别进行填充。</p>
+<p><img src="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231113194102105.png" alt="image-20231113194102105"></p>
+<h3 id="2-3-数据输出通道"><a href="#2-3-数据输出通道" class="headerlink" title="2.3 数据输出通道"></a>2.3 数据输出通道</h3><p>数据输出通道包含变换的实部和虚部结果，这些结果通过TDATA传输。此外，TUSER携带与TDATA上的样本数据相关的每个样本的状态信息。此状态信息用于下游从设备，直接处理数据样本。它不会与数据不同步，因为它是通过相同的通道传输的。以下信息被归类为每个样本的状态信息：</p>
+<ul>
+<li>XK_INDEX</li>
+<li>Block Exponent (BLK_EXP) for each FFT channel</li>
+<li>Overflow (OVFLO) for each FFT channel</li>
+</ul>
+<p><img src="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231113194539890.png" alt="image-20231113194539890"></p>
+<p>其中关于输出结果的状态的字段为tuser，它具体有如下字段;</p>
+<div class="table-container">
+<table>
+<thead>
+<tr>
+<th></th>
+<th>width</th>
+<th>Padded</th>
+<th>description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>XK_INDEX</td>
+<td>log2(max point size)</td>
+<td>yes</td>
+<td>输出数据的索引</td>
+</tr>
+<tr>
+<td>BLK_EXP</td>
+<td>8</td>
+<td>yes</td>
+<td>块指数（无符号二进制补码）：应用的缩放量（即，以其它情况下未缩放的输出值向下移位的位数）。对于核心拥有的每个FFT通道，都包含一个单独的BLK_EXP字段。   仅在使用块浮点数时可用。   有关BLK_EXP的更多信息，请参阅块指数（Block Exponent）。</td>
+</tr>
+<tr>
+<td>OVFLO</td>
+<td>1</td>
+<td></td>
+<td>算术溢出指示器（单个比特，高电平有效）：如果数据帧中的任何值溢出，则在结果卸载过程中OVFLO为高电平。在新的数据帧开始时，OVFLO信号会被复位。   对于核心拥有的每个FFT通道，都包含一个单独的OVFLO字段。   该端口是可选的，仅在使用缩放算术或单精度浮点数I/O时可用。   有关OVFLO的更多信息，请参阅溢出（Overflow）。</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><img src="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231113194943736.png" alt="image-20231113194943736"></p>
+<p><img src="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231113195013761.png" alt="image-20231113195013761"></p>
+<h3 id="2-4-状态通道"><a href="#2-4-状态通道" class="headerlink" title="2.4 状态通道"></a>2.4 状态通道</h3><p>状态通道包含每帧的状态信息，即与整个数据帧相关的信息。这是为下游从设备设计的，它们不直接操作数据，但可能需要了解这些信息来控制系统的其他部分。发送状态信息的确切位置取决于状态信息的性质。以下信息被归类为每帧的状态信息。</p>
+<ol>
+<li>BLK_EXP for each channel</li>
+<li>OVFLO for each channel</li>
+</ol>
+<p>请注意，核心无法同时配置为具有BLK_EXP和OVFLO。BLK_EXP状态信息在帧开始时发送，而OVFLO状态信息在帧结束时发送。</p>
+<h3 id="2-5-Run-Time-Transform-Configuration"><a href="#2-5-Run-Time-Transform-Configuration" class="headerlink" title="2.5 Run Time Transform Configuration"></a>2.5 Run Time Transform Configuration</h3><h4 id="2-5-1-Transform-Size"><a href="#2-5-1-Transform-Size" class="headerlink" title="2.5.1 Transform Size"></a>2.5.1 Transform Size</h4><p>变换点数大小可以通过配置通道中的NFFT字段进行设置，如果选择了运行时可配置的变换长度选项。表3-18提供了有效的设置和相应的变换大小。如果输入的NFFT值过大，核心将自动设置为最大可用的点数（在IDE中选择）。如果值过小，核心将自动设置为最小可用的点数：Radix-4 Burst I/O架构为64，其他架构为8。</p>
+<p><img src="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231114104123657.png" alt="image-20231114104123657"></p>
+<h4 id="2-5-2-Forward-Inverse-and-Scaling-Schedule"><a href="#2-5-2-Forward-Inverse-and-Scaling-Schedule" class="headerlink" title="2.5.2 Forward/Inverse and Scaling Schedule"></a>2.5.2 Forward/Inverse and Scaling Schedule</h4><p>变换类型（正向或逆向）和缩放计划可以逐帧设置，而不中断帧处理。在多通道核心中，可以为每个FFT通道独立设置变换类型和缩放计划。每个FFT数据通道在配置通道中都有一个分配的FWD_INV字段和SCALE_SCH字段。将FWD_INV字段设置为0会产生逆向FFT，将FWD_INV字段设置为1会创建正向变换。  </p>
+<p><strong>当FFT核心配置为处理浮点数据时，不需要缩放计划（SCALE_SCH被忽略）</strong>。浮点数据的归一化和缩放在内部处理。</p>
+<h3 id="2-6-Transform-Status"><a href="#2-6-Transform-Status" class="headerlink" title="2.6 Transform Status"></a>2.6 Transform Status</h3><h4 id="2-6-1-overflow"><a href="#2-6-1-overflow" class="headerlink" title="2.6.1 overflow"></a>2.6.1 overflow</h4><p><strong>固定点数据</strong><br><strong>仅当使用缩放算术时，数据输出和状态通道中的溢出（OVFLO）字段才可用</strong>。如果数据帧中的任何点溢出，则在卸载期间OVFLO被置为高电平。对于多通道核心，每个通道都有单独的OVFLO字段。当核心发生溢出时，数据会被包装而不是饱和，导致变换后的数据对大多数应用程序无法使用。</p>
+<p><strong>浮点数据</strong><br>在FFT处理浮点数据时，溢出字段用于指示指数溢出。溢出的输出样本根据内部结果的符号设置为±。当输出上存在NaN值时，不会断言溢出字段。NaN值只能在输入数据帧包含NaN或±样本时出现在FFT输出中。</p>
+<h4 id="2-6-2-块指数"><a href="#2-6-2-块指数" class="headerlink" title="2.6.2 块指数"></a>2.6.2 块指数</h4><p>数据输出和状态通道中的块指数（BLK_EXP）字段（仅与块浮点选项一起使用）包含块指数。对于多通道核心，每个通道都有单独的BLK_EXP字段。字段中的值表示在变换过程中数据进行了多少位的缩放。例如，如果BLK_EXP的值为00101 = 5，则表示相关的输出数据（XK_RE，XK_IM）被缩放了5位（向右移动了5位），换句话说，被32整除，以充分利用输出数据路径的可用动态范围而不溢出。由于块缩放是基于处理的每个阶段的最大值进行的，因此BLK_EXP值可能因不同的架构而不同，即使输入数据相同，这是由于每个架构中每个处理阶段执行的不同固有缩放所导致的。</p>
+<h4 id="2-6-3-XK-Index"><a href="#2-6-3-XK-Index" class="headerlink" title="2.6.3 XK Index"></a>2.6.3 XK Index</h4><p>XK_INDEX字段（如果在数据输出通道中存在）给出了同时呈现的XK_RE / XK_IM数据的样本编号。对于自然顺序输出，XK_INDEX从0递增到（点数）-1。当使用位反转输出时，XK_INDEX涵盖相同的数字范围，但以位（或数字）反转的方式进行。例如，当进行8点FFT时，XK_INDEX采用表3-19中的值。</p>
+<p><img src="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231114105220756.png" alt="image-20231114105220756"></p>
+<p>如果使用循环前缀插入，首先卸载循环前缀，XK_INDEX从（点数）-（循环前缀长度）计数到（点数）-1。在循环前缀被卸载后，或者如果循环前缀长度为零，则卸载整个输出数据帧。XK_INDEX从0计数到（点数）-1，与之前相同。<strong>只有在自然顺序输出时才能进行循环前缀插入</strong>。</p>
+<h3 id="2-7-Controlling-the-FFT-Core"><a href="#2-7-Controlling-the-FFT-Core" class="headerlink" title="2.7 Controlling the FFT Core"></a>2.7 Controlling the FFT Core</h3><p>符号数据要通过Data Input通道加载到核心中进行处理。处理后的符号数据要通过Data Output通道卸载。这两个通道都使用AXI4-Stream协议。图3-40显示了该协议的基本原理。  TVALID由主组件驱动，表示它有要传输的数据，而TREADY由从组件驱动，表示它准备好接收数据。当TVALID和TREADY都为高电平时，数据传输会发生。图中的A点表示在这些时钟周期中没有数据传输，因为主组件和从组件都没有准备好。B点表示了两个时钟周期，其中没有数据传输，因为主组件没有要传输的数据。这被称为主等待状态。C点表示了一个时钟周期，在这个周期中没有数据传输，因为从组件没有准备好接收数据。这被称为从等待状态。主等待状态和从等待状态可以持续任意数量的时钟周期。</p>
+<p><img src="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/image-20231114105723290.png" alt="image-20231114105723290"></p>
+<h4 id="2-7-1-Configuring-the-FFT"><a href="#2-7-1-Configuring-the-FFT" class="headerlink" title="2.7.1 Configuring the FFT"></a>2.7.1 Configuring the FFT</h4><p>FFT变换是通过配置通道进行配置的。在该通道中携带的配置信息以及它们的打包方式在“配置通道”中进行了更详细的讨论。当核心准备加载新的帧进行处理时，它会检查配置通道上是否提供了新的配置。如果有的话，在加载帧之前，FFT处理核心将使用该信息进行配置。如果没有提供新的配置信息，则核心将使用其上一次的配置来处理帧。如果从未提供过配置，则使用重置中描述的核心默认值。  </p>
+<p>将配置数据应用于特定帧的过程取决于核心的当前状态：  </p>
+<ul>
+<li><p>将配置应用于开机后或空闲期后的第一帧  </p>
+</li>
+<li><p>配置应用于帧序列中的下一帧</p>
+</li>
+</ul>
+<p><strong>应用新配置时处于空闲状态</strong><br>如果核心处于空闲状态（即不加载、处理或卸载任何帧），它会等待帧数据或配置数据，以决定下一步采取的操作。如果核心控制模块看到了新的帧数据，但没有看到新的配置信息，则核心开始使用现有配置处理帧。如果在帧数据之前或与帧数据同时看到配置信息，则将该配置应用于该帧。<br>为确保在处理帧之前应用配置数据，配置信息应写入配置通道。在写入第一个数据输入通道的数据之前，配置数据的写入到配置通道必须至少提前1个时钟周期完成。如果未能这样做，可能会导致帧使用先前的配置选项进行处理。<br>在系统上下文中，满足这一要求可能最简单的方法是在启用上游数据主机之前配置核心。</p>
+<p><strong>Applying a New Configuration While Streaming Frames</strong><br>当上游主机处于活动状态并向核心发送帧数据时，使用先前的技术来将配置与特定帧同步变得困难，因为新帧的数据可能已经加载到数据输入通道中。将配置与帧同步的推荐方法是使用<strong>event_frame_started</strong>信号。  当核心开始将数据加载到FFT处理核心中的帧时，此信号被断言为高电平。这是一个已知的安全点，用于发送下一帧的配置信息。在此之后发送的配置数据可能会或可能不会应用于后续的帧，这取决于帧大小和event_frame_started断言以及配置写入之间的延迟。</p>
+<p>在FFT IP当中还有几个状态指示信号，这些状态指示信号在设计FFT IP的使用的时候很有帮助。</p>
+<ul>
+<li><p>event_frame_started<br>该信号标志着FFT开始处理这一帧数据</p>
+</li>
+<li><p>event_tlast_missing<br>该信号指示输入的一帧axis数据当中缺少tlast信号。</p>
+</li>
+<li><p>event_tlast_unexpected<br>该信号指示输入的axis数据流当有异常的tlast信号，表示信号提前结束了。</p>
+</li>
+<li><p>event_data_in_channel_halt<br>该信号表示输入的信号的数据没能按照预期提供给该IP。</p>
+</li>
+</ul>
+<p>在我最开始尝试进行动态FFT配置的时候，总是出现一些问题，也是经过一番调整，最终让上面的这几个信号都正常工作才最终解决了FFT的控制问题。</p>
+<h1 id="3-基于FFT-IP动态配置"><a href="#3-基于FFT-IP动态配置" class="headerlink" title="3. 基于FFT IP动态配置"></a>3. 基于FFT IP动态配置</h1><p>在这里需要特别注意FFT IP的动态配置问题。关于FFT IP动态配置转换长度，IP认为该长度有一个最大值，这个最大值是根据配置的GUI界面当中的所设置的。</p>
+<p>在这里也是自己踩过的几个坑：</p>
+<h2 id="3-1-最大转换长度问题"><a href="#3-1-最大转换长度问题" class="headerlink" title="3.1 最大转换长度问题"></a>3.1 最大转换长度问题</h2><p>当我在IP当中把FFT的转换长度设置为4096，然后我尝试动态地去改变FFT的长度，我发现，当我将长度更改为8192的时候，FFT IP的输出，给出那些状态信号还是按照4096给出的。<br>然后我又尝试将FFT IP的动态配置为2048，这时候FFT IP就是按照预期进行工作的。<br>有了上面的经验，我大胆的推断该IP的执行的最大的FFT的长度就是IP配置界面当中写的那一个。因此，我去将该IP的配置界面当中最大转换长度，填写为了16384。然后我去动态地配置该IP，就能够将转换长度配置成8192的了。</p>
+<h2 id="3-2-FFT-IP配置时机问题"><a href="#3-2-FFT-IP配置时机问题" class="headerlink" title="3.2 FFT IP配置时机问题"></a>3.2 FFT IP配置时机问题</h2><p>在前面IP手册当中也有介绍如何去配置IP，其中需要关注一个IP配置的时机问题。<br><strong>应用新配置时处于空闲状态</strong><br>如果核心处于空闲状态（即不加载、处理或卸载任何帧），它会等待帧数据或配置数据，以决定下一步采取的操作。如果核心控制模块看到了新的帧数据，但没有看到新的配置信息，则核心开始使用现有配置处理帧。如果在帧数据之前或与帧数据同时看到配置信息，则将该配置应用于该帧。<br>为确保在处理帧之前应用配置数据，配置信息应写入配置通道。在写入第一个数据输入通道的数据之前，配置数据的写入到配置通道必须至少提前1个时钟周期完成。如果未能这样做，可能会导致帧使用先前的配置选项进行处理。<br>在系统上下文中，满足这一要求可能最简单的方法是在启用上游数据主机之前配置核心。</p>
+<p><strong>Applying a New Configuration While Streaming Frames</strong><br>当上游主机处于活动状态并向核心发送帧数据时，使用先前的技术来将配置与特定帧同步变得困难，因为新帧的数据可能已经加载到数据输入通道中。将配置与帧同步的推荐方法是使用<strong>event_frame_started</strong>信号。  当核心开始将数据加载到FFT处理核心中的帧时，此信号被断言为高电平。这是一个已知的安全点，用于发送下一帧的配置信息。在此之后发送的配置数据可能会或可能不会应用于后续的帧，这取决于帧大小和event_frame_started断言以及配置写入之间的延迟。</p>
+<p>在应用新的配置的时候，需要考虑这两种情况。<br>在实际使用的过程当中event_frame_started这个信号可以作为一个参考，因为这个信号拉高，表明一帧FFT数据已经开始进行处理，那么在这一帧数据数据就会以当前的配置进行工作。所以这是一个我们可以应用新的配置的时机。</p>
+<h1 id="4-实际的设计"><a href="#4-实际的设计" class="headerlink" title="4. 实际的设计"></a>4. 实际的设计</h1><p>在实际的设计当中，遵循了一个简单的模型：<br><img src="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/系统结构.png" alt><br>数据经过FIFO进行时钟域的转换，然后将IQ路信号分别转换为浮点数。<br>之后进入一个上游数据处理模块，在该模块当中，负责根据FFT的相关配置，为FFT IP提供对应的数据。主要是按照一帧一帧的数据方式来进行处理，因此需要保证帧与帧之间的完整性。<br>在这个系统当中有一个负责监视FFT 转换长度的模块，该模块的作用就是当FFT的转换长度发生变化的时候，给IP提供新的配置。<br>从后面的实际使用过程当中来看，这个配置的有效时机就是一个周期。</p>
+<h2 id="4-1-上游处理模块"><a href="#4-1-上游处理模块" class="headerlink" title="4.1 上游处理模块"></a>4.1 上游处理模块</h2><p><img src="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/upstream_process.png" alt><br>上游处理模块主要是按照下面的方式进行工作。<br>起始就是在正常工作的状态下面，突然发生了FFT IP的重新配置，那么需要我们按照新的配置的方式去准备给到下游的数据。<br>主要关注的是一个数据帧的结束时刻。</p>
+<h2 id="4-2-FFT-size-monitor"><a href="#4-2-FFT-size-monitor" class="headerlink" title="4.2 FFT size monitor"></a>4.2 FFT size monitor</h2><p><img src="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/FFT_SIZE_monitor.png" alt><br>该模块主要就是根据前面介绍的FFT IP配置的两种时机，当IP的配置发生变化的时候，完成对应的配置。</p>
+<h2 id="工作的效果"><a href="#工作的效果" class="headerlink" title="工作的效果"></a>工作的效果</h2><p>在根据上面的动态配置IP的原理之后，可以看看FFT IP动态配置的效果：<br><img src="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/FFT动态配置.png" alt><br>可以看到，当转换长度发生变化，我们需要考虑新的配置数据。按照FFT IP所需要的格式准备好数据。<br>等到event_frame_started开始的时候，将新的配置应用到下一帧。<br>可以看到，FFT IP给出来的config通道的配置信号的tready和tvalid的共同有效只保持了一个周期。两者共同有效的时候，配置数据已经写入到FFT IP当中。</p>
+<p><img src="/2023/11/24/2023.11/XFFT-IP%E4%BD%BF%E7%94%A8/FFT%20IP整体工作状态.png" alt><br>XFFT IP 的整体工作状态如上虞所展示的，当新的配置应用到FFT IP之后，两次不同配置之间给出数据结果是有一个反应时间的。在此之间XFFT 的输入数据通道上的tready信号也会拉低一段时间。</p>
+
+    </div>
+
+    
+    
+    
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/SDR/" rel="tag"># SDR</a>
+              <a href="/tags/FPGA/" rel="tag"># FPGA</a>
+              <a href="/tags/DSP/" rel="tag"># DSP</a>
+          </div>
+
+        
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2023/11/24/2023.11/cpp-07-%E6%8B%B7%E8%B4%9D%E6%9E%84%E9%80%A0/" rel="prev" title="cpp-07-拷贝构造">
+      <i class="fa fa-chevron-left"></i> cpp-07-拷贝构造
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2023/11/25/2023.11/cpp-08-this%E6%8C%87%E9%92%88%E4%B8%8E%E8%B5%8B%E5%80%BC%E8%BF%90%E7%AE%97%E7%AC%A6%E5%87%BD%E6%95%B0/" rel="next" title="cpp-08-this指针与赋值运算符函数">
+      cpp-08-this指针与赋值运算符函数 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+
+
+          </div>
+          
+    <div class="comments" id="valine-comments"></div>
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let { activeClass } = CONFIG.comments;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          Table of Contents
+        </li>
+        <li class="sidebar-nav-overview">
+          Overview
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-1"><a class="nav-link" href="#XFFT"><span class="nav-number">1.</span> <span class="nav-text">XFFT</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#1-%E6%A6%82%E8%BF%B0"><span class="nav-number">1.1.</span> <span class="nav-text">1. 概述</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#2-IP%E6%A0%B8%E7%9A%84%E8%AE%BE%E8%AE%A1"><span class="nav-number">1.2.</span> <span class="nav-text">2. IP核的设计</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#2-1-%E9%85%8D%E7%BD%AE%E9%80%9A%E9%81%93"><span class="nav-number">1.2.1.</span> <span class="nav-text">2.1 配置通道</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-2-%E6%95%B0%E6%8D%AE%E8%BE%93%E5%85%A5%E9%80%9A%E9%81%93"><span class="nav-number">1.2.2.</span> <span class="nav-text">2.2 数据输入通道</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-3-%E6%95%B0%E6%8D%AE%E8%BE%93%E5%87%BA%E9%80%9A%E9%81%93"><span class="nav-number">1.2.3.</span> <span class="nav-text">2.3 数据输出通道</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-4-%E7%8A%B6%E6%80%81%E9%80%9A%E9%81%93"><span class="nav-number">1.2.4.</span> <span class="nav-text">2.4 状态通道</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-5-Run-Time-Transform-Configuration"><span class="nav-number">1.2.5.</span> <span class="nav-text">2.5 Run Time Transform Configuration</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#2-5-1-Transform-Size"><span class="nav-number">1.2.5.1.</span> <span class="nav-text">2.5.1 Transform Size</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-5-2-Forward-Inverse-and-Scaling-Schedule"><span class="nav-number">1.2.5.2.</span> <span class="nav-text">2.5.2 Forward&#x2F;Inverse and Scaling Schedule</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-6-Transform-Status"><span class="nav-number">1.2.6.</span> <span class="nav-text">2.6 Transform Status</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#2-6-1-overflow"><span class="nav-number">1.2.6.1.</span> <span class="nav-text">2.6.1 overflow</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-6-2-%E5%9D%97%E6%8C%87%E6%95%B0"><span class="nav-number">1.2.6.2.</span> <span class="nav-text">2.6.2 块指数</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#2-6-3-XK-Index"><span class="nav-number">1.2.6.3.</span> <span class="nav-text">2.6.3 XK Index</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-7-Controlling-the-FFT-Core"><span class="nav-number">1.2.7.</span> <span class="nav-text">2.7 Controlling the FFT Core</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#2-7-1-Configuring-the-FFT"><span class="nav-number">1.2.7.1.</span> <span class="nav-text">2.7.1 Configuring the FFT</span></a></li></ol></li></ol></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#3-%E5%9F%BA%E4%BA%8EFFT-IP%E5%8A%A8%E6%80%81%E9%85%8D%E7%BD%AE"><span class="nav-number">2.</span> <span class="nav-text">3. 基于FFT IP动态配置</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#3-1-%E6%9C%80%E5%A4%A7%E8%BD%AC%E6%8D%A2%E9%95%BF%E5%BA%A6%E9%97%AE%E9%A2%98"><span class="nav-number">2.1.</span> <span class="nav-text">3.1 最大转换长度问题</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#3-2-FFT-IP%E9%85%8D%E7%BD%AE%E6%97%B6%E6%9C%BA%E9%97%AE%E9%A2%98"><span class="nav-number">2.2.</span> <span class="nav-text">3.2 FFT IP配置时机问题</span></a></li></ol></li><li class="nav-item nav-level-1"><a class="nav-link" href="#4-%E5%AE%9E%E9%99%85%E7%9A%84%E8%AE%BE%E8%AE%A1"><span class="nav-number">3.</span> <span class="nav-text">4. 实际的设计</span></a><ol class="nav-child"><li class="nav-item nav-level-2"><a class="nav-link" href="#4-1-%E4%B8%8A%E6%B8%B8%E5%A4%84%E7%90%86%E6%A8%A1%E5%9D%97"><span class="nav-number">3.1.</span> <span class="nav-text">4.1 上游处理模块</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#4-2-FFT-size-monitor"><span class="nav-number">3.2.</span> <span class="nav-text">4.2 FFT size monitor</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E5%B7%A5%E4%BD%9C%E7%9A%84%E6%95%88%E6%9E%9C"><span class="nav-number">3.3.</span> <span class="nav-text">工作的效果</span></a></li></ol></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="wcc"
+      src="/./images/avatar.jpg">
+  <p class="site-author-name" itemprop="name">wcc</p>
+  <div class="site-description" itemprop="description">一点点学习笔记</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">70</span>
+          <span class="site-state-item-name">posts</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">16</span>
+        <span class="site-state-item-name">categories</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">25</span>
+        <span class="site-state-item-name">tags</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/black-pigeon" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;black-pigeon" rel="noopener" target="_blank"><i class="fab fa-github fa-fw"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:1530604142@qq.com" title="E-Mail → mailto:1530604142@qq.com" rel="noopener" target="_blank"><i class="fa fa-envelope fa-fw"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="https://blog.csdn.net/qq_41332806" title="CSDN → https:&#x2F;&#x2F;blog.csdn.net&#x2F;qq_41332806" rel="noopener" target="_blank"><i class="link fa-fw"></i>CSDN</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        
+
+        <script async src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<div class="copyright">
+  
+  &copy; 
+  <span itemprop="copyrightYear">2023</span>
+  <span class="with-love">
+    <i class="fa fa-heart"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">wcc</span>
+</div>
+  <div class="powered-by">Powered by <a href="https://hexo.io/" class="theme-link" rel="noopener" target="_blank">Hexo</a> & <a href="https://mist.theme-next.org/" class="theme-link" rel="noopener" target="_blank">NexT.Mist</a>
+  </div>
+
+        
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  <script src="/lib/anime.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/jquery@3/dist/jquery.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+
+
+
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+      
+
+<script>
+  if (typeof MathJax === 'undefined') {
+    window.MathJax = {
+      loader: {
+        source: {
+          '[tex]/amsCd': '[tex]/amscd',
+          '[tex]/AMScd': '[tex]/amscd'
+        }
+      },
+      tex: {
+        inlineMath: {'[+]': [['$', '$']]},
+        tags: 'ams'
+      },
+      options: {
+        renderActions: {
+          findScript: [10, doc => {
+            document.querySelectorAll('script[type^="math/tex"]').forEach(node => {
+              const display = !!node.type.match(/; *mode=display/);
+              const math = new doc.options.MathItem(node.textContent, doc.inputJax[0], display);
+              const text = document.createTextNode('');
+              node.parentNode.replaceChild(text, node);
+              math.start = {node: text, delim: '', n: 0};
+              math.end = {node: text, delim: '', n: 0};
+              doc.math.push(math);
+            });
+          }, '', false],
+          insertedScript: [200, () => {
+            document.querySelectorAll('mjx-container').forEach(node => {
+              let target = node.parentNode;
+              if (target.nodeName.toLowerCase() === 'li') {
+                target.parentNode.classList.add('has-jax');
+              }
+            });
+          }, '', false]
+        }
+      }
+    };
+    (function () {
+      var script = document.createElement('script');
+      script.src = '//cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js';
+      script.defer = true;
+      document.head.appendChild(script);
+    })();
+  } else {
+    MathJax.startup.document.state(0);
+    MathJax.texReset();
+    MathJax.typeset();
+  }
+</script>
+
+    
+
+  
+
+
+<script>
+NexT.utils.loadComments(document.querySelector('#valine-comments'), () => {
+  NexT.utils.getScript('//unpkg.com/valine/dist/Valine.min.js', () => {
+    var GUEST = ['nick', 'mail', 'link'];
+    var guest = 'nick,mail,link';
+    guest = guest.split(',').filter(item => {
+      return GUEST.includes(item);
+    });
+    new Valine({
+      el         : '#valine-comments',
+      verify     : true,
+      notify     : true,
+      appId      : 'rHwH8GQmfmgbwLmh5m76yRPQ-gzGzoHsz',
+      appKey     : 'VtkBzYWU0v1DGxD93SdmvXi4',
+      placeholder: "Just go go ^_^",
+      avatar     : 'wavatar',
+      meta       : guest,
+      pageSize   : '10' || 10,
+      visitor    : true,
+      lang       : '' || 'zh-cn',
+      path       : location.pathname,
+      recordIP   : false,
+      serverURLs : ''
+    });
+  }, window.Valine);
+});
+</script>
+
+</body>
+</html>

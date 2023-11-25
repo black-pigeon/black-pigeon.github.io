@@ -127,7 +127,7 @@
   </li>
         <li class="menu-item menu-item-tags">
 
-    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">24</span></a>
+    <a href="/tags/" rel="section"><i class="fa fa-tags fa-fw"></i>Tags<span class="badge">25</span></a>
 
   </li>
         <li class="menu-item menu-item-categories">
@@ -137,7 +137,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">68</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">70</span></a>
 
   </li>
   </ul>
@@ -163,6 +163,215 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/07/06/2021.7/ZYNQ-%E8%AF%BB%E5%8F%96PCM%E6%96%87%E4%BB%B6%E5%B9%B6%E6%92%AD%E6%94%BE/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/07/06/2021.7/ZYNQ-%E8%AF%BB%E5%8F%96PCM%E6%96%87%E4%BB%B6%E5%B9%B6%E6%92%AD%E6%94%BE/" class="post-title-link" itemprop="url">ZYNQ 读取PCM文件并播放</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-07-06 14:11:57" itemprop="dateCreated datePublished" datetime="2021-07-06T14:11:57+08:00">2021-07-06</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/SDR/" itemprop="url" rel="index"><span itemprop="name">SDR</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/07/06/2021.7/ZYNQ-%E8%AF%BB%E5%8F%96PCM%E6%96%87%E4%BB%B6%E5%B9%B6%E6%92%AD%E6%94%BE/" class="post-meta-item leancloud_visitors" data-flag-title="ZYNQ 读取PCM文件并播放" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2021/07/06/2021.7/ZYNQ-%E8%AF%BB%E5%8F%96PCM%E6%96%87%E4%BB%B6%E5%B9%B6%E6%92%AD%E6%94%BE/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/07/06/2021.7/ZYNQ-%E8%AF%BB%E5%8F%96PCM%E6%96%87%E4%BB%B6%E5%B9%B6%E6%92%AD%E6%94%BE/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>最近开始准备从头开始实现一个FM的调制月解调的实验,在进行这些实验之前,首先需要进行的一个操作就是读取SD卡当中的文件,将SD卡当中的文件读取到内存当中,在FPGA的PL端实现将数据读出,并且将读取出来的数据提供给PCM模块.这样PCM模块就能够播放音乐了.<br>这是实现FM调制的第一步,先有一个音频数据源.</p>
+<h2 id="1-系统结构"><a href="#1-系统结构" class="headerlink" title="1. 系统结构"></a>1. 系统结构</h2><p>ZYNQ读取SD卡的整个系统架构如下图所示:<br><img src="/2021/07/06/2021.7/ZYNQ-%E8%AF%BB%E5%8F%96PCM%E6%96%87%E4%BB%B6%E5%B9%B6%E6%92%AD%E6%94%BE/系统结构.png" alt="协同结构"><br></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/07/06/2021.7/ZYNQ-%E8%AF%BB%E5%8F%96PCM%E6%96%87%E4%BB%B6%E5%B9%B6%E6%92%AD%E6%94%BE/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/07/02/2021.7/ZYNQ-Linux-2-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E5%8F%82%E6%95%B0/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/07/02/2021.7/ZYNQ-Linux-2-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E5%8F%82%E6%95%B0/" class="post-title-link" itemprop="url">ZYNQ Linux(2)--内核模块参数和符号共享</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-07-02 22:24:53" itemprop="dateCreated datePublished" datetime="2021-07-02T22:24:53+08:00">2021-07-02</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/Linux/" itemprop="url" rel="index"><span itemprop="name">Linux</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/07/02/2021.7/ZYNQ-Linux-2-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E5%8F%82%E6%95%B0/" class="post-meta-item leancloud_visitors" data-flag-title="ZYNQ Linux(2)--内核模块参数和符号共享" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2021/07/02/2021.7/ZYNQ-Linux-2-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E5%8F%82%E6%95%B0/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/07/02/2021.7/ZYNQ-Linux-2-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E5%8F%82%E6%95%B0/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h2 id="1-内核模块参数"><a href="#1-内核模块参数" class="headerlink" title="1. 内核模块参数"></a>1. 内核模块参数</h2><p>在前面的学习了如何来编译一个最基础的内核模块。了解了一个内核模块在源码当中的表现形式是什么样的。在内核模块当中可以进行参数的传递。比如在加载内核模块给内核模块指定参数，这样内核模块就能根据传递的参数来进行工作了。<br>使用模块参数的时候需要使用到一个模块参数的宏。<br><code>module_param(name, type, perm)</code></p>
+<ul>
+<li>name：参数名</li>
+<li>type：参数类型，如int、byte、bool、charp…</li>
+<li>perm：读写权限</li></ul>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/07/02/2021.7/ZYNQ-Linux-2-%E5%86%85%E6%A0%B8%E6%A8%A1%E5%9D%97%E5%8F%82%E6%95%B0/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -1066,7 +1275,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">68</span>
+          <span class="site-state-item-count">70</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
@@ -1079,7 +1288,7 @@
       <div class="site-state-item site-state-tags">
             <a href="/tags/">
           
-        <span class="site-state-item-count">24</span>
+        <span class="site-state-item-count">25</span>
         <span class="site-state-item-name">tags</span></a>
       </div>
   </nav>
