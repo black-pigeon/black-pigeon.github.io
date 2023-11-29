@@ -137,7 +137,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">72</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">73</span></a>
 
   </li>
   </ul>
@@ -163,6 +163,108 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/" class="post-title-link" itemprop="url">使用FPGA实现相关运算</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-06-13 19:42:55" itemprop="dateCreated datePublished" datetime="2023-06-13T19:42:55+08:00">2023-06-13</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-06-14 13:13:34" itemprop="dateModified" datetime="2023-06-14T13:13:34+08:00">2023-06-14</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/FPGA/" itemprop="url" rel="index"><span itemprop="name">FPGA</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/" class="post-meta-item leancloud_visitors" data-flag-title="使用FPGA实现相关运算" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>最近帮一个客户实现将一部分算法卸载到FPGA上，其中的一个部分是相关算法。相关简单来说就是一个乘累加的过程。如果在设计的的时候采用一些特殊的序列，比如PN码，那么甚至可以把乘法变成加减法来进行操作。<br></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2023/06/13/2023.6/%E4%BD%BF%E7%94%A8FPGA%E5%AE%9E%E7%8E%B0%E7%9B%B8%E5%85%B3%E8%BF%90%E7%AE%97/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -1086,108 +1188,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2022/07/15/2022.7/%E4%B8%AA%E4%BA%BA%E6%84%9F%E6%82%9F/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/./images/avatar.jpg">
-      <meta itemprop="name" content="wcc">
-      <meta itemprop="description" content="一点点学习笔记">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="wcc的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2022/07/15/2022.7/%E4%B8%AA%E4%BA%BA%E6%84%9F%E6%82%9F/" class="post-title-link" itemprop="url">个人感悟</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2022-07-15 16:03:19" itemprop="dateCreated datePublished" datetime="2022-07-15T16:03:19+08:00">2022-07-15</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/personal/" itemprop="url" rel="index"><span itemprop="name">personal</span></a>
-                </span>
-            </span>
-
-          
-            <span id="/2022/07/15/2022.7/%E4%B8%AA%E4%BA%BA%E6%84%9F%E6%82%9F/" class="post-meta-item leancloud_visitors" data-flag-title="个人感悟" title="Views">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span class="post-meta-item-text">Views: </span>
-              <span class="leancloud-visitors-count"></span>
-            </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine: </span>
-    
-    <a title="valine" href="/2022/07/15/2022.7/%E4%B8%AA%E4%BA%BA%E6%84%9F%E6%82%9F/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2022/07/15/2022.7/%E4%B8%AA%E4%BA%BA%E6%84%9F%E6%82%9F/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <p>最近挺迷茫的，但是今天稍微深入地了解了一个之前见过的公司，也就是提供ZipCPU的这个公司，这个IP，在ettus usrp的之前的系列当中用过，是一个比较完整的处理器。<br><img src="/2022/07/15/2022.7/%E4%B8%AA%E4%BA%BA%E6%84%9F%E6%82%9F/ZipCPU.png" alt="ZipCPU"><br>这是由一个人完成的公司，在了解了这个公司之后，我发现了他开源了许多和FPGA相关的资源，包括这个ZipCPU，DSP处理相关的资源等等。<br>看到了他实现的这一些列工作之后，我一时间感觉到了相当震惊。<br></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2022/07/15/2022.7/%E4%B8%AA%E4%BA%BA%E6%84%9F%E6%82%9F/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1259,7 +1259,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">72</span>
+          <span class="site-state-item-count">73</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
