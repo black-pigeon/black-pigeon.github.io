@@ -137,7 +137,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">74</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">75</span></a>
 
   </li>
   </ul>
@@ -163,6 +163,108 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/11/14/2023.11/cpp-04-%E7%B1%BB%E5%9E%8B%E8%BD%AC%E6%8D%A2%E5%87%BD%E6%95%B0%E9%87%8D%E8%BD%BD%E4%B8%8Einline/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2023/11/14/2023.11/cpp-04-%E7%B1%BB%E5%9E%8B%E8%BD%AC%E6%8D%A2%E5%87%BD%E6%95%B0%E9%87%8D%E8%BD%BD%E4%B8%8Einline/" class="post-title-link" itemprop="url">cpp-04-类型转换函数重载与inline</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2023-11-14 19:38:39" itemprop="dateCreated datePublished" datetime="2023-11-14T19:38:39+08:00">2023-11-14</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-11-15 13:35:07" itemprop="dateModified" datetime="2023-11-15T13:35:07+08:00">2023-11-15</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/C/" itemprop="url" rel="index"><span itemprop="name">C++</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2023/11/14/2023.11/cpp-04-%E7%B1%BB%E5%9E%8B%E8%BD%AC%E6%8D%A2%E5%87%BD%E6%95%B0%E9%87%8D%E8%BD%BD%E4%B8%8Einline/" class="post-meta-item leancloud_visitors" data-flag-title="cpp-04-类型转换函数重载与inline" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2023/11/14/2023.11/cpp-04-%E7%B1%BB%E5%9E%8B%E8%BD%AC%E6%8D%A2%E5%87%BD%E6%95%B0%E9%87%8D%E8%BD%BD%E4%B8%8Einline/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2023/11/14/2023.11/cpp-04-%E7%B1%BB%E5%9E%8B%E8%BD%AC%E6%8D%A2%E5%87%BD%E6%95%B0%E9%87%8D%E8%BD%BD%E4%B8%8Einline/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="cpp的类型转换"><a href="#cpp的类型转换" class="headerlink" title="cpp的类型转换"></a>cpp的类型转换</h1><p>在C当中，类型转换的风格很简单：<br><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">TYPE a = （TYPE）EXPRESSION;</span><br></pre></td></tr></table></figure><br>直接将要转换的变量前面加上需要的目标类型。<br>C风格的类型转换可以在任意类型之间转换。比如可以把一个指向const对象的指针转换成指向非const对象的指针，把一个指向基类对象的指针转换成指向一个派生类对象的指针。这在某些时候是比较危险的。</p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2023/11/14/2023.11/cpp-04-%E7%B1%BB%E5%9E%8B%E8%BD%AC%E6%8D%A2%E5%87%BD%E6%95%B0%E9%87%8D%E8%BD%BD%E4%B8%8Einline/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -1048,108 +1150,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/06/16/2023.6/cocotb-2-basic/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/./images/avatar.jpg">
-      <meta itemprop="name" content="wcc">
-      <meta itemprop="description" content="一点点学习笔记">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="wcc的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/06/16/2023.6/cocotb-2-basic/" class="post-title-link" itemprop="url">cocotb-2-basic</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2023-06-16 10:19:48" itemprop="dateCreated datePublished" datetime="2023-06-16T10:19:48+08:00">2023-06-16</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-06-17 17:09:51" itemprop="dateModified" datetime="2023-06-17T17:09:51+08:00">2023-06-17</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/cocotb/" itemprop="url" rel="index"><span itemprop="name">cocotb</span></a>
-                </span>
-            </span>
-
-          
-            <span id="/2023/06/16/2023.6/cocotb-2-basic/" class="post-meta-item leancloud_visitors" data-flag-title="cocotb-2-basic" title="Views">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span class="post-meta-item-text">Views: </span>
-              <span class="leancloud-visitors-count"></span>
-            </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine: </span>
-    
-    <a title="valine" href="/2023/06/16/2023.6/cocotb-2-basic/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2023/06/16/2023.6/cocotb-2-basic/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在之前我们已经介绍了使用cocotb来仿真xilinx IP的一个简单流程，在那里面并没有介绍太多关于cocotb的注意事项。在这篇博客当中，我会记录学习cocotb的一些基本知识。<br></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2023/06/16/2023.6/cocotb-2-basic/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1221,7 +1221,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">74</span>
+          <span class="site-state-item-count">75</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>

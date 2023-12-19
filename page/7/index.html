@@ -137,7 +137,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">74</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">75</span></a>
 
   </li>
   </ul>
@@ -163,6 +163,109 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/11/10/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-3-PN%E7%A0%81%E7%89%87%E6%90%9C%E7%B4%A2/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2021/11/10/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-3-PN%E7%A0%81%E7%89%87%E6%90%9C%E7%B4%A2/" class="post-title-link" itemprop="url">北斗卫星定位-3-PN码片搜索</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+
+              <time title="Created: 2021-11-10 10:06:08" itemprop="dateCreated datePublished" datetime="2021-11-10T10:06:08+08:00">2021-11-10</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="far fa-calendar-check"></i>
+                </span>
+                <span class="post-meta-item-text">Edited on</span>
+                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/SDR/" itemprop="url" rel="index"><span itemprop="name">SDR</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2021/11/10/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-3-PN%E7%A0%81%E7%89%87%E6%90%9C%E7%B4%A2/" class="post-meta-item leancloud_visitors" data-flag-title="北斗卫星定位-3-PN码片搜索" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2021/11/10/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-3-PN%E7%A0%81%E7%89%87%E6%90%9C%E7%B4%A2/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2021/11/10/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-3-PN%E7%A0%81%E7%89%87%E6%90%9C%E7%B4%A2/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在之前的博客当中，学习着如何生成PN码，了解GPS、北斗信息是如何通过调制进行发送的，最近开始学习如何来完成北斗信号的解调，因此有必要记录一下学习的过程。</p>
+<h1 id="信号的捕获"><a href="#信号的捕获" class="headerlink" title="信号的捕获"></a>信号的捕获</h1><p>在CDMA当中，系统都存在信号捕获的问题，因为发送的不同信号在同一个频率上，不同信号之间是通过伪随机码来进行区分的。<br>对于卫星信号而言，卫星的高速运动会使得卫星和接收机之间的相对距离发生变化，从而导致载波频率的多普勒频移，从而影响信号的质量。<br>由于伪随机码使得信号的频谱展宽，相应的功率降低，再加上接收机和卫星之间的距离很远，导致信号湮没在噪声中。<br></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2021/11/10/2021.11/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-3-PN%E7%A0%81%E7%89%87%E6%90%9C%E7%B4%A2/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -1101,108 +1204,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/./images/avatar.jpg">
-      <meta itemprop="name" content="wcc">
-      <meta itemprop="description" content="一点点学习笔记">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="wcc的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/" class="post-title-link" itemprop="url">北斗卫星定位(2)----数据码</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2021-06-09 13:45:46" itemprop="dateCreated datePublished" datetime="2021-06-09T13:45:46+08:00">2021-06-09</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-02-07 14:50:37" itemprop="dateModified" datetime="2023-02-07T14:50:37+08:00">2023-02-07</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/SDR/" itemprop="url" rel="index"><span itemprop="name">SDR</span></a>
-                </span>
-            </span>
-
-          
-            <span id="/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/" class="post-meta-item leancloud_visitors" data-flag-title="北斗卫星定位(2)----数据码" title="Views">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span class="post-meta-item-text">Views: </span>
-              <span class="leancloud-visitors-count"></span>
-            </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine: </span>
-    
-    <a title="valine" href="/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="1-数据码"><a href="#1-数据码" class="headerlink" title="1. 数据码"></a>1. 数据码</h1><p>在前面的博客中，学习了PN码是个什么玩意儿，并且学习了如何来进行相关等操作。今天将会学习在卫星定位系统中更高一层次的东西，也就是数据码。数据码也就是导航电文，导航电文提供了用于定位的最基础的信息。<br>根据速率和结构不同，导航电文分为 <strong>D1</strong> 导航电文和 <strong>D2</strong> 导航电文。<strong>D1</strong> 导航电文速率为 <strong>50bps</strong> ，内容包含基本导航信息（本卫星基本导航信息、全部卫星历书信息、与其他系统时间同步信息；<strong>D2</strong> 导航电文速率为 <strong>500bps</strong> ，内容包含基本导航信息和广域差分信息（北斗系统的差分及完成性信息和格网点电离层信息）。<br></p>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2021/06/09/2021.6/%E5%8C%97%E6%96%97%E5%8D%AB%E6%98%9F%E5%AE%9A%E4%BD%8D-2-%E6%95%B0%E6%8D%AE%E7%A0%81/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1274,7 +1275,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">74</span>
+          <span class="site-state-item-count">75</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
