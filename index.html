@@ -137,7 +137,7 @@
   </li>
         <li class="menu-item menu-item-archives">
 
-    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">76</span></a>
+    <a href="/archives/" rel="section"><i class="fa fa-archive fa-fw"></i>Archives<span class="badge">77</span></a>
 
   </li>
   </ul>
@@ -163,6 +163,103 @@
 
           <div class="content index posts-expand">
             
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
+    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2024/01/02/2024.1/cpp-15-%E7%BB%A7%E6%89%BF/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/./images/avatar.jpg">
+      <meta itemprop="name" content="wcc">
+      <meta itemprop="description" content="一点点学习笔记">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="wcc的博客">
+    </span>
+      <header class="post-header">
+        <h2 class="post-title" itemprop="name headline">
+          
+            <a href="/2024/01/02/2024.1/cpp-15-%E7%BB%A7%E6%89%BF/" class="post-title-link" itemprop="url">cpp-15-继承</a>
+        </h2>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-calendar"></i>
+              </span>
+              <span class="post-meta-item-text">Posted on</span>
+              
+
+              <time title="Created: 2024-01-02 15:28:57 / Modified: 17:20:54" itemprop="dateCreated datePublished" datetime="2024-01-02T15:28:57+08:00">2024-01-02</time>
+            </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="far fa-folder"></i>
+              </span>
+              <span class="post-meta-item-text">In</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/C/" itemprop="url" rel="index"><span itemprop="name">C++</span></a>
+                </span>
+            </span>
+
+          
+            <span id="/2024/01/02/2024.1/cpp-15-%E7%BB%A7%E6%89%BF/" class="post-meta-item leancloud_visitors" data-flag-title="cpp-15-继承" title="Views">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">Views: </span>
+              <span class="leancloud-visitors-count"></span>
+            </span>
+  
+  <span class="post-meta-item">
+    
+      <span class="post-meta-item-icon">
+        <i class="far fa-comment"></i>
+      </span>
+      <span class="post-meta-item-text">Valine: </span>
+    
+    <a title="valine" href="/2024/01/02/2024.1/cpp-15-%E7%BB%A7%E6%89%BF/#valine-comments" itemprop="discussionUrl">
+      <span class="post-comments-count valine-comment-count" data-xid="/2024/01/02/2024.1/cpp-15-%E7%BB%A7%E6%89%BF/" itemprop="commentCount"></span>
+    </a>
+  </span>
+  
+  
+
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+          <p>在C语言中重用代码的方式就是拷贝代码、修改代码。C++中代码重用的方式之一就是采用继承。继承是面向对象程序设计中重要的特征，可以说，不掌握继承就等于没有掌握面向对象的精华。通过继承，我们可以用原有类型来定义一个新类型，定义的新类型既包含了原有类型的成员，也能自己添加新的成员，而不用将原有类的内容重新书写一遍。原有类型称为“基类”或“父类”，在它的基础上建立的类称为“派生类”或“子类”。</p>
+<h2 id="继承和派生的定义"><a href="#继承和派生的定义" class="headerlink" title="继承和派生的定义"></a>继承和派生的定义</h2><p>当一个派生类继承一个基类时，需要在派生类的类派生列表中明确的指出它是从哪个基类继承而来的。类派生列表的形式是在类名之后，大括号之前用冒号分隔，后面紧跟以逗号分隔的基类列表，其中每个基类前面可以有访问修饰限定符，其形式如下:<br><figure class="highlight cpp"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Derived</span></span></span><br><span class="line"><span class="class">:</span><span class="keyword">public</span> A</span><br><span class="line">,<span class="keyword">protected</span> B</span><br><span class="line">,<span class="keyword">private</span> C</span><br><span class="line">&#123;</span><br><span class="line"></span><br><span class="line">&#125;;</span><br></pre></td></tr></table></figure><br></p>
+          <!--noindex-->
+            <div class="post-button">
+              <a class="btn" href="/2024/01/02/2024.1/cpp-15-%E7%BB%A7%E6%89%BF/#more" rel="contents">
+                Read more &raquo;
+              </a>
+            </div>
+          <!--/noindex-->
+        
+      
+    </div>
+
+    
+    
+    
+      <footer class="post-footer">
+        <div class="post-eof"></div>
+      </footer>
+  </article>
+  
+  
+  
+
       
   
   
@@ -1049,112 +1146,6 @@
   
   
 
-      
-  
-  
-  <article itemscope itemtype="http://schema.org/Article" class="post-block" lang="zh-CH">
-    <link itemprop="mainEntityOfPage" href="https://black-pigeon.github.io/2023/11/23/2023.11/cpp-06-%E5%AF%B9%E8%B1%A1%E7%9A%84%E9%94%80%E6%AF%81/">
-
-    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
-      <meta itemprop="image" content="/./images/avatar.jpg">
-      <meta itemprop="name" content="wcc">
-      <meta itemprop="description" content="一点点学习笔记">
-    </span>
-
-    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
-      <meta itemprop="name" content="wcc的博客">
-    </span>
-      <header class="post-header">
-        <h2 class="post-title" itemprop="name headline">
-          
-            <a href="/2023/11/23/2023.11/cpp-06-%E5%AF%B9%E8%B1%A1%E7%9A%84%E9%94%80%E6%AF%81/" class="post-title-link" itemprop="url">cpp-06-对象的销毁</a>
-        </h2>
-
-        <div class="post-meta">
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-calendar"></i>
-              </span>
-              <span class="post-meta-item-text">Posted on</span>
-
-              <time title="Created: 2023-11-23 15:35:02" itemprop="dateCreated datePublished" datetime="2023-11-23T15:35:02+08:00">2023-11-23</time>
-            </span>
-              <span class="post-meta-item">
-                <span class="post-meta-item-icon">
-                  <i class="far fa-calendar-check"></i>
-                </span>
-                <span class="post-meta-item-text">Edited on</span>
-                <time title="Modified: 2023-11-24 11:04:49" itemprop="dateModified" datetime="2023-11-24T11:04:49+08:00">2023-11-24</time>
-              </span>
-            <span class="post-meta-item">
-              <span class="post-meta-item-icon">
-                <i class="far fa-folder"></i>
-              </span>
-              <span class="post-meta-item-text">In</span>
-                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
-                  <a href="/categories/C/" itemprop="url" rel="index"><span itemprop="name">C++</span></a>
-                </span>
-            </span>
-
-          
-            <span id="/2023/11/23/2023.11/cpp-06-%E5%AF%B9%E8%B1%A1%E7%9A%84%E9%94%80%E6%AF%81/" class="post-meta-item leancloud_visitors" data-flag-title="cpp-06-对象的销毁" title="Views">
-              <span class="post-meta-item-icon">
-                <i class="fa fa-eye"></i>
-              </span>
-              <span class="post-meta-item-text">Views: </span>
-              <span class="leancloud-visitors-count"></span>
-            </span>
-  
-  <span class="post-meta-item">
-    
-      <span class="post-meta-item-icon">
-        <i class="far fa-comment"></i>
-      </span>
-      <span class="post-meta-item-text">Valine: </span>
-    
-    <a title="valine" href="/2023/11/23/2023.11/cpp-06-%E5%AF%B9%E8%B1%A1%E7%9A%84%E9%94%80%E6%AF%81/#valine-comments" itemprop="discussionUrl">
-      <span class="post-comments-count valine-comment-count" data-xid="/2023/11/23/2023.11/cpp-06-%E5%AF%B9%E8%B1%A1%E7%9A%84%E9%94%80%E6%AF%81/" itemprop="commentCount"></span>
-    </a>
-  </span>
-  
-  
-
-        </div>
-      </header>
-
-    
-    
-    
-    <div class="post-body" itemprop="articleBody">
-
-      
-          <h1 id="析构函数"><a href="#析构函数" class="headerlink" title="析构函数"></a>析构函数</h1><p>构造函数(constructor)在创建对象时被系统自动调用，而析构函数(Destructor)在对象被撤销时被自动调用，相比构造函数，析构函数要简单的多。析构函数有如下特点：</p>
-<ul>
-<li>与类同名，之前冠以波浪号，以区别于构造函数。</li>
-<li>析构函数没有返回类型，也不能指定参数。因此，析构函数只能有一个，不能被重载。</li>
-<li>对象超出其作用域被销毁时，析构函数会被自动调用。</li></ul>
-          <!--noindex-->
-            <div class="post-button">
-              <a class="btn" href="/2023/11/23/2023.11/cpp-06-%E5%AF%B9%E8%B1%A1%E7%9A%84%E9%94%80%E6%AF%81/#more" rel="contents">
-                Read more &raquo;
-              </a>
-            </div>
-          <!--/noindex-->
-        
-      
-    </div>
-
-    
-    
-    
-      <footer class="post-footer">
-        <div class="post-eof"></div>
-      </footer>
-  </article>
-  
-  
-  
-
 
   
   <nav class="pagination">
@@ -1226,7 +1217,7 @@
       <div class="site-state-item site-state-posts">
           <a href="/archives/">
         
-          <span class="site-state-item-count">76</span>
+          <span class="site-state-item-count">77</span>
           <span class="site-state-item-name">posts</span>
         </a>
       </div>
